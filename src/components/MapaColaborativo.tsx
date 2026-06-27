@@ -19,17 +19,20 @@ interface MapaColaborativoProps {
 const CATEGORY_EMOJIS: Record<string, string> = {
   energia: "⚡",
   senal: "📶",
-  suministros: "📦",
+  suministros: "💙", // Matches the blue heart in the reference screenshot
   salud: "🏥",
   peligro: "⚠️",
   movilidad: "🚗",
 };
 
-const createCustomIcon = (tipo: "ofrece" | "necesita", categoria: string, fuente?: string) => {
+const createCustomIcon = (tipo: "ofrece" | "necesita", categoria: string, fuente?: string, hasDetails?: boolean) => {
   const emoji = CATEGORY_EMOJIS[categoria] || "📌";
   
   let colorClass = "";
-  if (fuente) {
+  if (hasDetails || categoria === "suministros") {
+    // Matches the light blue marker in the reference screenshot
+    colorClass = "border-sky-400 bg-sky-500 shadow-sky-500/20";
+  } else if (fuente) {
     if (fuente === "Localizados VE") {
       colorClass = "border-sky-400 bg-sky-500 shadow-sky-500/20";
     } else if (fuente === "Caracas Ayuda") {
@@ -43,10 +46,10 @@ const createCustomIcon = (tipo: "ofrece" | "necesita", categoria: string, fuente
 
   return L.divIcon({
     html: `
-      <div class="relative flex items-center justify-center w-9 h-9 rounded-xl text-white text-lg font-semibold shadow-2xl border-2 ${colorClass} transition-transform hover:scale-115 duration-200">
+      <div class="relative flex items-center justify-center w-9 h-9 rounded-full text-white text-lg font-semibold shadow-2xl border-2 ${colorClass} transition-transform hover:scale-115 duration-200">
         <span class="z-10">${emoji}</span>
         <span class="absolute -bottom-1 w-2 h-2 rotate-45 ${colorClass} border-r-2 border-b-2"></span>
-        ${fuente ? `<span class="absolute -top-1.5 -right-1.5 flex h-3.5 w-3.5 items-center justify-center rounded-full bg-slate-900 border border-slate-700 text-[8px] font-bold text-slate-300">ext</span>` : ""}
+        ${fuente && !hasDetails ? `<span class="absolute -top-1.5 -right-1.5 flex h-3.5 w-3.5 items-center justify-center rounded-full bg-slate-900 border border-slate-700 text-[8px] font-bold text-slate-300">ext</span>` : ""}
       </div>
     `,
     className: "custom-div-icon",
@@ -110,61 +113,149 @@ export default function MapaColaborativo({
 
         <MapClickEvents isReportingMode={isReportingMode} onLocationSelected={onLocationSelected} />
 
-        {/* Render markers directly without clustering. 
-            Overlapping points will naturally separate on zoom due to tiny coordinates offset/jittering added in the API. */}
-        {puntos.map((punto) => (
-          <Marker
-            key={punto.id}
-            position={[punto.lat, punto.lng]}
-            icon={createCustomIcon(punto.tipo, punto.categoria, punto.fuente)}
-          >
-            <Popup>
-              <div className="p-2 min-w-[220px]">
-                <div className="flex items-center gap-1.5 mb-1.5 flex-wrap">
-                  <span className="text-base">{CATEGORY_EMOJIS[punto.categoria]}</span>
-                  <span className="font-bold text-slate-100 text-xs capitalize">
-                    {punto.categoria}
-                  </span>
-                  {punto.fuente ? (
-                    <span className="ml-auto text-[9px] px-2 py-0.5 rounded-full bg-slate-800 border border-slate-700 text-slate-300 font-bold uppercase">
-                      {punto.fuente}
-                    </span>
-                  ) : (
-                    <span
-                      className={`ml-auto text-[9px] px-2 py-0.5 rounded-full font-bold uppercase ${
-                        punto.tipo === "ofrece"
-                          ? "bg-emerald-500/20 text-emerald-400"
-                          : "bg-rose-500/20 text-rose-400"
-                      }`}
-                    >
-                      {punto.tipo}
-                    </span>
-                  )}
-                </div>
-                <p className="text-slate-300 text-xs mb-3 leading-relaxed whitespace-pre-wrap">
-                  {punto.descripcion}
-                </p>
-                <div className="flex items-center justify-between text-[11px] text-slate-400 pt-2 border-t border-slate-700/50">
-                  {punto.fuente ? (
-                    <span className="text-[10px] text-slate-500 italic">Reporte externo verificado</span>
-                  ) : (
-                    <>
-                      <span>
-                        Votos: <strong className="text-white">{punto.confirmations}</strong>
+        {puntos.map((punto) => {
+          const hasDetails = !!punto.nombre && !!punto.direccion;
+          
+          return (
+            <Marker
+              key={punto.id}
+              position={[punto.lat, punto.lng]}
+              icon={createCustomIcon(punto.tipo, punto.categoria, punto.fuente, hasDetails)}
+            >
+              <Popup>
+                {hasDetails ? (
+                  /* Premium detailed popup layout (matches MRW screenshot exactly) */
+                  <div className="p-4 text-slate-100 flex flex-col gap-2 font-sans min-w-[280px] bg-[#111113] rounded-2xl">
+                    {/* Header Pill */}
+                    <div className="flex">
+                      <span className="text-[9px] font-extrabold uppercase tracking-wider bg-sky-950/70 text-sky-400 border border-sky-800/40 px-2.5 py-0.5 rounded-full flex items-center gap-1">
+                        💙 Centro de Acopio
                       </span>
-                      <button
-                        onClick={() => onConfirm(punto.id)}
-                        className="px-3 py-1 bg-orange-600 hover:bg-orange-500 text-white rounded-lg transition font-medium cursor-pointer"
+                    </div>
+
+                    {/* Name */}
+                    <h3 className="text-sm font-black text-sky-400 tracking-wide mt-1 leading-tight">
+                      {punto.nombre}
+                    </h3>
+
+                    {/* Address */}
+                    <p className="text-[11px] text-slate-300 leading-relaxed font-normal">
+                      {punto.direccion}
+                    </p>
+
+                    {/* Accepted Items */}
+                    {punto.aceptan && (
+                      <div className="text-[11px] leading-relaxed mt-0.5">
+                        <span className="font-bold text-white">Aceptan: </span>
+                        <span className="text-slate-300">{punto.aceptan}</span>
+                      </div>
+                    )}
+
+                    {/* Contact Number */}
+                    {punto.contacto && (
+                      <div className="text-[11px] mt-0.5">
+                        <span className="font-bold text-white">Contacto: </span>
+                        <a 
+                          href={`tel:${punto.contacto}`} 
+                          className="text-sky-400 underline font-semibold hover:text-sky-300 transition"
+                        >
+                          {punto.contacto}
+                        </a>
+                      </div>
+                    )}
+
+                    {/* Region */}
+                    <div className="flex items-center gap-1 text-[10px] text-slate-400 font-medium mt-1">
+                      <span>📍</span>
+                      <span>{punto.region || "Táchira"}</span>
+                    </div>
+
+                    {/* Action Buttons */}
+                    <div className="flex gap-2 mt-2 pt-2 border-t border-slate-800/60">
+                      <a
+                        href={`https://www.google.com/maps/search/?api=1&query=${punto.lat},${punto.lng}`}
+                        target="_blank"
+                        rel="noreferrer"
+                        className="flex-1 flex items-center justify-center gap-1 py-1.5 bg-blue-600 hover:bg-blue-500 text-white rounded-lg text-[10px] font-bold transition shadow-lg cursor-pointer"
                       >
-                        Confirmar Vigencia
-                      </button>
-                    </>
-                  )}
-                </div>
-              </div>
-            </Popup>
-          </Marker>
-        ))}
+                        🧭 Cómo llegar
+                      </a>
+                      {punto.whatsapp && (
+                        <a
+                          href={punto.whatsapp}
+                          target="_blank"
+                          rel="noreferrer"
+                          className="flex-1 flex items-center justify-center gap-1 py-1.5 bg-[#25d366] hover:bg-[#20ba56] text-white rounded-lg text-[10px] font-bold transition shadow-lg cursor-pointer"
+                        >
+                          💬 WhatsApp
+                        </a>
+                      )}
+                    </div>
+                  </div>
+                ) : (
+                  /* Standard community report popup layout, modernized to match premium aesthetics */
+                  <div className="p-4 text-slate-100 flex flex-col gap-2 font-sans min-w-[240px] bg-[#111113] rounded-2xl">
+                    <div className="flex items-center gap-1.5 flex-wrap">
+                      <span className="text-base">{CATEGORY_EMOJIS[punto.categoria]}</span>
+                      <span className="font-bold text-slate-100 text-xs capitalize">
+                        {punto.categoria}
+                      </span>
+                      {punto.fuente ? (
+                        <span className="ml-auto text-[9px] px-2 py-0.5 rounded-full bg-slate-800 border border-slate-700 text-slate-300 font-bold uppercase">
+                          {punto.fuente}
+                        </span>
+                      ) : (
+                        <span
+                          className={`ml-auto text-[9px] px-2 py-0.5 rounded-full font-bold uppercase ${
+                            punto.tipo === "ofrece"
+                              ? "bg-emerald-500/20 text-emerald-400"
+                              : "bg-rose-500/20 text-rose-400"
+                          }`}
+                        >
+                          {punto.tipo}
+                        </span>
+                      )}
+                    </div>
+                    
+                    <p className="text-slate-300 text-xs my-1.5 leading-relaxed whitespace-pre-wrap">
+                      {punto.descripcion}
+                    </p>
+                    
+                    <div className="flex items-center justify-between text-[11px] text-slate-400 pt-2 border-t border-slate-800/60">
+                      {punto.fuente ? (
+                        <span className="text-[10px] text-slate-500 italic">Reporte externo verificado</span>
+                      ) : (
+                        <>
+                          <span>
+                            Votos: <strong className="text-white">{punto.confirmations}</strong>
+                          </span>
+                          <button
+                            onClick={() => onConfirm(punto.id)}
+                            className="px-2.5 py-1 bg-orange-600 hover:bg-orange-500 text-white rounded-lg transition font-medium cursor-pointer"
+                          >
+                            Confirmar Vigencia
+                          </button>
+                        </>
+                      )}
+                    </div>
+
+                    {/* Standard routing help always available */}
+                    <div className="mt-1 flex gap-2">
+                      <a
+                        href={`https://www.google.com/maps/search/?api=1&query=${punto.lat},${punto.lng}`}
+                        target="_blank"
+                        rel="noreferrer"
+                        className="w-full flex items-center justify-center gap-1 py-1.5 bg-blue-600 hover:bg-blue-500 text-white rounded-lg text-[10px] font-bold transition shadow-lg cursor-pointer"
+                      >
+                        🧭 Cómo llegar
+                      </a>
+                    </div>
+                  </div>
+                )}
+              </Popup>
+            </Marker>
+          );
+        })}
       </MapContainer>
     </div>
   );

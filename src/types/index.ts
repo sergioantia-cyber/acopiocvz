@@ -9,4 +9,12 @@ export interface PuntoReportado {
   creadoAt: string;
   expiresAt: string;
   fuente?: string; // e.g. "Localizados VE", "Caracas Ayuda", "Ayuda por Venezuela"
+  
+  // Detailed popup fields
+  nombre?: string;
+  direccion?: string;
+  contacto?: string;
+  aceptan?: string;
+  region?: string;
+  whatsapp?: string;
 }
