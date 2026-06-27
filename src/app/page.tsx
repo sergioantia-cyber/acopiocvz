@@ -1120,7 +1120,7 @@ export default function HomePage() {
                                 </div>
                               )}
                             </td>
-                            <td className="p-3.5 text-slate-400 max-w-xs truncate" title={person.observaciones}>
+                            <td className="p-3.5 text-slate-400 max-w-sm whitespace-pre-wrap break-words">
                               {person.observaciones || "Sin observaciones registradas."}
                             </td>
                           </tr>
