@@ -37,13 +37,19 @@ const mapCaracasAyudaCategory = (cat: string): PuntoReportado["categoria"] => {
   return "suministros";
 };
 
-export async function GET() {
+export async function GET(request: Request) {
+  const { searchParams } = new URL(request.url);
+  const q = searchParams.get("q") || "";
   const reports: PuntoReportado[] = [];
   let rawLocalizados: any[] = [];
 
   // 1. Fetch Localizados Venezuela (Public API)
   try {
-    const res = await fetch("https://localizadosvenezuela.com/api/v1/localizados?limit=500", {
+    const localizadosUrl = q
+      ? `https://localizadosvenezuela.com/api/v1/localizados?q=${encodeURIComponent(q)}&limit=150`
+      : "https://localizadosvenezuela.com/api/v1/localizados?limit=500";
+
+    const res = await fetch(localizadosUrl, {
       next: { revalidate: 60 },
     });
     const result = await res.json();

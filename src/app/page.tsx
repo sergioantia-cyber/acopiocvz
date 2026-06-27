@@ -360,6 +360,26 @@ export default function HomePage() {
     loadData();
   }, []);
 
+  // Real-time search query listener for Desaparecidos/Localizados
+  useEffect(() => {
+    const delayDebounceFn = setTimeout(async () => {
+      try {
+        const url = desaparecidosQuery.trim()
+          ? `/api/external-reports?q=${encodeURIComponent(desaparecidosQuery)}`
+          : "/api/external-reports";
+        const res = await fetch(url);
+        const result = await res.json();
+        if (result && result.success && Array.isArray(result.localizadosRaw)) {
+          setLocalizados(result.localizadosRaw);
+        }
+      } catch (err) {
+        console.error("Error searching localizados in real-time:", err);
+      }
+    }, 450); // 450ms debounce to prevent API flooding
+
+    return () => clearTimeout(delayDebounceFn);
+  }, [desaparecidosQuery]);
+
   useEffect(() => {
     const getAddress = async () => {
       if (!selectedCoords) return;
