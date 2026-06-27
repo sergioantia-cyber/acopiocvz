@@ -28,14 +28,13 @@ const PLACE_COORDINATES: Record<string, [number, number]> = {
   "hospital-general-san-cristobal": [7.7667, -72.2250],
 };
 
-// Map Caracas Ayuda categories to our categories
 const mapCaracasAyudaCategory = (cat: string): PuntoReportado["categoria"] => {
   const c = cat.toLowerCase();
   if (c.includes("medico") || c.includes("medicamento")) return "salud";
   if (c.includes("carga") || c.includes("energia") || c.includes("internet")) return "energia";
   if (c.includes("peligro") || c.includes("zona")) return "peligro";
   if (c.includes("combustible") || c.includes("transporte")) return "movilidad";
-  return "suministros"; // acopio, donaciones, agua, comida, refugio, higiene, mascotas
+  return "suministros";
 };
 
 export async function GET() {
@@ -93,7 +92,7 @@ export async function GET() {
     console.error("Error fetching Localizados VE:", err);
   }
 
-  // 2. Fetch live data from Caracas Ayuda (Querying their Supabase REST Endpoint directly!)
+  // 2. Fetch live data from Caracas Ayuda (Querying Supabase REST Endpoint)
   try {
     const supabaseUrl = "https://zxpfumbsxgnfzxjlhocu.supabase.co";
     const supabaseKey = "sb_publishable_bx7plOxEb3M4aNID_stt-g_WPh-FS88";
@@ -103,14 +102,13 @@ export async function GET() {
         "apikey": supabaseKey,
         "Authorization": `Bearer ${supabaseKey}`,
       },
-      next: { revalidate: 60 }, // cache for 1 minute
+      next: { revalidate: 60 },
     });
     
     if (res.ok) {
       const data = await res.json();
       if (Array.isArray(data)) {
         data.forEach((item: any) => {
-          // Normalize WhatsApp Link
           let waLink = undefined;
           if (item.telefono) {
             const cleanPhone = item.telefono.replace(/\D/g, "");
@@ -120,14 +118,12 @@ export async function GET() {
             }
           }
 
-          // Extract region name from address or use fallback
           let regionName = "Venezuela";
           if (item.direccion) {
             const parts = item.direccion.split(",");
             regionName = parts[parts.length - 1]?.trim() || "Venezuela";
           }
 
-          // Apply a very micro jitter to prevent absolute duplicates overlapping
           const jitterLat = (Math.random() - 0.5) * 0.0005;
           const jitterLng = (Math.random() - 0.5) * 0.0005;
 
@@ -143,7 +139,6 @@ export async function GET() {
             expiresAt: new Date(Date.now() + 72 * 3600000).toISOString(),
             fuente: "Caracas Ayuda",
             
-            // Detailed popup fields matching screenshot
             nombre: item.nombre,
             direccion: item.direccion || "Sin dirección cargada.",
             contacto: item.telefono || undefined,
@@ -158,49 +153,78 @@ export async function GET() {
     console.error("Error fetching live Caracas Ayuda database:", err);
   }
 
-  // 3. Fallback / Hardcoded Ayuda por Venezuela points
-  const ayudaPorVzlaPuntos: PuntoReportado[] = [
-    {
-      id: "ayudaporvenezuela-1",
-      tipo: "ofrece",
-      categoria: "energia",
-      descripcion: "Punto de carga eléctrica móvil. Generador a gasolina encendido de 8:00 AM a 6:00 PM.",
-      lat: 10.4960,
-      lng: -66.8480,
-      confirmations: 15,
-      creadoAt: new Date().toISOString(),
-      expiresAt: new Date(Date.now() + 24 * 3600000).toISOString(),
-      fuente: "Ayuda por Venezuela",
-      
-      nombre: "Planta Altamira",
-      direccion: "Plaza Francia, Altamira, Caracas.",
-      contacto: "0412-1112233",
-      aceptan: "Carga de celulares, laptops y equipos médicos menores",
-      region: "Caracas",
-      whatsapp: "https://wa.me/584121112233",
-    },
-    {
-      id: "ayudaporvenezuela-2",
-      tipo: "ofrece",
-      categoria: "senal",
-      descripcion: "[San Cristóbal] Punto WiFi libre satelital activo en las inmediaciones del Hospital Central.",
-      lat: 7.7770,
-      lng: -72.2160,
-      confirmations: 41,
-      creadoAt: new Date().toISOString(),
-      expiresAt: new Date(Date.now() + 24 * 3600000).toISOString(),
-      fuente: "Ayuda por Venezuela",
-      
-      nombre: "WiFi Satelital Hospital Central",
-      direccion: "Av. Lucio Oquendo, San Cristóbal, Táchira.",
-      contacto: "0424-7778899",
-      aceptan: "Conexión libre para comunicación de emergencias",
-      region: "San Cristóbal",
-      whatsapp: "https://wa.me/584247778899",
-    },
-  ];
+  // 3. Fetch live data from Ayuda por Venezuela (Querying Supabase REST Endpoint)
+  try {
+    const supabaseUrl = "https://yqcwttcbweqicdyfwseb.supabase.co";
+    const supabaseKey = "sb_publishable_AtK5TeQlbB7N4M2o_YcaaQ_3ly_BeAQ";
+    
+    const res = await fetch(`${supabaseUrl}/rest/v1/help_points?select=*`, {
+      headers: {
+        "apikey": supabaseKey,
+        "Authorization": `Bearer ${supabaseKey}`,
+      },
+      next: { revalidate: 60 },
+    });
+    
+    if (res.ok) {
+      const data = await res.json();
+      if (Array.isArray(data)) {
+        data.forEach((item: any) => {
+          let waLink = undefined;
+          if (item.reporter_contact) {
+            const cleanPhone = item.reporter_contact.replace(/\D/g, "");
+            if (cleanPhone.length > 0) {
+              const formatted = cleanPhone.startsWith("58") ? cleanPhone : "58" + cleanPhone.replace(/^0/, "");
+              waLink = `https://wa.me/${formatted}`;
+            }
+          }
 
-  reports.push(...ayudaPorVzlaPuntos);
+          let category: PuntoReportado["categoria"] = "suministros";
+          const needsList = Array.isArray(item.needs) ? item.needs : [];
+          const text = needsList.join(" ").toLowerCase() + " " + (item.notes || "").toLowerCase();
+          
+          if (text.includes("agua") || text.includes("higiene")) {
+            category = "suministros";
+          } else if (text.includes("comida") || text.includes("alimento")) {
+            category = "suministros";
+          } else if (text.includes("luz") || text.includes("energia") || text.includes("electricidad")) {
+            category = "energia";
+          } else if (text.includes("medicina") || text.includes("salud") || text.includes("hospital")) {
+            category = "salud";
+          } else if (text.includes("senal") || text.includes("conectividad") || text.includes("internet")) {
+            category = "senal";
+          } else if (text.includes("peligro") || text.includes("derrumba") || text.includes("riesgo")) {
+            category = "peligro";
+          }
+
+          const jitterLat = (Math.random() - 0.5) * 0.0005;
+          const jitterLng = (Math.random() - 0.5) * 0.0005;
+
+          reports.push({
+            id: `ayudaporvenezuela-${item.id}`,
+            tipo: "necesita",
+            categoria: category,
+            descripcion: item.notes || `Necesidad urgente de: ${needsList.join(', ')}`,
+            lat: Number(item.latitude) + jitterLat,
+            lng: Number(item.longitude) + jitterLng,
+            confirmations: item.visit_count || 1,
+            creadoAt: item.created_at || new Date().toISOString(),
+            expiresAt: new Date(Date.now() + 24 * 3600000).toISOString(),
+            fuente: "Ayuda por Venezuela",
+            
+            nombre: item.name,
+            direccion: item.address || "Sin dirección.",
+            contacto: item.reporter_contact || undefined,
+            aceptan: needsList.join(', '),
+            region: item.city || item.state || "Venezuela",
+            whatsapp: waLink,
+          });
+        });
+      }
+    }
+  } catch (err) {
+    console.error("Error fetching live Ayuda por Venezuela database:", err);
+  }
 
   return NextResponse.json({ success: true, data: reports, localizadosRaw: rawLocalizados });
 }

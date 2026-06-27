@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { MapContainer, TileLayer, Marker, Popup, useMapEvents } from "react-leaflet";
+import { MapContainer, TileLayer, Marker, Popup, useMapEvents, Circle } from "react-leaflet";
 import L from "leaflet";
 
 // Import CSS files directly
@@ -30,7 +30,6 @@ const createCustomIcon = (tipo: "ofrece" | "necesita", categoria: string, fuente
   
   let colorClass = "";
   if (hasDetails || categoria === "suministros") {
-    // Matches the light blue marker in the reference screenshot
     colorClass = "border-sky-400 bg-sky-500 shadow-sky-500/20";
   } else if (fuente) {
     if (fuente === "Localizados VE") {
@@ -59,6 +58,19 @@ const createCustomIcon = (tipo: "ofrece" | "necesita", categoria: string, fuente
   });
 };
 
+// Zoom level tracker to adjust the opacity of the electricity circles dynamically
+function ZoomTracker({ onZoomChange }: { onZoomChange: (zoom: number) => void }) {
+  useMapEvents({
+    zoomend(e) {
+      onZoomChange(e.target.getZoom());
+    },
+    load(e) {
+      onZoomChange(e.target.getZoom());
+    }
+  });
+  return null;
+}
+
 function MapClickEvents({
   isReportingMode,
   onLocationSelected,
@@ -85,6 +97,7 @@ export default function MapaColaborativo({
 }: MapaColaborativoProps) {
   const defaultCenter: [number, number] = userLocation || [10.4806, -66.9036];
   const [isMounted, setIsMounted] = useState(false);
+  const [zoomLevel, setZoomLevel] = useState(7);
 
   useEffect(() => {
     setIsMounted(true);
@@ -97,6 +110,11 @@ export default function MapaColaborativo({
       </div>
     );
   }
+
+  // Calculate opacity based on zoom: "más opaco a medida que se acerca pero que no desaparezca"
+  // Zoom 7 (far): opacity 0.15 (very transparent)
+  // Zoom 16 (close): opacity 0.70 (very opaque)
+  const lightCircleOpacity = Math.min(0.75, Math.max(0.15, (zoomLevel - 6) * 0.06));
 
   return (
     <div className="w-full h-full min-h-[400px] md:min-h-full relative rounded-2xl overflow-hidden border-4 border-orange-500 shadow-2xl bg-slate-900">
@@ -111,8 +129,28 @@ export default function MapaColaborativo({
           url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
         />
 
+        <ZoomTracker onZoomChange={setZoomLevel} />
         <MapClickEvents isReportingMode={isReportingMode} onLocationSelected={onLocationSelected} />
 
+        {/* 1. Render electricity circles (círculo de la luz) with dynamic opacity */}
+        {puntos
+          .filter((punto) => punto.categoria === "energia")
+          .map((punto) => (
+            <Circle
+              key={`light-circle-${punto.id}`}
+              center={[punto.lat, punto.lng]}
+              radius={350} // 350 meters coverage area
+              pathOptions={{
+                fillColor: "#eab308", // Yellow color
+                fillOpacity: lightCircleOpacity,
+                color: "#eab308", // Border
+                weight: 1.5,
+                opacity: Math.min(0.85, lightCircleOpacity + 0.1),
+              }}
+            />
+          ))}
+
+        {/* 2. Render normal markers */}
         {puntos.map((punto) => {
           const hasDetails = !!punto.nombre && !!punto.direccion;
           
@@ -239,7 +277,6 @@ export default function MapaColaborativo({
                       )}
                     </div>
 
-                    {/* Standard routing help always available */}
                     <div className="mt-1 flex gap-2">
                       <a
                         href={`https://www.google.com/maps/search/?api=1&query=${punto.lat},${punto.lng}`}

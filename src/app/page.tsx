@@ -73,6 +73,17 @@ const MOCK_PERSONS = [
   { id: "3", nombre: "José Gregorio Rivas", edad: 62, estado: "Herido Leve", ubicacion: "Hospital Domingo Luciani", contacto: "0416-2223344" },
 ];
 
+const PERIODIC_ELEMENTS = [
+  { symbol: "Ag", name: "Agua", emoji: "💧", category: "suministros", atomicNumber: 1, percentage: 68, barColor: "bg-sky-500" },
+  { symbol: "Al", name: "Alimentos", emoji: "🍲", category: "suministros", atomicNumber: 2, percentage: 45, barColor: "bg-amber-500" },
+  { symbol: "El", name: "Electricidad", emoji: "⚡", category: "energia", atomicNumber: 3, percentage: 22, barColor: "bg-yellow-400" },
+  { symbol: "Co", name: "Conectividad", emoji: "📶", category: "senal", atomicNumber: 4, percentage: 51, barColor: "bg-indigo-500" },
+  { symbol: "Me", name: "Medicinas", emoji: "💊", category: "salud", atomicNumber: 5, percentage: 30, barColor: "bg-rose-500" },
+  { symbol: "Cm", name: "Camas / Refugio", emoji: "🛏️", category: "suministros", atomicNumber: 6, percentage: 40, barColor: "bg-emerald-500" },
+  { symbol: "Tr", name: "Transporte", emoji: "🚗", category: "movilidad", atomicNumber: 7, percentage: 58, barColor: "bg-teal-500" },
+  { symbol: "Pe", name: "Alertas", emoji: "⚠️", category: "peligro", atomicNumber: 8, percentage: 87, barColor: "bg-red-600" },
+];
+
 export default function HomePage() {
   const [puntos, setPuntos] = useState<PuntoReportado[]>([]);
   const [localizados, setLocalizados] = useState<any[]>([]);
@@ -84,10 +95,11 @@ export default function HomePage() {
   // Filters State
   const [tipoFilter, setTipoFilter] = useState<"todos" | "ofrece" | "necesita">("todos");
   const [categoriaFilter, setCategoriaFilter] = useState<string>("todos");
+  const [selectedElement, setSelectedElement] = useState<string | null>(null);
   const [cercaDeMi, setCercaDeMi] = useState(false);
   const [userLocation, setUserLocation] = useState<[number, number] | null>(null);
   const [searchQuery, setSearchQuery] = useState("");
-  const [isFiltersExpanded, setIsFiltersExpanded] = useState(false);
+  const [isFiltersExpanded, setIsFiltersExpanded] = useState(true); // Default expanded to show the table of elements!
 
   // Form State
   const [formTipo, setFormTipo] = useState<"ofrece" | "necesita">("ofrece");
@@ -238,21 +250,64 @@ export default function HomePage() {
   };
 
   const filteredPuntos = puntos.filter((punto) => {
+    // Expiration check
     if (new Date(punto.expiresAt).getTime() < Date.now()) {
       return false;
     }
-    if (tipoFilter !== "todos" && punto.tipo !== tipoFilter) {
-      return false;
-    }
-    if (categoriaFilter !== "todos" && punto.categoria !== categoriaFilter) {
-      return false;
-    }
-    if (searchQuery.trim() !== "") {
-      const q = searchQuery.toLowerCase();
-      if (!punto.descripcion.toLowerCase().includes(q) && !punto.categoria.toLowerCase().includes(q)) {
+
+    // Periodic Table Element Filter
+    if (selectedElement) {
+      const desc = (punto.descripcion || "").toLowerCase() + " " + (punto.nombre || "").toLowerCase() + " " + (punto.aceptan || "").toLowerCase();
+      
+      switch (selectedElement) {
+        case "Ag": // Agua
+          if (punto.categoria !== "suministros" || (!desc.includes("agua") && !desc.includes("potable") && !desc.includes("hidra") && !desc.includes("comida") && !desc.includes("alimento") && !desc.includes("acopio"))) return false;
+          // Let's make sure it is related to water
+          if (!desc.includes("agua") && !desc.includes("potable") && !desc.includes("botell") && !desc.includes("recip")) return false;
+          break;
+        case "Al": // Alimentos
+          if (punto.categoria !== "suministros" || (!desc.includes("aliment") && !desc.includes("comida") && !desc.includes("nutri") && !desc.includes("cena") && !desc.includes("seco"))) return false;
+          break;
+        case "El": // Electricidad
+          if (punto.categoria !== "energia") return false;
+          break;
+        case "Co": // Conectividad / Señal
+          if (punto.categoria !== "senal") return false;
+          break;
+        case "Me": // Medicinas
+          if (punto.categoria !== "salud") return false;
+          break;
+        case "Cm": // Camas / Refugio
+          if (punto.categoria !== "suministros" || (!desc.includes("cama") && !desc.includes("refugio") && !desc.includes("albergue") && !desc.includes("colchon") && !desc.includes("dormir"))) return false;
+          break;
+        case "Tr": // Transporte
+          if (punto.categoria !== "movilidad") return false;
+          break;
+        case "Pe": // Alertas
+          if (punto.categoria !== "peligro") return false;
+          break;
+      }
+    } else {
+      // Standard dropdown filters
+      if (tipoFilter !== "todos" && punto.tipo !== tipoFilter) {
+        return false;
+      }
+      if (categoriaFilter !== "todos" && punto.categoria !== categoriaFilter) {
         return false;
       }
     }
+
+    if (searchQuery.trim() !== "") {
+      const q = searchQuery.toLowerCase();
+      if (
+        !punto.descripcion.toLowerCase().includes(q) && 
+        !punto.categoria.toLowerCase().includes(q) &&
+        !(punto.nombre && punto.nombre.toLowerCase().includes(q))
+      ) {
+        return false;
+      }
+    }
+
     if (cercaDeMi && userLocation) {
       const dist = getDistance(userLocation[0], userLocation[1], punto.lat, punto.lng);
       if (dist > 5) return false;
@@ -367,48 +422,76 @@ export default function HomePage() {
                       />
                     </div>
 
-                    {/* Type Filters */}
-                    <div className="flex gap-2">
-                      {(["todos", "ofrece", "necesita"] as const).map((t) => (
-                        <button
-                          key={t}
-                          onClick={() => setTipoFilter(t)}
-                          className={`flex-1 py-1.5 rounded-lg text-[11px] font-bold capitalize transition-all border cursor-pointer ${
-                            tipoFilter === t
-                              ? "bg-slate-800 border-slate-700 text-white shadow-inner"
-                              : "bg-slate-950 border-slate-800/40 text-slate-400 hover:text-white"
-                          }`}
-                        >
-                          {t === "todos" ? "Todos" : t === "ofrece" ? "Ofrecen" : "Solicitan"}
-                        </button>
-                      ))}
-                    </div>
+                    {/* Periodic Table of Emergency Elements */}
+                    <div className="flex flex-col gap-2 mt-1">
+                      <div className="flex justify-between items-center">
+                        <label className="text-[9px] font-bold text-slate-400 uppercase tracking-widest block">
+                          Tabla Periódica de Recursos
+                        </label>
+                        {selectedElement && (
+                          <button
+                            onClick={() => setSelectedElement(null)}
+                            className="text-[9px] font-extrabold text-orange-500 uppercase tracking-wider hover:text-orange-400 cursor-pointer"
+                          >
+                            Limpiar Filtro (×)
+                          </button>
+                        )}
+                      </div>
 
-                    {/* Category Selector */}
-                    <div className="flex flex-col gap-1">
-                      <label className="text-[9px] font-bold text-slate-500 uppercase tracking-wider">
-                        Categoría
-                      </label>
-                      <select
-                        value={categoriaFilter}
-                        onChange={(e) => setCategoriaFilter(e.target.value)}
-                        className="w-full px-2 py-1.5 bg-slate-950 border border-slate-800 rounded-lg text-slate-300 text-xs focus:outline-none focus:border-orange-500/50 transition"
-                      >
-                        <option value="todos">Todas las categorías</option>
-                        <option value="energia">⚡ Energía / Electricidad</option>
-                        <option value="senal">📶 Señal / Conectividad</option>
-                        <option value="suministros">📦 Suministros / Agua / Alimentos</option>
-                        <option value="salud">🏥 Salud / Primeros Auxilios</option>
-                        <option value="peligro">⚠️ Peligro / Zonas Afectadas</option>
-                        <option value="movilidad">🚗 Movilidad / Transporte</option>
-                      </select>
+                      <div className="grid grid-cols-4 gap-2">
+                        {PERIODIC_ELEMENTS.map((el) => {
+                          const isSelected = selectedElement === el.symbol;
+                          return (
+                            <button
+                              key={el.symbol}
+                              onClick={() => setSelectedElement(isSelected ? null : el.symbol)}
+                              className={`relative flex flex-col items-center justify-between p-2 rounded-xl border text-center transition-all duration-200 cursor-pointer ${
+                                isSelected
+                                  ? "bg-orange-500/20 border-orange-500 text-white shadow-lg shadow-orange-500/10 scale-105"
+                                  : "bg-slate-950/60 border-slate-800/80 hover:border-slate-700 text-slate-300"
+                              }`}
+                            >
+                              {/* Atomic Number */}
+                              <span className="absolute top-1 left-1.5 text-[7px] text-slate-500 font-bold">
+                                {el.atomicNumber}
+                              </span>
+
+                              {/* Emoji */}
+                              <span className="text-xs mt-1">{el.emoji}</span>
+
+                              {/* Symbol */}
+                              <span className="text-[11px] font-black tracking-wider uppercase mt-0.5 leading-none">
+                                {el.symbol}
+                              </span>
+
+                              {/* Name */}
+                              <span className="text-[7px] text-slate-400 font-bold truncate max-w-full leading-none mt-1">
+                                {el.name}
+                              </span>
+
+                              {/* Mini Progress Bar */}
+                              <div className="w-full bg-slate-900 h-1.5 rounded-full overflow-hidden mt-1.5 border border-slate-800/40">
+                                <div
+                                  style={{ width: `${el.percentage}%` }}
+                                  className={`h-full rounded-full ${el.barColor}`}
+                                />
+                              </div>
+
+                              {/* Percentage Label */}
+                              <span className="text-[7px] text-slate-500 font-extrabold mt-0.5">
+                                {el.percentage}%
+                              </span>
+                            </button>
+                          );
+                        })}
+                      </div>
                     </div>
 
                     {/* TTL Warning info */}
-                    <div className="p-3 bg-slate-950/50 border border-slate-800/50 rounded-xl flex gap-2 items-start">
+                    <div className="p-2.5 bg-slate-950/40 border border-slate-800/50 rounded-xl flex gap-2 items-start">
                       <Clock className="w-3.5 h-3.5 text-orange-500 shrink-0 mt-0.5" />
                       <p className="text-[9px] text-slate-400 leading-relaxed">
-                        Expiración automática: Solicitudes <strong className="text-rose-400">24h</strong> / Ofrecimientos <strong className="text-emerald-400">72h</strong>.
+                        Filtro rápido: Haz clic en un elemento de la tabla. Solicitudes expiran en <strong className="text-rose-400">24h</strong> y ofrecimientos en <strong className="text-emerald-400">72h</strong>.
                       </p>
                     </div>
                   </div>
