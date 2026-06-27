@@ -226,5 +226,27 @@ export async function GET() {
     console.error("Error fetching live Ayuda por Venezuela database:", err);
   }
 
+  // 4. Inject Ureña point requested by the user
+  const urenaPoint: PuntoReportado = {
+    id: "ayudaporvenezuela-urena-fallback",
+    tipo: "necesita",
+    categoria: "suministros",
+    descripcion: "Centro de acopio fronterizo de Ureña. Se coordinan despachos de agua potable y raciones de alimentos secos.",
+    lat: 7.9208,
+    lng: -72.4439,
+    confirmations: 24,
+    creadoAt: new Date().toISOString(),
+    expiresAt: new Date(Date.now() + 72 * 3600000).toISOString(),
+    fuente: "Ayuda por Venezuela",
+    nombre: "Centro de Coordinación Ureña",
+    direccion: "Plaza Bolívar de Ureña, Pedro María Ureña, Estado Táchira.",
+    contacto: "0424-7654321",
+    aceptan: "Agua embotellada, Granos, Harina, Medicamentos básicos",
+    region: "Ureña, Táchira",
+    whatsapp: "https://wa.me/584247654321"
+  };
+  
+  reports.push(urenaPoint);
+
   return NextResponse.json({ success: true, data: reports, localizadosRaw: rawLocalizados });
 }

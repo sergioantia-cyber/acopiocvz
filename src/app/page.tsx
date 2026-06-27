@@ -101,12 +101,131 @@ export default function HomePage() {
   const [searchQuery, setSearchQuery] = useState("");
   const [isFiltersExpanded, setIsFiltersExpanded] = useState(true); // Default expanded to show the table of elements!
 
+  // Auth State
+  const [user, setUser] = useState<{ email: string; name: string; avatar: string } | null>(null);
+
+  // Edit Point States
+  const [editingPunto, setEditingPunto] = useState<PuntoReportado | null>(null);
+  const [editNombre, setEditNombre] = useState("");
+  const [editDireccion, setEditDireccion] = useState("");
+  const [editContacto, setEditContacto] = useState("");
+  const [editAceptan, setEditAceptan] = useState("");
+  const [editDescripcion, setEditDescripcion] = useState("");
+  const [editPercentages, setEditPercentages] = useState<Record<string, number>>({});
+
   // Form State
   const [formTipo, setFormTipo] = useState<"ofrece" | "necesita">("ofrece");
   const [formCategoria, setFormCategoria] = useState<PuntoReportado["categoria"]>("suministros");
   const [formDescripcion, setFormDescripcion] = useState("");
   const [formDireccion, setFormDireccion] = useState("");
   const [isReverseGeocoding, setIsReverseGeocoding] = useState(false);
+
+  // Auth functions
+  const handleGoogleLogin = async () => {
+    if (isSupabaseConfigured && supabase) {
+      await supabase.auth.signInWithOAuth({
+        provider: "google",
+        options: {
+          redirectTo: typeof window !== "undefined" ? window.location.origin : "",
+        }
+      });
+    } else {
+      // Simulate Google Auth
+      setUser({
+        email: "colaborador@ayudaparavenezuela.com",
+        name: "Sergio Antía (Colaborador)",
+        avatar: "https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=96&h=96&fit=crop&crop=faces",
+      });
+    }
+  };
+
+  const handleLogout = async () => {
+    if (isSupabaseConfigured && supabase) {
+      await supabase.auth.signOut();
+    }
+    setUser(null);
+  };
+
+  // Start Editing Point
+  const handleStartEdit = (punto: PuntoReportado) => {
+    if (!user) {
+      alert("Por favor inicia sesión con Google en la barra superior para actualizar la información de este punto.");
+      return;
+    }
+    setEditingPunto(punto);
+    setEditNombre(punto.nombre || "");
+    setEditDireccion(punto.direccion || "");
+    setEditContacto(punto.contacto || "");
+    setEditAceptan(punto.aceptan || "");
+    setEditDescripcion(punto.descripcion || "");
+    
+    // Default percentages based on resource type
+    setEditPercentages({
+      Ag: punto.descripcion.toLowerCase().includes("agua") || (punto.aceptan && punto.aceptan.toLowerCase().includes("agua")) ? 90 : 68,
+      Al: punto.descripcion.toLowerCase().includes("comida") || punto.descripcion.toLowerCase().includes("alimento") ? 85 : 45,
+      El: punto.categoria === "energia" ? 95 : 22,
+      Co: punto.categoria === "senal" ? 95 : 51,
+      Me: punto.categoria === "salud" ? 90 : 30,
+      Cm: punto.descripcion.toLowerCase().includes("cama") || punto.descripcion.toLowerCase().includes("refugio") ? 80 : 40,
+      Tr: punto.categoria === "movilidad" ? 90 : 58,
+      Pe: punto.categoria === "peligro" ? 85 : 12,
+    });
+  };
+
+  // Save Edited Point
+  const handleSaveEdit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!editingPunto) return;
+
+    const updatedPunto: PuntoReportado = {
+      ...editingPunto,
+      nombre: editNombre || undefined,
+      direccion: editDireccion || undefined,
+      contacto: editContacto || undefined,
+      aceptan: editAceptan || undefined,
+      descripcion: editDescripcion,
+    };
+
+    // Update in local state array
+    const updated = puntos.map((p) => (p.id === editingPunto.id ? updatedPunto : p));
+    setPuntos(updated);
+    
+    // Save to localStorage if it's local
+    if (!editingPunto.id.startsWith("caracasayuda-") && !editingPunto.id.startsWith("ayudaporvenezuela-") && !editingPunto.id.startsWith("localizados-")) {
+      localStorage.setItem("punto_de_apoyo_puntos", JSON.stringify(updated.filter(p => !p.id.startsWith("caracasayuda-") && !p.id.startsWith("ayudaporvenezuela-") && !p.id.startsWith("localizados-"))));
+    }
+
+    // Write back to Supabase if configured!
+    if (isSupabaseConfigured && supabase) {
+      await supabase
+        .from("reports")
+        .upsert({
+          id: editingPunto.id,
+          nombre: editNombre,
+          direccion: editDireccion,
+          contacto: editContacto,
+          aceptan: editAceptan,
+          descripcion: editDescripcion,
+          categoria: editingPunto.categoria,
+          tipo: editingPunto.tipo,
+          lat: editingPunto.lat,
+          lng: editingPunto.lng,
+          expiresAt: editingPunto.expiresAt,
+          creadoAt: editingPunto.creadoAt,
+        });
+    }
+
+    // Update the periodic elements percentages dynamically
+    Object.entries(editPercentages).forEach(([symbol, val]) => {
+      const el = PERIODIC_ELEMENTS.find(e => e.symbol === symbol);
+      if (el) {
+        el.percentage = val;
+      }
+    });
+
+    setEditingPunto(null);
+    alert("¡Centro actualizado con éxito en tiempo real!");
+  };
 
   const getDistance = (lat1: number, lon1: number, lat2: number, lon2: number) => {
     const R = 6371;
@@ -121,6 +240,32 @@ export default function HomePage() {
     const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
     return R * c;
   };
+
+  useEffect(() => {
+    if (isSupabaseConfigured && supabase) {
+      supabase.auth.getSession().then(({ data: { session } }) => {
+        if (session?.user) {
+          setUser({
+            email: session.user.email || "",
+            name: session.user.user_metadata?.full_name || "Colaborador",
+            avatar: session.user.user_metadata?.avatar_url || "",
+          });
+        }
+      });
+      const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
+        if (session?.user) {
+          setUser({
+            email: session.user.email || "",
+            name: session.user.user_metadata?.full_name || "Colaborador",
+            avatar: session.user.user_metadata?.avatar_url || "",
+          });
+        } else {
+          setUser(null);
+        }
+      });
+      return () => subscription.unsubscribe();
+    }
+  }, []);
 
   useEffect(() => {
     if (typeof window !== "undefined" && navigator.geolocation) {
@@ -333,32 +478,62 @@ export default function HomePage() {
             </div>
           </div>
 
-          {/* Navigation tabs */}
-          <div className="flex bg-slate-950 p-1 rounded-xl border border-slate-800/60 sm:min-w-[280px]">
-            <button
-              onClick={() => {
-                setCurrentTab("mapa");
-                setIsReporting(false);
-              }}
-              className={`flex-1 flex items-center justify-center gap-1.5 py-1.5 rounded-lg text-xs font-bold transition-all cursor-pointer ${
-                currentTab === "mapa" ? "bg-orange-500 text-white shadow-md" : "text-slate-400 hover:text-white"
-              }`}
-            >
-              <Compass className="w-3.5 h-3.5" />
-              Mapa
-            </button>
-            <button
-              onClick={() => {
-                setCurrentTab("sheets");
-                setIsReporting(false);
-              }}
-              className={`flex-1 flex items-center justify-center gap-1.5 py-1.5 rounded-lg text-xs font-bold transition-all cursor-pointer ${
-                currentTab === "sheets" ? "bg-orange-500 text-white shadow-md" : "text-slate-400 hover:text-white"
-              }`}
-            >
-              <FileSpreadsheet className="w-3.5 h-3.5" />
-              Desaparecidos
-            </button>
+          {/* Navigation & Auth tabs */}
+          <div className="flex flex-wrap items-center gap-3">
+            <div className="flex bg-slate-950 p-1 rounded-xl border border-slate-800/60 sm:min-w-[280px]">
+              <button
+                onClick={() => {
+                  setCurrentTab("mapa");
+                  setIsReporting(false);
+                }}
+                className={`flex-1 flex items-center justify-center gap-1.5 py-1.5 rounded-lg text-xs font-bold transition-all cursor-pointer ${
+                  currentTab === "mapa" ? "bg-orange-500 text-white shadow-md" : "text-slate-400 hover:text-white"
+                }`}
+              >
+                <Compass className="w-3.5 h-3.5" />
+                Mapa
+              </button>
+              <button
+                onClick={() => {
+                  setCurrentTab("sheets");
+                  setIsReporting(false);
+                }}
+                className={`flex-1 flex items-center justify-center gap-1.5 py-1.5 rounded-lg text-xs font-bold transition-all cursor-pointer ${
+                  currentTab === "sheets" ? "bg-orange-500 text-white shadow-md" : "text-slate-400 hover:text-white"
+                }`}
+              >
+                <FileSpreadsheet className="w-3.5 h-3.5" />
+                Desaparecidos
+              </button>
+            </div>
+
+            {/* Google Authentication Widget */}
+            <div className="flex items-center gap-2">
+              {user ? (
+                <div className="flex items-center gap-2 bg-slate-950/60 p-1 pl-2.5 pr-2.5 rounded-xl border border-slate-800/80">
+                  {user.avatar ? (
+                    <img src={user.avatar} alt={user.name} className="w-5 h-5 rounded-full border border-orange-500" />
+                  ) : (
+                    <span className="text-[10px] text-slate-300">👤</span>
+                  )}
+                  <span className="text-[10px] font-bold text-slate-200 hidden md:inline">{user.name.split(" ")[0]}</span>
+                  <button
+                    onClick={handleLogout}
+                    className="text-[9px] font-extrabold text-red-400 hover:text-red-300 uppercase tracking-wider ml-1 cursor-pointer"
+                  >
+                    Cerrar
+                  </button>
+                </div>
+              ) : (
+                <button
+                  onClick={handleGoogleLogin}
+                  className="flex items-center gap-1.5 px-3 py-1.5 bg-slate-950 hover:bg-slate-900 border border-slate-800 text-slate-300 hover:text-white rounded-xl text-xs font-bold transition cursor-pointer"
+                >
+                  <span>🔑</span>
+                  <span>Google Login</span>
+                </button>
+              )}
+            </div>
           </div>
         </div>
       </header>
@@ -374,6 +549,7 @@ export default function HomePage() {
                 isReportingMode={isReporting}
                 onLocationSelected={handleLocationSelected}
                 onConfirm={handleConfirm}
+                onEdit={handleStartEdit}
                 userLocation={userLocation}
               />
             </div>
@@ -771,6 +947,154 @@ export default function HomePage() {
           </div>
         )}
       </div>
+
+      {/* 5. Modern Blur Modal for Editing Center Items / Percentages */}
+      {editingPunto && (
+        <div className="absolute inset-0 bg-slate-950/70 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+          <form
+            onSubmit={handleSaveEdit}
+            className="w-full max-w-md bg-slate-900 border border-slate-800 rounded-3xl p-6 shadow-2xl flex flex-col gap-4 animate-in zoom-in-95 duration-200 max-h-[90vh] overflow-y-auto"
+          >
+            <div className="flex justify-between items-center border-b border-slate-800 pb-3">
+              <div>
+                <h2 className="text-sm font-black text-orange-500 uppercase tracking-widest">
+                  ✏️ Actualizar Insumos
+                </h2>
+                <p className="text-[10px] text-slate-400 truncate max-w-[280px]">
+                  {editingPunto.nombre || "Reporte de Emergencia"}
+                </p>
+              </div>
+              <button
+                type="button"
+                onClick={() => setEditingPunto(null)}
+                className="text-slate-400 hover:text-white text-xs font-bold"
+              >
+                Cerrar (×)
+              </button>
+            </div>
+
+            {/* Basic Info Fields */}
+            <div className="flex flex-col gap-2.5">
+              <div className="flex flex-col gap-1">
+                <label className="text-[9px] font-bold text-slate-500 uppercase tracking-wider">
+                  Nombre del Centro
+                </label>
+                <input
+                  type="text"
+                  value={editNombre}
+                  onChange={(e) => setEditNombre(e.target.value)}
+                  className="w-full px-3 py-2 bg-slate-950 border border-slate-800 rounded-xl text-slate-200 text-xs focus:outline-none focus:border-orange-500/50"
+                  required
+                />
+              </div>
+
+              <div className="flex flex-col gap-1">
+                <label className="text-[9px] font-bold text-slate-500 uppercase tracking-wider">
+                  Dirección Detallada
+                </label>
+                <textarea
+                  value={editDireccion}
+                  onChange={(e) => setEditDireccion(e.target.value)}
+                  className="w-full px-3 py-2 bg-slate-950 border border-slate-800 rounded-xl text-slate-200 text-xs focus:outline-none focus:border-orange-500/50 h-16 resize-none"
+                  required
+                />
+              </div>
+
+              <div className="grid grid-cols-2 gap-3">
+                <div className="flex flex-col gap-1">
+                  <label className="text-[9px] font-bold text-slate-500 uppercase tracking-wider">
+                    Teléfono de Contacto
+                  </label>
+                  <input
+                    type="text"
+                    value={editContacto}
+                    onChange={(e) => setEditContacto(e.target.value)}
+                    placeholder="Ej. 04141234567"
+                    className="w-full px-3 py-2 bg-slate-950 border border-slate-800 rounded-xl text-slate-200 text-xs focus:outline-none focus:border-orange-500/50"
+                  />
+                </div>
+
+                <div className="flex flex-col gap-1">
+                  <label className="text-[9px] font-bold text-slate-500 uppercase tracking-wider">
+                    ¿Qué Aceptan / Ofrecen?
+                  </label>
+                  <input
+                    type="text"
+                    value={editAceptan}
+                    onChange={(e) => setEditAceptan(e.target.value)}
+                    placeholder="Ej. Agua, Comida, Ropa"
+                    className="w-full px-3 py-2 bg-slate-950 border border-slate-800 rounded-xl text-slate-200 text-xs focus:outline-none focus:border-orange-500/50"
+                  />
+                </div>
+              </div>
+
+              <div className="flex flex-col gap-1">
+                <label className="text-[9px] font-bold text-slate-500 uppercase tracking-wider">
+                  Notas / Detalles del Centro
+                </label>
+                <textarea
+                  value={editDescripcion}
+                  onChange={(e) => setEditDescripcion(e.target.value)}
+                  placeholder="Observaciones de capacidad, estado de luz, etc."
+                  className="w-full px-3 py-2 bg-slate-950 border border-slate-800 rounded-xl text-slate-200 text-xs focus:outline-none focus:border-orange-500/50 h-16 resize-none"
+                />
+              </div>
+            </div>
+
+            {/* Resource Percentages (Periodic Elements update) */}
+            <div className="border-t border-slate-800 pt-3">
+              <label className="text-[9px] font-bold text-slate-400 uppercase tracking-widest block mb-2">
+                Nivel de Abastecimiento por Elemento (%)
+              </label>
+              
+              <div className="grid grid-cols-2 gap-x-4 gap-y-2">
+                {PERIODIC_ELEMENTS.map((el) => (
+                  <div key={el.symbol} className="flex items-center justify-between bg-slate-950/60 p-2 rounded-xl border border-slate-800/40">
+                    <div className="flex items-center gap-1.5 font-sans">
+                      <span className="text-xs">{el.emoji}</span>
+                      <span className="text-[10px] font-black text-slate-350 uppercase">{el.symbol}</span>
+                    </div>
+                    
+                    <div className="flex items-center gap-2">
+                      <input
+                        type="range"
+                        min="1"
+                        max="100"
+                        value={editPercentages[el.symbol] ?? 50}
+                        onChange={(e) => setEditPercentages({
+                          ...editPercentages,
+                          [el.symbol]: parseInt(e.target.value)
+                        })}
+                        className="w-20 accent-orange-500 h-1 cursor-pointer bg-slate-800 rounded-lg appearance-none"
+                      />
+                      <span className="text-[10px] font-black text-slate-300 w-8 text-right">
+                        {editPercentages[el.symbol] ?? 50}%
+                      </span>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+
+            {/* Save Buttons */}
+            <div className="flex gap-3 border-t border-slate-800 pt-4 mt-2">
+              <button
+                type="button"
+                onClick={() => setEditingPunto(null)}
+                className="flex-1 py-2.5 border border-slate-800 text-slate-400 hover:text-white rounded-xl text-xs font-bold transition cursor-pointer"
+              >
+                Cancelar
+              </button>
+              <button
+                type="submit"
+                className="flex-1 py-2.5 bg-orange-600 hover:bg-orange-500 text-white rounded-xl text-xs font-bold transition shadow-lg cursor-pointer"
+              >
+                Guardar Cambios
+              </button>
+            </div>
+          </form>
+        </div>
+      )}
     </main>
   );
 }

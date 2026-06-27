@@ -13,6 +13,7 @@ interface MapaColaborativoProps {
   isReportingMode: boolean;
   onLocationSelected: (lat: number, lng: number) => void;
   onConfirm: (id: string) => void;
+  onEdit?: (punto: PuntoReportado) => void;
   userLocation: [number, number] | null;
 }
 
@@ -93,6 +94,7 @@ export default function MapaColaborativo({
   isReportingMode,
   onLocationSelected,
   onConfirm,
+  onEdit,
   userLocation,
 }: MapaColaborativoProps) {
   const defaultCenter: [number, number] = userLocation || [10.4806, -66.9036];
@@ -259,6 +261,15 @@ export default function MapaColaborativo({
                           📞 Llamar
                         </a>
                       )}
+
+                      {onEdit && (
+                        <button
+                          onClick={() => onEdit(punto)}
+                          className="flex-1 min-w-[70px] flex items-center justify-center gap-1 py-2 bg-orange-600 hover:bg-orange-500 text-white rounded-xl text-[9px] font-extrabold transition border border-orange-500/30 shadow-lg cursor-pointer"
+                        >
+                          ✏️ Editar
+                        </button>
+                      )}
                     </div>
                   </div>
                 ) : (
@@ -313,10 +324,18 @@ export default function MapaColaborativo({
                         href={`https://www.google.com/maps/search/?api=1&query=${punto.lat},${punto.lng}`}
                         target="_blank"
                         rel="noreferrer"
-                        className="w-full flex items-center justify-center gap-1 py-1.5 bg-blue-600 hover:bg-blue-500 text-white rounded-lg text-[10px] font-bold transition shadow-lg cursor-pointer"
+                        className="flex-1 flex items-center justify-center gap-1 py-1.5 bg-blue-600 hover:bg-blue-500 text-white rounded-lg text-[10px] font-bold transition shadow-lg cursor-pointer"
                       >
                         🧭 Cómo llegar
                       </a>
+                      {onEdit && (
+                        <button
+                          onClick={() => onEdit(punto)}
+                          className="flex-1 flex items-center justify-center gap-1 py-1.5 bg-orange-600 hover:bg-orange-500 text-white rounded-lg text-[10px] font-bold transition shadow-lg cursor-pointer"
+                        >
+                          ✏️ Editar
+                        </button>
+                      )}
                     </div>
                   </div>
                 )}
