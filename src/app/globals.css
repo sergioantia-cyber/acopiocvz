@@ -1,0 +1,112 @@
+@import "tailwindcss";
+
+:root {
+  --background: #090d16;
+  --foreground: #f8fafc;
+}
+
+@theme inline {
+  --color-background: var(--background);
+  --color-foreground: var(--foreground);
+  --font-sans: var(--font-inter);
+}
+
+body {
+  background: var(--background);
+  color: var(--foreground);
+  font-family: var(--font-inter), sans-serif;
+  overflow-x: hidden;
+}
+
+/* Custom styles for Leaflet */
+.leaflet-container {
+  background: #0b111e !important;
+  font-family: inherit;
+}
+
+.leaflet-bar {
+  border: 1px solid rgba(255, 255, 255, 0.1) !important;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.5) !important;
+}
+
+.leaflet-bar a {
+  background-color: #131d31 !important;
+  color: #94a3b8 !important;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.05) !important;
+  transition: all 0.2s;
+}
+
+.leaflet-bar a:hover {
+  background-color: #1e293b !important;
+  color: #ffffff !important;
+}
+
+.leaflet-popup-content-wrapper {
+  background: rgba(19, 29, 49, 0.85) !important;
+  backdrop-filter: blur(12px) !important;
+  color: #f8fafc !important;
+  border: 1px solid rgba(255, 255, 255, 0.1) !important;
+  border-radius: 12px !important;
+  box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.5) !important;
+}
+
+.leaflet-popup-tip {
+  background: rgba(19, 29, 49, 0.85) !important;
+  border: 1px solid rgba(255, 255, 255, 0.1) !important;
+}
+
+/* Custom Marker Cluster styles */
+.marker-cluster-small {
+  background-color: rgba(249, 115, 22, 0.2) !important;
+}
+.marker-cluster-small div {
+  background-color: rgba(249, 115, 22, 0.6) !important;
+  color: #ffffff !important;
+}
+
+.marker-cluster-medium {
+  background-color: rgba(234, 88, 12, 0.2) !important;
+}
+.marker-cluster-medium div {
+  background-color: rgba(234, 88, 12, 0.6) !important;
+  color: #ffffff !important;
+}
+
+.marker-cluster-large {
+  background-color: rgba(194, 65, 12, 0.2) !important;
+}
+.marker-cluster-large div {
+  background-color: rgba(194, 65, 12, 0.6) !important;
+  color: #ffffff !important;
+}
+
+/* Hide leaflet attribution in mobile or style it nicely */
+.leaflet-control-attribution {
+  background: rgba(15, 23, 42, 0.8) !important;
+  color: #64748b !important;
+  backdrop-filter: blur(4px);
+  font-size: 9px !important;
+}
+
+.leaflet-control-attribution a {
+  color: #38bdf8 !important;
+}
+
+/* Custom Scrollbar */
+::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+
+::-webkit-scrollbar-track {
+  background: #090d16;
+}
+
+::-webkit-scrollbar-thumb {
+  background: #1e293b;
+  border-radius: 3px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: #334155;
+}
