@@ -159,78 +159,8 @@ export async function GET(request: Request) {
     console.error("Error fetching live Caracas Ayuda database:", err);
   }
 
-  // 3. Fetch live data from Ayuda por Venezuela (Querying Supabase REST Endpoint)
-  try {
-    const supabaseUrl = "https://yqcwttcbweqicdyfwseb.supabase.co";
-    const supabaseKey = "sb_publishable_AtK5TeQlbB7N4M2o_YcaaQ_3ly_BeAQ";
-    
-    const res = await fetch(`${supabaseUrl}/rest/v1/help_points?select=*`, {
-      headers: {
-        "apikey": supabaseKey,
-        "Authorization": `Bearer ${supabaseKey}`,
-      },
-      next: { revalidate: 60 },
-    });
-    
-    if (res.ok) {
-      const data = await res.json();
-      if (Array.isArray(data)) {
-        data.forEach((item: any) => {
-          let waLink = undefined;
-          if (item.reporter_contact) {
-            const cleanPhone = item.reporter_contact.replace(/\D/g, "");
-            if (cleanPhone.length > 0) {
-              const formatted = cleanPhone.startsWith("58") ? cleanPhone : "58" + cleanPhone.replace(/^0/, "");
-              waLink = `https://wa.me/${formatted}`;
-            }
-          }
+  // Note: help_points Supabase query removed — all 403 centers are now loaded from the public CSV endpoint below.
 
-          let category: PuntoReportado["categoria"] = "suministros";
-          const needsList = Array.isArray(item.needs) ? item.needs : [];
-          const text = needsList.join(" ").toLowerCase() + " " + (item.notes || "").toLowerCase();
-          
-          if (text.includes("agua") || text.includes("higiene")) {
-            category = "suministros";
-          } else if (text.includes("comida") || text.includes("alimento")) {
-            category = "suministros";
-          } else if (text.includes("luz") || text.includes("energia") || text.includes("electricidad")) {
-            category = "energia";
-          } else if (text.includes("medicina") || text.includes("salud") || text.includes("hospital")) {
-            category = "salud";
-          } else if (text.includes("senal") || text.includes("conectividad") || text.includes("internet")) {
-            category = "senal";
-          } else if (text.includes("peligro") || text.includes("derrumba") || text.includes("riesgo")) {
-            category = "peligro";
-          }
-
-          const jitterLat = (Math.random() - 0.5) * 0.0005;
-          const jitterLng = (Math.random() - 0.5) * 0.0005;
-
-          reports.push({
-            id: `ayudaporvenezuela-${item.id}`,
-            tipo: "necesita",
-            categoria: category,
-            descripcion: item.notes || `Necesidad urgente de: ${needsList.join(', ')}`,
-            lat: Number(item.latitude) + jitterLat,
-            lng: Number(item.longitude) + jitterLng,
-            confirmations: item.visit_count || 1,
-            creadoAt: item.created_at || new Date().toISOString(),
-            expiresAt: new Date(Date.now() + 24 * 3600000).toISOString(),
-            fuente: "Ayuda por Venezuela",
-            
-            nombre: item.name,
-            direccion: item.address || "Sin dirección.",
-            contacto: item.reporter_contact || undefined,
-            aceptan: needsList.join(', '),
-            region: item.city || item.state || "Venezuela",
-            whatsapp: waLink,
-          });
-        });
-      }
-    }
-  } catch (err) {
-    console.error("Error fetching live Ayuda por Venezuela database:", err);
-  }
 
   // Helper function to parse CSV safely respecting quotes
   const parseCSV = (text: string): any[] => {
