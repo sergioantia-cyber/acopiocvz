@@ -163,16 +163,26 @@ export default function MapaColaborativo({
               <Popup>
                 {hasDetails ? (
                   /* Premium detailed popup layout (matches MRW screenshot exactly) */
-                  <div className="p-4 text-slate-100 flex flex-col gap-2 font-sans min-w-[280px] bg-[#111113] rounded-2xl">
-                    {/* Header Pill */}
+                  <div className="p-4 text-slate-100 flex flex-col gap-2.5 font-sans min-w-[290px] bg-[#111113] rounded-2xl shadow-2xl border border-slate-800/50">
+                    {/* Header Pill depending on source & needs */}
                     <div className="flex">
-                      <span className="text-[9px] font-extrabold uppercase tracking-wider bg-sky-950/70 text-sky-400 border border-sky-800/40 px-2.5 py-0.5 rounded-full flex items-center gap-1">
-                        💙 Centro de Acopio
-                      </span>
+                      {punto.fuente === "Caracas Ayuda" ? (
+                        <span className="text-[9px] font-extrabold uppercase tracking-wider bg-sky-950/70 text-sky-400 border border-sky-800/40 px-2.5 py-0.5 rounded-full flex items-center gap-1">
+                          📦 Centro de Acopio
+                        </span>
+                      ) : punto.fuente === "Ayuda por Venezuela" ? (
+                        <span className="text-[9px] font-extrabold uppercase tracking-wider bg-rose-950/70 text-rose-400 border border-rose-800/40 px-2.5 py-0.5 rounded-full flex items-center gap-1 animate-pulse">
+                          🆘 Necesita Ayuda
+                        </span>
+                      ) : (
+                        <span className="text-[9px] font-extrabold uppercase tracking-wider bg-emerald-950/70 text-emerald-400 border border-emerald-800/40 px-2.5 py-0.5 rounded-full flex items-center gap-1">
+                          📍 Reporte: {punto.fuente || "Colaborativo"}
+                        </span>
+                      )}
                     </div>
 
                     {/* Name */}
-                    <h3 className="text-sm font-black text-sky-400 tracking-wide mt-1 leading-tight">
+                    <h3 className="text-sm font-black text-sky-400 tracking-wide mt-0.5 leading-tight">
                       {punto.nombre}
                     </h3>
 
@@ -181,20 +191,28 @@ export default function MapaColaborativo({
                       {punto.direccion}
                     </p>
 
+                    {/* Description / Details */}
+                    {punto.descripcion && (
+                      <div className="text-[11px] text-slate-300 p-2 bg-slate-950/60 rounded-xl border border-slate-900 leading-relaxed">
+                        <div className="text-[8px] uppercase tracking-widest text-slate-500 font-extrabold mb-1">Detalles del punto</div>
+                        <span className="font-normal">{punto.descripcion}</span>
+                      </div>
+                    )}
+
                     {/* Accepted Items */}
                     {punto.aceptan && (
-                      <div className="text-[11px] leading-relaxed mt-0.5">
-                        <span className="font-bold text-white">Aceptan: </span>
+                      <div className="text-[11px] leading-relaxed">
+                        <span className="font-bold text-white">{punto.tipo === "necesita" ? "Necesitan: " : "Aceptan: "}</span>
                         <span className="text-slate-300">{punto.aceptan}</span>
                       </div>
                     )}
 
                     {/* Contact Number */}
                     {punto.contacto && (
-                      <div className="text-[11px] mt-0.5">
+                      <div className="text-[11px]">
                         <span className="font-bold text-white">Contacto: </span>
                         <a 
-                          href={`tel:${punto.contacto}`} 
+                          href={`tel:${punto.contacto.replace(/\s+/g, "")}`} 
                           className="text-sky-400 underline font-semibold hover:text-sky-300 transition"
                         >
                           {punto.contacto}
@@ -202,30 +220,43 @@ export default function MapaColaborativo({
                       </div>
                     )}
 
-                    {/* Region */}
-                    <div className="flex items-center gap-1 text-[10px] text-slate-400 font-medium mt-1">
-                      <span>📍</span>
-                      <span>{punto.region || "Táchira"}</span>
+                    {/* Region & Source */}
+                    <div className="flex justify-between items-center text-[10px] text-slate-400 font-medium mt-1">
+                      <div className="flex items-center gap-1">
+                        <span>📍</span>
+                        <span>{punto.region || "Venezuela"}</span>
+                      </div>
+                      <span className="text-[8px] text-slate-500 uppercase tracking-wider font-extrabold">{punto.fuente}</span>
                     </div>
 
-                    {/* Action Buttons */}
-                    <div className="flex gap-2 mt-2 pt-2 border-t border-slate-800/60">
+                    {/* Action Buttons: Maps, Whatsapp & Call */}
+                    <div className="flex flex-wrap gap-2 mt-2 pt-2.5 border-t border-slate-800/80">
                       <a
                         href={`https://www.google.com/maps/search/?api=1&query=${punto.lat},${punto.lng}`}
                         target="_blank"
                         rel="noreferrer"
-                        className="flex-1 flex items-center justify-center gap-1 py-1.5 bg-blue-600 hover:bg-blue-500 text-white rounded-lg text-[10px] font-bold transition shadow-lg cursor-pointer"
+                        className="flex-1 min-w-[70px] flex items-center justify-center gap-1 py-2 bg-blue-600 hover:bg-blue-500 text-white rounded-xl text-[9px] font-extrabold transition shadow-lg cursor-pointer"
                       >
-                        🧭 Cómo llegar
+                        🧭 Maps
                       </a>
+                      
                       {punto.whatsapp && (
                         <a
                           href={punto.whatsapp}
                           target="_blank"
                           rel="noreferrer"
-                          className="flex-1 flex items-center justify-center gap-1 py-1.5 bg-[#25d366] hover:bg-[#20ba56] text-white rounded-lg text-[10px] font-bold transition shadow-lg cursor-pointer"
+                          className="flex-1 min-w-[70px] flex items-center justify-center gap-1 py-2 bg-[#25d366] hover:bg-[#20ba56] text-white rounded-xl text-[9px] font-extrabold transition shadow-lg cursor-pointer"
                         >
                           💬 WhatsApp
+                        </a>
+                      )}
+
+                      {punto.contacto && (
+                        <a
+                          href={`tel:${punto.contacto.replace(/\s+/g, "")}`}
+                          className="flex-1 min-w-[70px] flex items-center justify-center gap-1 py-2 bg-slate-800 hover:bg-slate-700 text-slate-100 rounded-xl text-[9px] font-extrabold transition border border-slate-700/50 shadow-lg cursor-pointer"
+                        >
+                          📞 Llamar
                         </a>
                       )}
                     </div>
