@@ -1,9 +1,7 @@
 import { NextResponse } from "next/server";
 import { PuntoReportado } from "@/types";
 
-// Coordinate registry for known hospitals and aid centers in Venezuela (including San Cristóbal / Táchira)
 const PLACE_COORDINATES: Record<string, [number, number]> = {
-  // Caracas & La Guaira
   "hospital-perez-carreno": [10.4725, -66.9538],
   "hospital-domingo-luciani": [10.4892, -66.8174],
   "alcaldia-de-chacao": [10.4906, -66.8533],
@@ -24,7 +22,6 @@ const PLACE_COORDINATES: Record<string, [number, number]> = {
   "centro-de-acopio-caraballeda": [10.6111, -66.8550],
   "cruz-roja": [10.5061, -66.9025],
   
-  // Táchira / San Cristóbal (User current viewport region)
   "hospital-central-de-san-cristobal": [7.7765, -72.2155],
   "refugio-gimnasio-san-cristobal": [7.7942, -72.2033],
   "unet-acopio": [7.7905, -72.1985],
@@ -33,8 +30,9 @@ const PLACE_COORDINATES: Record<string, [number, number]> = {
 
 export async function GET() {
   const reports: PuntoReportado[] = [];
+  let rawLocalizados: any[] = [];
 
-  // 1. Fetch Localizados Venezuela (Public API - Up to 500 records)
+  // 1. Fetch Localizados Venezuela (Public API)
   try {
     const res = await fetch("https://localizadosvenezuela.com/api/v1/localizados?limit=500", {
       next: { revalidate: 60 },
@@ -42,6 +40,7 @@ export async function GET() {
     const result = await res.json();
 
     if (result && result.data && Array.isArray(result.data)) {
+      rawLocalizados = result.data;
       result.data.forEach((item: any, index: number) => {
         const slug = item.lugarSlug || "";
         let baseCoords = PLACE_COORDINATES[slug];
@@ -49,16 +48,12 @@ export async function GET() {
         if (!baseCoords) {
           const text = ((item.direccion || "") + (item.observaciones || "") + (item.lugarNombre || "")).toLowerCase();
           if (text.includes("cristobal") || text.includes("tachira") || text.includes("cucuta") || index % 5 === 0) {
-            // Place some reports in Táchira (San Cristóbal)
             baseCoords = [7.7765, -72.2155];
           } else {
-            // Default to Caracas
             baseCoords = [10.4806, -66.9036];
           }
         }
 
-        // Apply a small random coordinate jitter/offset (approx 150-300 meters)
-        // This ensures markers do not overlap completely, separating naturally as the user zooms in
         const jitterLat = (Math.random() - 0.5) * 0.004;
         const jitterLng = (Math.random() - 0.5) * 0.004;
         const lat = baseCoords[0] + jitterLat;
@@ -82,7 +77,7 @@ export async function GET() {
     console.error("Error fetching Localizados VE:", err);
   }
 
-  // 2. Caracas Ayuda points (Caracas & San Cristóbal)
+  // 2. Caracas Ayuda points
   const caracasAyudaPuntos: Omit<PuntoReportado, "id" | "creadoAt" | "expiresAt">[] = [
     {
       tipo: "ofrece",
@@ -93,7 +88,6 @@ export async function GET() {
       confirmations: 18,
       fuente: "Caracas Ayuda",
     },
-    // San Cristóbal Point
     {
       tipo: "ofrece",
       categoria: "suministros",
@@ -123,7 +117,7 @@ export async function GET() {
     });
   });
 
-  // 3. Ayuda por Venezuela points (Caracas & San Cristóbal)
+  // 3. Ayuda por Venezuela points
   const ayudaPorVzlaPuntos: Omit<PuntoReportado, "id" | "creadoAt" | "expiresAt">[] = [
     {
       tipo: "ofrece",
@@ -134,7 +128,6 @@ export async function GET() {
       confirmations: 15,
       fuente: "Ayuda por Venezuela",
     },
-    // San Cristóbal Point
     {
       tipo: "ofrece",
       categoria: "senal",
@@ -164,5 +157,5 @@ export async function GET() {
     });
   });
 
-  return NextResponse.json({ success: true, data: reports });
+  return NextResponse.json({ success: true, data: reports, localizadosRaw: rawLocalizados });
 }

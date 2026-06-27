@@ -75,6 +75,8 @@ const MOCK_PERSONS = [
 
 export default function HomePage() {
   const [puntos, setPuntos] = useState<PuntoReportado[]>([]);
+  const [localizados, setLocalizados] = useState<any[]>([]);
+  const [desaparecidosQuery, setDesaparecidosQuery] = useState("");
   const [currentTab, setCurrentTab] = useState<"mapa" | "sheets">("mapa");
   const [isReporting, setIsReporting] = useState(false);
   const [selectedCoords, setSelectedCoords] = useState<{ lat: number; lng: number } | null>(null);
@@ -140,8 +142,13 @@ export default function HomePage() {
       try {
         const res = await fetch("/api/external-reports");
         const result = await res.json();
-        if (result && result.success && Array.isArray(result.data)) {
-          setPuntos([...dbPuntos, ...result.data]);
+        if (result && result.success) {
+          if (Array.isArray(result.data)) {
+            setPuntos([...dbPuntos, ...result.data]);
+          }
+          if (Array.isArray(result.localizadosRaw)) {
+            setLocalizados(result.localizadosRaw);
+          }
         } else {
           setPuntos(dbPuntos);
         }
@@ -558,15 +565,27 @@ export default function HomePage() {
         ) : (
           // 6. Google Sheets Panel (Fills the entire screen under the header)
           <div className="absolute inset-0 pt-28 pb-6 px-4 max-w-5xl mx-auto h-full overflow-y-auto flex flex-col gap-6 z-20 bg-slate-950">
-            <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 shrink-0">
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 shrink-0">
               <div>
                 <h2 className="text-lg font-extrabold text-white flex items-center gap-2">
                   <FileSpreadsheet className="w-5 h-5 text-emerald-400" />
                   Listado de Personas Localizadas
                 </h2>
                 <p className="text-slate-400 text-[11px] mt-0.5">
-                  Datos consolidados de personas registradas en hospitales o refugios oficiales.
+                  Datos consolidados en tiempo real del portal oficial de emergencias.
                 </p>
+              </div>
+
+              {/* Local Search Input */}
+              <div className="relative w-full sm:w-80">
+                <Search className="w-4 h-4 text-slate-500 absolute left-3 top-2.5" />
+                <input
+                  type="text"
+                  value={desaparecidosQuery}
+                  onChange={(e) => setDesaparecidosQuery(e.target.value)}
+                  placeholder="Buscar por nombre, hospital, ciudad..."
+                  className="w-full pl-10 pr-4 py-2.5 bg-slate-900 border border-slate-800 rounded-xl text-slate-200 placeholder-slate-500 text-xs focus:outline-none focus:border-orange-500/50 transition-all"
+                />
               </div>
             </div>
 
@@ -577,33 +596,69 @@ export default function HomePage() {
                   <tr>
                     <th className="p-3.5">Nombre Completo</th>
                     <th className="p-3.5">Edad</th>
-                    <th className="p-3.5">Estado</th>
-                    <th className="p-3.5">Última Ubicación Conocida</th>
-                    <th className="p-3.5">Contacto</th>
+                    <th className="p-3.5">Estado / Condición</th>
+                    <th className="p-3.5">Ubicación / Centro</th>
+                    <th className="p-3.5">Observaciones</th>
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-slate-800/40 text-slate-300 text-[11px]">
-                  {MOCK_PERSONS.map((person) => (
-                    <tr key={person.id} className="hover:bg-slate-900/30 transition">
-                      <td className="p-3.5 font-bold text-white">{person.nombre}</td>
-                      <td className="p-3.5 text-slate-400">{person.edad} años</td>
-                      <td className="p-3.5">
-                        <span
-                          className={`px-2.5 py-1 rounded-full text-[9px] font-bold ${
-                            person.estado.includes("Encontrado")
-                              ? "bg-emerald-500/10 text-emerald-400"
-                              : person.estado.includes("Buscando")
-                              ? "bg-amber-500/10 text-amber-400 animate-pulse"
-                              : "bg-rose-500/10 text-rose-400"
-                          }`}
-                        >
-                          {person.estado}
-                        </span>
+                  {localizados.length === 0 ? (
+                    <tr>
+                      <td colSpan={5} className="p-8 text-center text-slate-500">
+                        Cargando base de datos de localizados...
                       </td>
-                      <td className="p-3.5 text-slate-400">{person.ubicacion}</td>
-                      <td className="p-3.5 text-slate-400">{person.contacto}</td>
                     </tr>
-                  ))}
+                  ) : localizados.filter((p) => {
+                      if (!desaparecidosQuery.trim()) return true;
+                      const q = desaparecidosQuery.toLowerCase();
+                      return (
+                        p.nombreCompleto?.toLowerCase().includes(q) ||
+                        p.lugarNombre?.toLowerCase().includes(q) ||
+                        p.direccion?.toLowerCase().includes(q) ||
+                        p.observaciones?.toLowerCase().includes(q)
+                      );
+                    }).length === 0 ? (
+                    <tr>
+                      <td colSpan={5} className="p-8 text-center text-slate-500">
+                        No se encontraron resultados para "{desaparecidosQuery}".
+                      </td>
+                    </tr>
+                  ) : (
+                    localizados
+                      .filter((p) => {
+                        if (!desaparecidosQuery.trim()) return true;
+                        const q = desaparecidosQuery.toLowerCase();
+                        return (
+                          p.nombreCompleto?.toLowerCase().includes(q) ||
+                          p.lugarNombre?.toLowerCase().includes(q) ||
+                          p.direccion?.toLowerCase().includes(q) ||
+                          p.observaciones?.toLowerCase().includes(q)
+                        );
+                      })
+                      .map((person, index) => {
+                        const cond = person.condicion || "desconocido";
+                        const stateText = cond === "vivo" ? "Localizado - Vivo" : cond === "fallecido" ? "Fallecido" : "En Observación";
+                        const badgeColor = cond === "vivo" ? "bg-emerald-500/10 text-emerald-400" : cond === "fallecido" ? "bg-rose-500/10 text-rose-400" : "bg-sky-500/10 text-sky-400";
+                        return (
+                          <tr key={person.slug || index} className="hover:bg-slate-900/30 transition">
+                            <td className="p-3.5 font-bold text-white">{person.nombreCompleto}</td>
+                            <td className="p-3.5 text-slate-400">{person.edad ? `${person.edad} años` : "S/I"}</td>
+                            <td className="p-3.5">
+                              <span className={`px-2.5 py-1 rounded-full text-[9px] font-bold ${badgeColor}`}>
+                                {stateText}
+                              </span>
+                            </td>
+                            <td className="p-3.5 text-slate-300">
+                              <div className="font-medium">{person.lugarNombre || "Sin Centro"}</div>
+                              {person.direccion && <div className="text-[10px] text-slate-500 mt-0.5">{person.direccion}</div>}
+                            </td>
+                            <td className="p-3.5 text-slate-400 max-w-xs truncate" title={person.observaciones}>
+                              {person.observaciones || "Sin observaciones registradas."}
+                            </td>
+                          </tr>
+                        );
+                      })
+                  )}
                 </tbody>
               </table>
             </div>
@@ -613,17 +668,21 @@ export default function HomePage() {
               <div className="flex items-center gap-3">
                 <Share2 className="w-5 h-5 text-orange-500 shrink-0" />
                 <div className="text-center sm:text-left">
-                  <h4 className="text-xs font-bold text-slate-300">¿Quieres agregar datos a la planilla original?</h4>
-                  <p className="text-[10px] text-slate-400 mt-0.5">El formulario oficial del Google Sheets permite la carga segura y directa.</p>
+                  <h4 className="text-xs font-bold text-slate-300">
+                    Fuente de datos oficial: Localizados Venezuela
+                  </h4>
+                  <p className="text-[10px] text-slate-400 mt-0.5">
+                    Puedes consultar, reportar nuevos casos y ver el portal maestro en su web oficial.
+                  </p>
                 </div>
               </div>
               <a
-                href="https://docs.google.com/spreadsheets"
+                href="https://localizadosvenezuela.com/"
                 target="_blank"
                 rel="noreferrer"
                 className="w-full sm:w-auto px-4 py-2 bg-slate-800 hover:bg-slate-700 text-white rounded-xl text-[11px] font-bold transition border border-slate-700 text-center"
               >
-                Abrir Google Sheet
+                Visitar LocalizadosVenezuela.com
               </a>
             </div>
           </div>
