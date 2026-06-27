@@ -102,6 +102,11 @@ export default function HomePage() {
   const [searchQuery, setSearchQuery] = useState("");
   const [isFiltersExpanded, setIsFiltersExpanded] = useState(true); // Default expanded to show the table of elements!
 
+  // Dragging States for Left Sidebar / Floating Panel
+  const [panelPos, setPanelPos] = useState({ x: 16, y: 174 });
+  const [isDragging, setIsDragging] = useState(false);
+  const [dragStart, setDragStart] = useState({ x: 0, y: 0 });
+
   // Auth State
   const [user, setUser] = useState<{ email: string; name: string; avatar: string } | null>(null);
 
@@ -267,6 +272,43 @@ export default function HomePage() {
       return () => subscription.unsubscribe();
     }
   }, []);
+
+  // Dragging event listeners for mouse and touch movements
+  useEffect(() => {
+    const handleMouseMove = (e: MouseEvent) => {
+      if (!isDragging) return;
+      // Bound position to screen boundaries
+      const newX = Math.max(0, Math.min(window.innerWidth - 320, e.clientX - dragStart.x));
+      const newY = Math.max(0, Math.min(window.innerHeight - 100, e.clientY - dragStart.y));
+      setPanelPos({ x: newX, y: newY });
+    };
+
+    const handleTouchMove = (e: TouchEvent) => {
+      if (!isDragging) return;
+      const touch = e.touches[0];
+      const newX = Math.max(0, Math.min(window.innerWidth - 320, touch.clientX - dragStart.x));
+      const newY = Math.max(0, Math.min(window.innerHeight - 100, touch.clientY - dragStart.y));
+      setPanelPos({ x: newX, y: newY });
+    };
+
+    const handleStopDrag = () => {
+      setIsDragging(false);
+    };
+
+    if (isDragging) {
+      window.addEventListener("mousemove", handleMouseMove);
+      window.addEventListener("mouseup", handleStopDrag);
+      window.addEventListener("touchmove", handleTouchMove);
+      window.addEventListener("touchend", handleStopDrag);
+    }
+
+    return () => {
+      window.removeEventListener("mousemove", handleMouseMove);
+      window.removeEventListener("mouseup", handleStopDrag);
+      window.removeEventListener("touchmove", handleTouchMove);
+      window.removeEventListener("touchend", handleStopDrag);
+    };
+  }, [isDragging, dragStart]);
 
   useEffect(() => {
     if (typeof window !== "undefined" && navigator.geolocation) {
@@ -688,38 +730,69 @@ export default function HomePage() {
               })()}
             </div>
 
-            {/* 4. Floating Filters Card (Responsive Left Panel / Top Overlays) */}
-            <div className="absolute top-[174px] left-4 right-4 sm:right-auto sm:w-[360px] z-20 pointer-events-none">
-              <div className="w-full bg-slate-900/90 backdrop-blur-md border border-slate-800/80 rounded-2xl shadow-2xl p-4 flex flex-col gap-3.5 pointer-events-auto max-h-[60dvh] overflow-y-auto">
+            {/* 4. Floating Filters Card (Draggable & Collapsible Sidebar Card) */}
+            <div 
+              style={{ left: `${panelPos.x}px`, top: `${panelPos.y}px` }}
+              className="absolute w-[320px] z-20 pointer-events-auto select-none"
+            >
+              <div className="w-full bg-slate-900/95 backdrop-blur-md border border-slate-800/90 rounded-2xl shadow-2xl flex flex-col gap-3 max-h-[60dvh] overflow-hidden">
                 
-                {/* Header of Filters */}
-                <div className="flex items-center justify-between">
-                  <button
-                    onClick={() => setIsFiltersExpanded(!isFiltersExpanded)}
-                    className="flex items-center gap-1.5 text-xs font-bold uppercase tracking-wider text-slate-300 hover:text-white cursor-pointer"
-                  >
-                    <ListFilter className="w-3.5 h-3.5 text-orange-500" />
-                    Filtros Rápidos
-                    {isFiltersExpanded ? <ChevronUp className="w-3 h-3" /> : <ChevronDown className="w-3 h-3" />}
-                  </button>
-
-                  {userLocation && (
+                {/* Header Drag Handle & Title (Acts as grab handle) */}
+                <div 
+                  onMouseDown={(e) => {
+                    if (e.button !== 0) return;
+                    const target = e.target as HTMLElement;
+                    if (target.closest("button")) return;
+                    setIsDragging(true);
+                    setDragStart({
+                      x: e.clientX - panelPos.x,
+                      y: e.clientY - panelPos.y
+                    });
+                  }}
+                  onTouchStart={(e) => {
+                    const target = e.target as HTMLElement;
+                    if (target.closest("button")) return;
+                    const touch = e.touches[0];
+                    setIsDragging(true);
+                    setDragStart({
+                      x: touch.clientX - panelPos.x,
+                      y: touch.clientY - panelPos.y
+                    });
+                  }}
+                  style={{ cursor: isDragging ? "grabbing" : "grab" }}
+                  className="px-4 pt-2.5 pb-2.5 bg-slate-950/60 border-b border-slate-800/80 flex flex-col gap-1 select-none"
+                >
+                  {/* Visual Pill Drag Indicator */}
+                  <div className="w-10 h-1 bg-slate-700/60 rounded-full mx-auto" />
+                  
+                  <div className="flex items-center justify-between">
                     <button
-                      onClick={() => setCercaDeMi(!cercaDeMi)}
-                      className={`text-[10px] font-bold px-2.5 py-1 rounded-full transition-all border cursor-pointer ${
-                        cercaDeMi
-                          ? "bg-orange-500/15 border-orange-500 text-orange-400"
-                          : "bg-slate-950 border-slate-800 text-slate-400 hover:text-white"
-                      }`}
+                      onClick={() => setIsFiltersExpanded(!isFiltersExpanded)}
+                      className="flex items-center gap-1.5 text-xs font-black uppercase tracking-wider text-slate-300 hover:text-white cursor-pointer select-none"
                     >
-                      Cerca de mí (5 km)
+                      <ListFilter className="w-3.5 h-3.5 text-orange-500" />
+                      Filtros Rápidos
+                      {isFiltersExpanded ? <ChevronUp className="w-3 h-3 text-orange-500" /> : <ChevronDown className="w-3 h-3 text-orange-500" />}
                     </button>
-                  )}
+
+                    {userLocation && (
+                      <button
+                        onClick={() => setCercaDeMi(!cercaDeMi)}
+                        className={`text-[9px] font-bold px-2 py-0.5 rounded-full transition-all border cursor-pointer ${
+                          cercaDeMi
+                            ? "bg-orange-500/15 border-orange-500 text-orange-400"
+                            : "bg-slate-950 border-slate-800 text-slate-400 hover:text-white"
+                        }`}
+                      >
+                        Cerca de mí
+                      </button>
+                    )}
+                  </div>
                 </div>
 
                 {/* Collapsible search and detailed filters */}
-                {(isFiltersExpanded || true) && (
-                  <div className="flex flex-col gap-3 animate-in fade-in duration-200">
+                {isFiltersExpanded && (
+                  <div className="p-4 pt-1 flex flex-col gap-3.5 overflow-y-auto max-h-[45dvh] scrollbar-none">
                     
                     {/* Stats Comparison Card */}
                     <div className="p-3 bg-slate-950 border border-slate-800/80 rounded-xl flex flex-col gap-2 shadow-inner">
