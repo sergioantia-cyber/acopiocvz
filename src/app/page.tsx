@@ -1050,7 +1050,10 @@ export default function HomePage() {
                         p.nombreCompleto?.toLowerCase().includes(q) ||
                         p.lugarNombre?.toLowerCase().includes(q) ||
                         p.direccion?.toLowerCase().includes(q) ||
-                        p.observaciones?.toLowerCase().includes(q)
+                        p.observaciones?.toLowerCase().includes(q) ||
+                        (p.cedula && String(p.cedula).toLowerCase().includes(q)) ||
+                        (p.edad && String(p.edad).toLowerCase().includes(q)) ||
+                        p.lugarSlug?.toLowerCase().includes(q)
                       );
                     }).length === 0 ? (
                     <tr>
@@ -1067,7 +1070,10 @@ export default function HomePage() {
                           p.nombreCompleto?.toLowerCase().includes(q) ||
                           p.lugarNombre?.toLowerCase().includes(q) ||
                           p.direccion?.toLowerCase().includes(q) ||
-                          p.observaciones?.toLowerCase().includes(q)
+                          p.observaciones?.toLowerCase().includes(q) ||
+                          (p.cedula && String(p.cedula).toLowerCase().includes(q)) ||
+                          (p.edad && String(p.edad).toLowerCase().includes(q)) ||
+                          p.lugarSlug?.toLowerCase().includes(q)
                         );
                       })
                       .map((person, index) => {
@@ -1075,17 +1081,29 @@ export default function HomePage() {
                         const stateText = cond === "vivo" ? "Localizado - Vivo" : cond === "fallecido" ? "Fallecido" : "En Observación";
                         const badgeColor = cond === "vivo" ? "bg-emerald-500/10 text-emerald-400" : cond === "fallecido" ? "bg-rose-500/10 text-rose-400" : "bg-sky-500/10 text-sky-400";
                         return (
-                          <tr key={person.slug || index} className="hover:bg-slate-900/30 transition">
-                            <td className="p-3.5 font-bold text-white">{person.nombreCompleto}</td>
-                            <td className="p-3.5 text-slate-400">{person.edad ? `${person.edad} años` : "S/I"}</td>
+                          <tr key={person.slug || index} className="hover:bg-slate-900/30 transition border-b border-slate-800/30">
+                            <td className="p-3.5 text-white">
+                              <div className="font-bold text-white">{person.nombreCompleto}</div>
+                              {person.cedula && (
+                                <div className="text-[9px] text-slate-400 font-extrabold mt-0.5 uppercase tracking-wider">
+                                  💳 C.I.: {person.cedula}
+                                </div>
+                              )}
+                            </td>
+                            <td className="p-3.5 text-slate-400 font-bold">{person.edad ? `${person.edad} años` : "S/I"}</td>
                             <td className="p-3.5">
                               <span className={`px-2.5 py-1 rounded-full text-[9px] font-bold ${badgeColor}`}>
                                 {stateText}
                               </span>
                             </td>
-                            <td className="p-3.5 text-slate-300">
-                              <div className="font-medium">{person.lugarNombre || "Sin Centro"}</div>
+                            <td className="p-3.5 text-slate-350">
+                              <div className="font-bold text-slate-200">{person.lugarNombre || "Sin Centro"}</div>
                               {person.direccion && <div className="text-[10px] text-slate-500 mt-0.5">{person.direccion}</div>}
+                              {person.telefono && (
+                                <div className="text-[9px] text-orange-400/80 font-bold mt-1">
+                                  📞 Tel: {person.telefono}
+                                </div>
+                              )}
                             </td>
                             <td className="p-3.5 text-slate-400 max-w-xs truncate" title={person.observaciones}>
                               {person.observaciones || "Sin observaciones registradas."}
