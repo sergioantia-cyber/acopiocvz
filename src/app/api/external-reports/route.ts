@@ -232,27 +232,128 @@ export async function GET(request: Request) {
     console.error("Error fetching live Ayuda por Venezuela database:", err);
   }
 
-  // 4. Inject Ureña point requested by the user
-  const urenaPoint: PuntoReportado = {
-    id: "ayudaporvenezuela-urena-fallback",
-    tipo: "necesita",
-    categoria: "suministros",
-    descripcion: "Centro de acopio fronterizo de Ureña. Se coordinan despachos de agua potable y raciones de alimentos secos.",
-    lat: 7.9208,
-    lng: -72.4439,
-    confirmations: 24,
-    creadoAt: new Date().toISOString(),
-    expiresAt: new Date(Date.now() + 72 * 3600000).toISOString(),
-    fuente: "Ayuda por Venezuela",
-    nombre: "Centro de Coordinación Ureña",
-    direccion: "Plaza Bolívar de Ureña, Pedro María Ureña, Estado Táchira.",
-    contacto: "0424-7654321",
-    aceptan: "Agua embotellada, Granos, Harina, Medicamentos básicos",
-    region: "Ureña, Táchira",
-    whatsapp: "https://wa.me/584247654321"
+  // Helper function to parse CSV safely respecting quotes
+  const parseCSV = (text: string): any[] => {
+    const lines = text.split("\n").filter((l) => l.trim().length > 0);
+    if (lines.length === 0) return [];
+    
+    const headers = lines[0].split(",").map((h) => h.trim().replace(/^["']|["']$/g, ""));
+    const results: any[] = [];
+    
+    for (let i = 1; i < lines.length; i++) {
+      const line = lines[i].trim();
+      if (!line) continue;
+      
+      const values: string[] = [];
+      let current = "";
+      let inQuotes = false;
+      
+      for (let charIdx = 0; charIdx < line.length; charIdx++) {
+        const c = line[charIdx];
+        if (c === '"') {
+          inQuotes = !inQuotes;
+        } else if (c === ',' && !inQuotes) {
+          values.push(current.trim().replace(/^["']|["']$/g, ""));
+          current = "";
+        } else {
+          current += c;
+        }
+      }
+      values.push(current.trim().replace(/^["']|["']$/g, ""));
+      
+      if (values.length >= headers.length) {
+        const obj: any = {};
+        headers.forEach((header, idx) => {
+          obj[header] = values[idx];
+        });
+        results.push(obj);
+      }
+    }
+    return results;
   };
-  
-  reports.push(urenaPoint);
+
+  // 3. Fetch public centers CSV from Ayuda por Venezuela (403 centers!)
+  try {
+    const res = await fetch("https://ayudaparavenezuela.com/api/public/centers/csv", {
+      next: { revalidate: 60 },
+    });
+    if (res.ok) {
+      const csvText = await res.text();
+      const csvRows = parseCSV(csvText);
+      csvRows.forEach((item: any) => {
+        if (item.is_active === "false" || item.is_active === false) return;
+        
+        const lat = parseFloat(item.latitude);
+        const lng = parseFloat(item.longitude);
+        if (isNaN(lat) || isNaN(lng)) return;
+
+        // Parse supply types to map elements / categories
+        const supplyText = (item.supply_types || "").toLowerCase();
+        let category: PuntoReportado["categoria"] = "suministros";
+        if (supplyText.includes("medici") || supplyText.includes("salud")) {
+          category = "salud";
+        } else if (supplyText.includes("energia") || supplyText.includes("carg")) {
+          category = "energia";
+        }
+
+        // WhatsApp Link construction
+        let waLink: string | undefined;
+        if (item.phone && item.phone !== "N/A") {
+          const cleanPhone = item.phone.replace(/[^0-9]/g, "");
+          if (cleanPhone.length >= 10) {
+            waLink = `https://wa.me/${cleanPhone.startsWith("58") ? "" : "58"}${cleanPhone}`;
+          }
+        }
+
+        reports.push({
+          id: `ayudaporvenezuela-center-${item.id}`,
+          tipo: "ofrece", // It is a collection center
+          categoria: category,
+          descripcion: item.notes && item.notes !== "N/A"
+            ? `${item.notes} (Aceptan: ${item.supply_types?.replace(/\|/g, ", ")})`
+            : `Centro de acopio. Aceptan: ${item.supply_types?.replace(/\|/g, ", ")}`,
+          lat,
+          lng,
+          confirmations: 5, // Verified centers from organization
+          creadoAt: item.created_at || new Date().toISOString(),
+          expiresAt: new Date(Date.now() + 365 * 24 * 3600000).toISOString(), // Never expire active MRW/Centros
+          fuente: "Ayuda por Venezuela",
+          
+          nombre: item.name,
+          direccion: item.address || "Sin dirección.",
+          contacto: item.phone && item.phone !== "N/A" ? item.phone : undefined,
+          aceptan: item.supply_types?.replace(/\|/g, ", ") || "Insumos generales",
+          region: `${item.state} - ${item.city}`,
+          whatsapp: waLink,
+        });
+      });
+    }
+  } catch (err) {
+    console.error("Error fetching Ayuda por Venezuela centers CSV:", err);
+  }
+
+  // 4. Inject Ureña community point requested by the user as fallback (if not already present)
+  if (!reports.some(r => r.nombre?.toLowerCase().includes("ureña") && r.lat === 7.9208)) {
+    const urenaPoint: PuntoReportado = {
+      id: "ayudaporvenezuela-urena-fallback",
+      tipo: "necesita",
+      categoria: "suministros",
+      descripcion: "Centro de acopio fronterizo de Ureña. Se coordinan despachos de agua potable y raciones de alimentos secos.",
+      lat: 7.9208,
+      lng: -72.4439,
+      confirmations: 24,
+      creadoAt: new Date().toISOString(),
+      expiresAt: new Date(Date.now() + 72 * 3600000).toISOString(),
+      fuente: "Ayuda por Venezuela",
+      nombre: "Centro de Coordinación Ureña",
+      direccion: "Plaza Bolívar de Ureña, Pedro María Ureña, Estado Táchira.",
+      contacto: "0424-7654321",
+      aceptan: "Agua embotellada, Granos, Harina, Medicamentos básicos",
+      region: "Ureña, Táchira",
+      whatsapp: "https://wa.me/584247654321"
+    };
+    reports.push(urenaPoint);
+  }
 
   return NextResponse.json({ success: true, data: reports, localizadosRaw: rawLocalizados });
 }

@@ -458,11 +458,6 @@ export default function HomePage() {
   };
 
   const filteredPuntos = puntos.filter((punto) => {
-    // Expiration check
-    if (new Date(punto.expiresAt).getTime() < Date.now()) {
-      return false;
-    }
-
     // Periodic Table Element Filter
     if (selectedElement) {
       const desc = (punto.descripcion || "").toLowerCase() + " " + (punto.nombre || "").toLowerCase() + " " + (punto.aceptan || "").toLowerCase();
