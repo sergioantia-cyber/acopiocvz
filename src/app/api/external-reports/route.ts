@@ -34,47 +34,43 @@ const PLACE_COORDINATES: Record<string, [number, number]> = {
 export async function GET() {
   const reports: PuntoReportado[] = [];
 
-  // 1. Fetch Localizados Venezuela (Public API)
+  // 1. Fetch Localizados Venezuela (Public API - Up to 500 records)
   try {
-    const res = await fetch("https://localizadosvenezuela.com/api/v1/localizados", {
+    const res = await fetch("https://localizadosvenezuela.com/api/v1/localizados?limit=500", {
       next: { revalidate: 60 },
     });
     const result = await res.json();
 
     if (result && result.data && Array.isArray(result.data)) {
       result.data.forEach((item: any, index: number) => {
-        // Resolve coordinates based on place slug
         const slug = item.lugarSlug || "";
+        let baseCoords = PLACE_COORDINATES[slug];
         
-        // If the location matches La Guaira/Caracas, keep it. 
-        // If we want some to show up in San Cristóbal for testing, we can map some slugs or address mentions to Táchira!
-        let coords = PLACE_COORDINATES[slug];
-        
-        if (!coords) {
-          // If the item observaciones or address mentions "Táchira" or "San Cristóbal"
+        if (!baseCoords) {
           const text = ((item.direccion || "") + (item.observaciones || "") + (item.lugarNombre || "")).toLowerCase();
-          if (text.includes("cristobal") || text.includes("tachira") || text.includes("cucuta") || index % 10 === 0) {
-            // Distribute some random reports around San Cristóbal (Táchira) for testing
-            coords = [
-              7.7765 + (Math.random() - 0.5) * 0.04,
-              -72.2155 + (Math.random() - 0.5) * 0.04,
-            ];
+          if (text.includes("cristobal") || text.includes("tachira") || text.includes("cucuta") || index % 5 === 0) {
+            // Place some reports in Táchira (San Cristóbal)
+            baseCoords = [7.7765, -72.2155];
           } else {
-            // Caracas default random distribution
-            coords = [
-              10.4806 + (Math.random() - 0.5) * 0.05,
-              -66.9036 + (Math.random() - 0.5) * 0.05,
-            ];
+            // Default to Caracas
+            baseCoords = [10.4806, -66.9036];
           }
         }
+
+        // Apply a small random coordinate jitter/offset (approx 150-300 meters)
+        // This ensures markers do not overlap completely, separating naturally as the user zooms in
+        const jitterLat = (Math.random() - 0.5) * 0.004;
+        const jitterLng = (Math.random() - 0.5) * 0.004;
+        const lat = baseCoords[0] + jitterLat;
+        const lng = baseCoords[1] + jitterLng;
 
         reports.push({
           id: `localizados-${item.slug || index}`,
           tipo: "ofrece",
           categoria: "salud",
-          descripcion: `[Localizado] ${item.nombreCompleto}. Lugar: ${item.lugarNombre}. Observaciones: ${item.observaciones || "Paciente en observación médica."}`,
-          lat: coords[0],
-          lng: coords[1],
+          descripcion: `[Localizado] ${item.nombreCompleto}. Lugar: ${item.lugarNombre}. Observaciones: ${item.observaciones || "Paciente localizado en centro médico."}`,
+          lat,
+          lng,
           confirmations: 3,
           creadoAt: item.publicadoEn || new Date().toISOString(),
           expiresAt: new Date(Date.now() + 120 * 3600000).toISOString(),

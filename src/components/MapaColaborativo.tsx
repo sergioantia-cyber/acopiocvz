@@ -2,13 +2,10 @@
 
 import { useEffect, useState } from "react";
 import { MapContainer, TileLayer, Marker, Popup, useMapEvents } from "react-leaflet";
-import MarkerClusterGroup from "react-leaflet-cluster";
 import L from "leaflet";
 
 // Import CSS files directly
 import "leaflet/dist/leaflet.css";
-import "leaflet.markercluster/dist/MarkerCluster.css";
-import "leaflet.markercluster/dist/MarkerCluster.Default.css";
 import { PuntoReportado } from "../types";
 
 interface MapaColaborativoProps {
@@ -31,10 +28,8 @@ const CATEGORY_EMOJIS: Record<string, string> = {
 const createCustomIcon = (tipo: "ofrece" | "necesita", categoria: string, fuente?: string) => {
   const emoji = CATEGORY_EMOJIS[categoria] || "📌";
   
-  // Choose border/ring color based on source and type
   let colorClass = "";
   if (fuente) {
-    // External source styles
     if (fuente === "Localizados VE") {
       colorClass = "border-sky-400 bg-sky-500 shadow-sky-500/20";
     } else if (fuente === "Caracas Ayuda") {
@@ -43,7 +38,6 @@ const createCustomIcon = (tipo: "ofrece" | "necesita", categoria: string, fuente
       colorClass = "border-violet-400 bg-violet-500 shadow-violet-500/20";
     }
   } else {
-    // Local source styles
     colorClass = tipo === "ofrece" ? "border-emerald-400 bg-emerald-500 shadow-emerald-500/20" : "border-rose-400 bg-rose-500 shadow-rose-500/20";
   }
 
@@ -116,67 +110,61 @@ export default function MapaColaborativo({
 
         <MapClickEvents isReportingMode={isReportingMode} onLocationSelected={onLocationSelected} />
 
-        {/* Marker Cluster Group with Spiderfier config */}
-        <MarkerClusterGroup
-          showCoverageOnHover={false}
-          spiderfyOnMaxZoom={true}
-          zoomToBoundsOnClick={true}
-          chunkedLoading={true}
-        >
-          {puntos.map((punto) => (
-            <Marker
-              key={punto.id}
-              position={[punto.lat, punto.lng]}
-              icon={createCustomIcon(punto.tipo, punto.categoria, punto.fuente)}
-            >
-              <Popup>
-                <div className="p-2 min-w-[220px]">
-                  <div className="flex items-center gap-1.5 mb-1.5 flex-wrap">
-                    <span className="text-base">{CATEGORY_EMOJIS[punto.categoria]}</span>
-                    <span className="font-bold text-slate-100 text-xs capitalize">
-                      {punto.categoria}
+        {/* Render markers directly without clustering. 
+            Overlapping points will naturally separate on zoom due to tiny coordinates offset/jittering added in the API. */}
+        {puntos.map((punto) => (
+          <Marker
+            key={punto.id}
+            position={[punto.lat, punto.lng]}
+            icon={createCustomIcon(punto.tipo, punto.categoria, punto.fuente)}
+          >
+            <Popup>
+              <div className="p-2 min-w-[220px]">
+                <div className="flex items-center gap-1.5 mb-1.5 flex-wrap">
+                  <span className="text-base">{CATEGORY_EMOJIS[punto.categoria]}</span>
+                  <span className="font-bold text-slate-100 text-xs capitalize">
+                    {punto.categoria}
+                  </span>
+                  {punto.fuente ? (
+                    <span className="ml-auto text-[9px] px-2 py-0.5 rounded-full bg-slate-800 border border-slate-700 text-slate-300 font-bold uppercase">
+                      {punto.fuente}
                     </span>
-                    {punto.fuente ? (
-                      <span className="ml-auto text-[9px] px-2 py-0.5 rounded-full bg-slate-800 border border-slate-700 text-slate-300 font-bold uppercase">
-                        {punto.fuente}
-                      </span>
-                    ) : (
-                      <span
-                        className={`ml-auto text-[9px] px-2 py-0.5 rounded-full font-bold uppercase ${
-                          punto.tipo === "ofrece"
-                            ? "bg-emerald-500/20 text-emerald-400"
-                            : "bg-rose-500/20 text-rose-400"
-                        }`}
-                      >
-                        {punto.tipo}
-                      </span>
-                    )}
-                  </div>
-                  <p className="text-slate-300 text-xs mb-3 leading-relaxed whitespace-pre-wrap">
-                    {punto.descripcion}
-                  </p>
-                  <div className="flex items-center justify-between text-[11px] text-slate-400 pt-2 border-t border-slate-700/50">
-                    {punto.fuente ? (
-                      <span className="text-[10px] text-slate-500 italic">Reporte externo verificado</span>
-                    ) : (
-                      <>
-                        <span>
-                          Votos: <strong className="text-white">{punto.confirmations}</strong>
-                        </span>
-                        <button
-                          onClick={() => onConfirm(punto.id)}
-                          className="px-3 py-1 bg-orange-600 hover:bg-orange-500 text-white rounded-lg transition font-medium cursor-pointer"
-                        >
-                          Confirmar Vigencia
-                        </button>
-                      </>
-                    )}
-                  </div>
+                  ) : (
+                    <span
+                      className={`ml-auto text-[9px] px-2 py-0.5 rounded-full font-bold uppercase ${
+                        punto.tipo === "ofrece"
+                          ? "bg-emerald-500/20 text-emerald-400"
+                          : "bg-rose-500/20 text-rose-400"
+                      }`}
+                    >
+                      {punto.tipo}
+                    </span>
+                  )}
                 </div>
-              </Popup>
-            </Marker>
-          ))}
-        </MarkerClusterGroup>
+                <p className="text-slate-300 text-xs mb-3 leading-relaxed whitespace-pre-wrap">
+                  {punto.descripcion}
+                </p>
+                <div className="flex items-center justify-between text-[11px] text-slate-400 pt-2 border-t border-slate-700/50">
+                  {punto.fuente ? (
+                    <span className="text-[10px] text-slate-500 italic">Reporte externo verificado</span>
+                  ) : (
+                    <>
+                      <span>
+                        Votos: <strong className="text-white">{punto.confirmations}</strong>
+                      </span>
+                      <button
+                        onClick={() => onConfirm(punto.id)}
+                        className="px-3 py-1 bg-orange-600 hover:bg-orange-500 text-white rounded-lg transition font-medium cursor-pointer"
+                      >
+                        Confirmar Vigencia
+                      </button>
+                    </>
+                  )}
+                </div>
+              </div>
+            </Popup>
+          </Marker>
+        ))}
       </MapContainer>
     </div>
   );
