@@ -96,6 +96,7 @@ export default function HomePage() {
   const [tipoFilter, setTipoFilter] = useState<"todos" | "ofrece" | "necesita">("todos");
   const [categoriaFilter, setCategoriaFilter] = useState<string>("todos");
   const [selectedElement, setSelectedElement] = useState<string | null>(null);
+  const [activeElementMenu, setActiveElementMenu] = useState<string | null>(null);
   const [cercaDeMi, setCercaDeMi] = useState(false);
   const [userLocation, setUserLocation] = useState<[number, number] | null>(null);
   const [searchQuery, setSearchQuery] = useState("");
@@ -554,8 +555,141 @@ export default function HomePage() {
               />
             </div>
 
-            {/* 3. Floating Filters Card (Responsive Left Panel / Top Overlays) */}
-            <div className="absolute top-28 left-4 right-4 sm:right-auto sm:w-[360px] z-20 pointer-events-none">
+            {/* 3. Top Interactive Resource Bubbles */}
+            <div className="absolute top-[96px] left-4 right-4 z-20 flex flex-col items-center gap-2.5 pointer-events-none">
+              <div className="flex items-center gap-3 overflow-x-auto pb-2 pointer-events-auto max-w-full px-4 scrollbar-none justify-center w-full">
+                {PERIODIC_ELEMENTS.map((el) => {
+                  const isSelected = selectedElement === el.symbol;
+                  const isMenuOpen = activeElementMenu === el.symbol;
+                  return (
+                    <button
+                      key={el.symbol}
+                      onClick={() => {
+                        setSelectedElement(isSelected ? null : el.symbol);
+                        setActiveElementMenu(isMenuOpen ? null : el.symbol);
+                      }}
+                      className={`relative flex flex-col items-center justify-center w-12 h-12 rounded-full border shadow-lg backdrop-blur-md transition-all duration-300 transform hover:scale-110 cursor-pointer ${
+                        isSelected
+                          ? "bg-orange-500 border-orange-400 text-white shadow-orange-500/25 ring-2 ring-orange-500/50"
+                          : "bg-slate-900/90 border-slate-800/90 hover:border-slate-700 text-slate-300"
+                      }`}
+                    >
+                      {/* Emoji */}
+                      <span className="text-[15px]">{el.emoji}</span>
+                      {/* Symbol */}
+                      <span className="text-[9px] font-black tracking-wider uppercase leading-none mt-0.5">
+                        {el.symbol}
+                      </span>
+                      {/* Mini indicator bar on the bubble edge */}
+                      <div className="absolute bottom-1 w-6 h-0.5 bg-slate-950/80 rounded-full overflow-hidden">
+                        <div style={{ width: `${el.percentage}%` }} className={`h-full ${el.barColor}`} />
+                      </div>
+                    </button>
+                  );
+                })}
+              </div>
+
+              {/* Floating Individual Element Information Menu */}
+              {activeElementMenu && (() => {
+                const el = PERIODIC_ELEMENTS.find(e => e.symbol === activeElementMenu);
+                if (!el) return null;
+                const statusText = el.percentage < 40 ? "Crítico ⚠️" : el.percentage < 75 ? "Moderado ⚡" : "Óptimo ✅";
+                const statusColor = el.percentage < 40 ? "text-rose-400 bg-rose-500/10 border-rose-500/20" : el.percentage < 75 ? "text-amber-400 bg-amber-500/10 border-amber-500/20" : "text-emerald-400 bg-emerald-500/10 border-emerald-500/20";
+                
+                return (
+                  <div className="w-80 bg-slate-900/95 backdrop-blur-md border border-slate-800 rounded-2xl p-4 shadow-2xl pointer-events-auto flex flex-col gap-3 animate-in slide-in-from-top-2 duration-200">
+                    <div className="flex justify-between items-center border-b border-slate-800 pb-2">
+                      <div className="flex items-center gap-2">
+                        <span className="text-xl">{el.emoji}</span>
+                        <div>
+                          <h3 className="text-xs font-black text-white uppercase tracking-wider leading-none">
+                            {el.symbol} - {el.name}
+                          </h3>
+                          <span className="text-[8px] text-slate-500 font-bold uppercase tracking-wider block mt-0.5">
+                            Insumo #{el.atomicNumber} de Emergencia
+                          </span>
+                        </div>
+                      </div>
+                      <span className={`text-[8px] font-extrabold uppercase px-2 py-0.5 rounded-full border ${statusColor}`}>
+                        {statusText}
+                      </span>
+                    </div>
+
+                    <div className="flex flex-col gap-1">
+                      <div className="flex justify-between text-[10px] text-slate-400 font-bold">
+                        <span>Nivel de Abastecimiento</span>
+                        <span className="text-white">{el.percentage}%</span>
+                      </div>
+                      <div className="w-full bg-slate-950 h-2 rounded-full overflow-hidden border border-slate-800">
+                        <div style={{ width: `${el.percentage}%` }} className={`h-full rounded-full transition-all duration-500 ${el.barColor}`} />
+                      </div>
+                    </div>
+
+                    <p className="text-[9px] text-slate-400 leading-relaxed bg-slate-950/40 p-2 rounded-xl border border-slate-850">
+                      Este indicador calcula el promedio estimado de stock en los puntos mapeados.
+                      {el.symbol === "Ag" && " Filtra centros que distribuyen agua potable, botellones, o cisternas de apoyo."}
+                      {el.symbol === "Al" && " Filtra centros que recolectan o entregan alimentos no perecederos, comidas calientes y víveres."}
+                      {el.symbol === "El" && " Filtra centros con suministro eléctrico alternativo, plantas eléctricas activas o puntos de carga."}
+                      {el.symbol === "Co" && " Filtra centros que disponen de cobertura satelital, señal de celular estable o red Wi-Fi comunitaria."}
+                      {el.symbol === "Me" && " Filtra centros de primeros auxilios, carpas de salud o puntos de distribución de insumos médicos."}
+                      {el.symbol === "Cm" && " Filtra refugios, albergues temporales o centros con capacidad de camas y colchonetas disponibles."}
+                      {el.symbol === "Tr" && " Filtra puntos con unidades de traslado, ambulancias activas o rutas de evacuación terrestre."}
+                      {el.symbol === "Pe" && " Filtra reportes de derrumbes, inundaciones, fallas estructurales graves o zonas de alto riesgo."}
+                    </p>
+
+                    {/* Collaboration edit sliders */}
+                    {user && (
+                      <div className="bg-slate-950/80 p-2.5 rounded-xl border border-slate-850 flex flex-col gap-1.5">
+                        <label className="text-[8px] font-extrabold uppercase tracking-wider text-orange-400 block">
+                          🔧 Ajustar Abastecimiento Nacional
+                        </label>
+                        <div className="flex items-center gap-3">
+                          <input
+                            type="range"
+                            min="1"
+                            max="100"
+                            value={el.percentage}
+                            onChange={(e) => {
+                              const val = parseInt(e.target.value);
+                              // Update local periodic array object
+                              const target = PERIODIC_ELEMENTS.find(item => item.symbol === el.symbol);
+                              if (target) {
+                                target.percentage = val;
+                              }
+                              // Trigger state refresh by changing selectedElement
+                              setSelectedElement(el.symbol);
+                            }}
+                            className="flex-1 accent-orange-500 h-1 cursor-pointer bg-slate-800 rounded-lg appearance-none"
+                          />
+                          <span className="text-[10px] font-black text-slate-200 w-8 text-right">{el.percentage}%</span>
+                        </div>
+                      </div>
+                    )}
+
+                    <div className="flex gap-2">
+                      <button
+                        onClick={() => {
+                          setSelectedElement(null);
+                          setActiveElementMenu(null);
+                        }}
+                        className="flex-1 py-1.5 bg-slate-800 hover:bg-slate-700 text-slate-300 rounded-lg text-[9px] font-extrabold transition cursor-pointer"
+                      >
+                        Limpiar Filtro
+                      </button>
+                      <button
+                        onClick={() => setActiveElementMenu(null)}
+                        className="flex-1 py-1.5 bg-orange-600 hover:bg-orange-500 text-white rounded-lg text-[9px] font-extrabold transition cursor-pointer"
+                      >
+                        Cerrar Menú
+                      </button>
+                    </div>
+                  </div>
+                );
+              })()}
+            </div>
+
+            {/* 4. Floating Filters Card (Responsive Left Panel / Top Overlays) */}
+            <div className="absolute top-[174px] left-4 right-4 sm:right-auto sm:w-[360px] z-20 pointer-events-none">
               <div className="w-full bg-slate-900/90 backdrop-blur-md border border-slate-800/80 rounded-2xl shadow-2xl p-4 flex flex-col gap-3.5 pointer-events-auto max-h-[60dvh] overflow-y-auto">
                 
                 {/* Header of Filters */}
@@ -586,6 +720,38 @@ export default function HomePage() {
                 {/* Collapsible search and detailed filters */}
                 {(isFiltersExpanded || true) && (
                   <div className="flex flex-col gap-3 animate-in fade-in duration-200">
+                    
+                    {/* Stats Comparison Card */}
+                    <div className="p-3 bg-slate-950 border border-slate-800/80 rounded-xl flex flex-col gap-2 shadow-inner">
+                      <div className="text-[8px] font-black uppercase tracking-widest text-orange-500">
+                        📊 Comparación de Monitoreo Nacional
+                      </div>
+                      
+                      <div className="grid grid-cols-3 gap-2 text-center">
+                        <div className="bg-slate-900/80 p-2 rounded-lg border border-slate-800/50">
+                          <span className="text-[7px] text-slate-400 font-extrabold uppercase block truncate">En el Mapa</span>
+                          <strong className="text-sm font-black text-sky-400">
+                            {puntos.filter(p => p.fuente !== "Localizados VE").length}
+                          </strong>
+                          <span className="text-[6px] text-slate-500 block leading-none">Centros activos</span>
+                        </div>
+                        <div className="bg-slate-900/80 p-2 rounded-lg border border-slate-800/50">
+                          <span className="text-[7px] text-slate-400 font-extrabold uppercase block truncate">Ayuda por Vzla</span>
+                          <strong className="text-sm font-black text-amber-500">403</strong>
+                          <span className="text-[6px] text-slate-500 block leading-none">Centros registrados</span>
+                        </div>
+                        <div className="bg-slate-900/80 p-2 rounded-lg border border-slate-800/50">
+                          <span className="text-[7px] text-slate-400 font-extrabold uppercase block truncate">Localizados</span>
+                          <strong className="text-sm font-black text-rose-500">500</strong>
+                          <span className="text-[6px] text-slate-500 block leading-none">Personas encontradas</span>
+                        </div>
+                      </div>
+                      
+                      <p className="text-[8px] text-slate-400 leading-normal">
+                        Nuestra app filtra y agrupa reportes del terremoto 2026. Mostramos <strong className="text-sky-400">{puntos.filter(p => p.fuente !== "Localizados VE").length} centros funcionales</strong> mapeados, de los <strong className="text-amber-500">403 centros oficiales</strong> reportados en <a href="https://ayudaparavenezuela.com/#centros" target="_blank" rel="noreferrer" className="text-amber-400 underline hover:text-amber-300">ayudaparavenezuela.com</a>.
+                      </p>
+                    </div>
+
                     {/* Search Input */}
                     <div className="relative">
                       <Search className="w-3.5 h-3.5 text-slate-500 absolute left-3 top-2.5" />
@@ -598,70 +764,7 @@ export default function HomePage() {
                       />
                     </div>
 
-                    {/* Periodic Table of Emergency Elements */}
-                    <div className="flex flex-col gap-2 mt-1">
-                      <div className="flex justify-between items-center">
-                        <label className="text-[9px] font-bold text-slate-400 uppercase tracking-widest block">
-                          Tabla Periódica de Recursos
-                        </label>
-                        {selectedElement && (
-                          <button
-                            onClick={() => setSelectedElement(null)}
-                            className="text-[9px] font-extrabold text-orange-500 uppercase tracking-wider hover:text-orange-400 cursor-pointer"
-                          >
-                            Limpiar Filtro (×)
-                          </button>
-                        )}
-                      </div>
 
-                      <div className="grid grid-cols-4 gap-2">
-                        {PERIODIC_ELEMENTS.map((el) => {
-                          const isSelected = selectedElement === el.symbol;
-                          return (
-                            <button
-                              key={el.symbol}
-                              onClick={() => setSelectedElement(isSelected ? null : el.symbol)}
-                              className={`relative flex flex-col items-center justify-between p-2 rounded-xl border text-center transition-all duration-200 cursor-pointer ${
-                                isSelected
-                                  ? "bg-orange-500/20 border-orange-500 text-white shadow-lg shadow-orange-500/10 scale-105"
-                                  : "bg-slate-950/60 border-slate-800/80 hover:border-slate-700 text-slate-300"
-                              }`}
-                            >
-                              {/* Atomic Number */}
-                              <span className="absolute top-1 left-1.5 text-[7px] text-slate-500 font-bold">
-                                {el.atomicNumber}
-                              </span>
-
-                              {/* Emoji */}
-                              <span className="text-xs mt-1">{el.emoji}</span>
-
-                              {/* Symbol */}
-                              <span className="text-[11px] font-black tracking-wider uppercase mt-0.5 leading-none">
-                                {el.symbol}
-                              </span>
-
-                              {/* Name */}
-                              <span className="text-[7px] text-slate-400 font-bold truncate max-w-full leading-none mt-1">
-                                {el.name}
-                              </span>
-
-                              {/* Mini Progress Bar */}
-                              <div className="w-full bg-slate-900 h-1.5 rounded-full overflow-hidden mt-1.5 border border-slate-800/40">
-                                <div
-                                  style={{ width: `${el.percentage}%` }}
-                                  className={`h-full rounded-full ${el.barColor}`}
-                                />
-                              </div>
-
-                              {/* Percentage Label */}
-                              <span className="text-[7px] text-slate-500 font-extrabold mt-0.5">
-                                {el.percentage}%
-                              </span>
-                            </button>
-                          );
-                        })}
-                      </div>
-                    </div>
 
                     {/* TTL Warning info */}
                     <div className="p-2.5 bg-slate-950/40 border border-slate-800/50 rounded-xl flex gap-2 items-start">
