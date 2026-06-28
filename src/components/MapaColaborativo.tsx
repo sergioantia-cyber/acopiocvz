@@ -147,45 +147,40 @@ export default function MapaColaborativo({
   const [zoomLevel, setZoomLevel] = useState(7);
   const [draggingId, setDraggingId] = useState<string | null>(null);
   const [mapLocked, setMapLocked] = useState(false);
-  const [isShiftPressed, setIsShiftPressed] = useState(false);
   const [moveToast, setMoveToast] = useState<string | null>(null);
   const toastTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const longPressTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
-  useEffect(() => { setIsMounted(true); }, []);
-
-  // Listen to Shift key to lock/unlock map panning & enable/disable marker dragging
   useEffect(() => {
-    if (!isOwner) return;
-
-    const handleKeyDown = (e: KeyboardEvent) => {
-      if (e.key === "Shift") {
-        setIsShiftPressed(true);
-        setMapLocked(true);
-      }
-    };
-
-    const handleKeyUp = (e: KeyboardEvent) => {
-      if (e.key === "Shift") {
-        setIsShiftPressed(false);
-        setMapLocked(false);
-      }
-    };
-
-    const handleBlur = () => {
-      setIsShiftPressed(false);
-      setMapLocked(false);
-    };
-
-    window.addEventListener("keydown", handleKeyDown);
-    window.addEventListener("keyup", handleKeyUp);
-    window.addEventListener("blur", handleBlur);
-
+    setIsMounted(true);
     return () => {
-      window.removeEventListener("keydown", handleKeyDown);
-      window.removeEventListener("keyup", handleKeyUp);
-      window.removeEventListener("blur", handleBlur);
+      if (longPressTimerRef.current) clearTimeout(longPressTimerRef.current);
     };
-  }, [isOwner]);
+  }, []);
+
+  const startLongPress = (id: string) => {
+    if (!isOwner) return;
+    if (longPressTimerRef.current) clearTimeout(longPressTimerRef.current);
+
+    longPressTimerRef.current = setTimeout(() => {
+      setMapLocked(true);
+      setDraggingId(id);
+      
+      // Haptic vibration feedback for mobile devices (50ms)
+      if (typeof window !== "undefined" && window.navigator && window.navigator.vibrate) {
+        try {
+          window.navigator.vibrate(50);
+        } catch (err) {}
+      }
+    }, 550); // 550ms hold threshold
+  };
+
+  const cancelLongPress = () => {
+    if (longPressTimerRef.current) {
+      clearTimeout(longPressTimerRef.current);
+      longPressTimerRef.current = null;
+    }
+  };
 
   const showToast = (msg: string) => {
     setMoveToast(msg);
@@ -203,10 +198,9 @@ export default function MapaColaborativo({
 
   const lightCircleOpacity = Math.min(0.75, Math.max(0.15, (zoomLevel - 6) * 0.06));
 
-  // Only owner can drag, and only when map is locked (either via Shift key or manual toggle)
-  // Note: fuente restriction removed — owner can reposition both user-created and external points
+  // Only owner can drag, and they are always draggable to prevent React recreation/unmount bugs
   const isDraggablePunto = (p: PuntoReportado) =>
-    isOwner && (isShiftPressed || mapLocked) && DRAGGABLE_CATEGORIES.has(p.categoria) && p.categoria !== "sismo";
+    isOwner && DRAGGABLE_CATEGORIES.has(p.categoria) && p.categoria !== "sismo";
 
   const renderMarker = (punto: PuntoReportado) => {
     const hasDetails = !!punto.nombre && !!punto.direccion;
@@ -215,11 +209,29 @@ export default function MapaColaborativo({
 
     return (
       <Marker
-        key={`${punto.id}-${canDrag ? "draggable" : "static"}`}
+        key={punto.id} // Keep constant key to avoid losing touch gesture on dynamic update
         position={[punto.lat, punto.lng]}
         icon={createCustomIcon(punto, isDraggingThis)}
         draggable={canDrag}
-        eventHandlers={canDrag ? {
+        eventHandlers={{
+          mousedown: () => {
+            startLongPress(punto.id);
+          },
+          touchstart: () => {
+            startLongPress(punto.id);
+          },
+          mouseup: () => {
+            cancelLongPress();
+          },
+          touchend: () => {
+            cancelLongPress();
+          },
+          mousemove: () => {
+            if (!mapLocked) cancelLongPress();
+          },
+          touchmove: () => {
+            if (!mapLocked) cancelLongPress();
+          },
           dragstart: () => {
             setDraggingId(punto.id);
             setMapLocked(true);   // ← freeze map so it doesn't pan
@@ -227,6 +239,7 @@ export default function MapaColaborativo({
           dragend: (e) => {
             setDraggingId(null);
             setMapLocked(false);  // ← unfreeze map
+            cancelLongPress();
             const marker = e.target;
             const newPos = marker.getLatLng();
             const prevLat = punto.lat;
@@ -239,7 +252,7 @@ export default function MapaColaborativo({
               showToast(`📍 "${punto.nombre || punto.categoria}" movido · Ctrl+Z para deshacer`);
             }
           },
-        } : undefined}
+        }}
       >
         {/* Full popup — shown for every marker */}
         <Popup>
@@ -489,19 +502,9 @@ export default function MapaColaborativo({
       {/* Owner drag mode hint banner */}
       {isOwner && (
         <div className="absolute top-2 left-1/2 -translate-x-1/2 z-[500] pointer-events-none">
-          <div className="flex items-center gap-3 bg-slate-900/90 backdrop-blur-md border border-orange-500/40 text-orange-300 text-[9px] font-extrabold uppercase tracking-wider px-4 py-2 rounded-full shadow-lg shadow-orange-500/10 pointer-events-auto">
+          <div className="flex items-center gap-2 bg-slate-900/90 backdrop-blur-md border border-orange-500/40 text-orange-300 text-[9px] font-extrabold uppercase tracking-wider px-3.5 py-1.5 rounded-full shadow-lg shadow-orange-500/10">
             <span>🖱️</span>
-            <span>Dueño — Mantén SHIFT para arrastrar</span>
-            <button
-              onClick={() => setMapLocked((prev) => !prev)}
-              className={`ml-1.5 px-2.5 py-1 rounded-lg text-[8px] font-black uppercase transition-all duration-150 cursor-pointer ${
-                mapLocked
-                  ? "bg-orange-500 text-slate-950 shadow-md shadow-orange-500/25"
-                  : "bg-slate-950/80 text-orange-400 border border-orange-500/30 hover:border-orange-500"
-              }`}
-            >
-              {mapLocked ? "🔒 Bloqueado" : "🔓 Bloquear Mapa"}
-            </button>
+            <span>Dueño — Deja presionado un marcador para moverlo · Ctrl+Z deshace</span>
           </div>
         </div>
       )}
