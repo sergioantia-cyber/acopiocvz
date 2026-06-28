@@ -69,10 +69,10 @@ const createCustomIcon = (punto: PuntoReportado, isDraggingThis = false) => {
 
   return L.divIcon({
     html: `
-      <div class="relative flex items-center justify-center w-9 h-9 rounded-full text-white text-lg font-semibold shadow-2xl border-2 ${colorClass}${dragRing} transition-transform hover:scale-115 duration-200" style="${isDraggingThis ? "cursor:grabbing;" : "cursor:grab;"}">
-        <span class="z-10">${emoji}</span>
-        <span class="absolute -bottom-1 w-2 h-2 rotate-45 ${colorClass} border-r-2 border-b-2"></span>
-        ${isExt ? `<span class="absolute -top-1.5 -right-1.5 flex h-3.5 w-3.5 items-center justify-center rounded-full bg-slate-900 border border-slate-700 text-[8px] font-bold text-slate-300">ext</span>` : ""}
+      <div class="relative flex items-center justify-center w-9 h-9 rounded-full text-white text-lg font-semibold shadow-2xl border-2 ${colorClass}${dragRing} transition-transform hover:scale-115 duration-200" style="${isDraggingThis ? "cursor:grabbing !important;" : "cursor:grab !important;"}pointer-events:all">
+        <span class="z-10" style="pointer-events:none">${emoji}</span>
+        <span class="absolute -bottom-1 w-2 h-2 rotate-45 ${colorClass} border-r-2 border-b-2" style="pointer-events:none"></span>
+        ${isExt ? `<span class="absolute -top-1.5 -right-1.5 flex h-3.5 w-3.5 items-center justify-center rounded-full bg-slate-900 border border-slate-700 text-[8px] font-bold text-slate-300" style="pointer-events:none">ext</span>` : ""}
       </div>
     `,
     className: "custom-div-icon",
@@ -204,8 +204,9 @@ export default function MapaColaborativo({
   const lightCircleOpacity = Math.min(0.75, Math.max(0.15, (zoomLevel - 6) * 0.06));
 
   // Only owner can drag, and only when map is locked (either via Shift key or manual toggle)
+  // Note: fuente restriction removed — owner can reposition both user-created and external points
   const isDraggablePunto = (p: PuntoReportado) =>
-    isOwner && (isShiftPressed || mapLocked) && !p.fuente && DRAGGABLE_CATEGORIES.has(p.categoria) && p.categoria !== "sismo";
+    isOwner && (isShiftPressed || mapLocked) && DRAGGABLE_CATEGORIES.has(p.categoria) && p.categoria !== "sismo";
 
   const renderMarker = (punto: PuntoReportado) => {
     const hasDetails = !!punto.nombre && !!punto.direccion;
