@@ -1457,11 +1457,11 @@ export default function HomePage() {
             {/* 3. Top Filter Pills � —  premium, horizontal, scrollable */}
             <div className="absolute top-[80px] sm:top-[96px] left-0 right-0 z-20 pointer-events-none">
             
-              <div className="flex items-center gap-2 overflow-x-auto pb-1 pointer-events-auto px-4 scrollbar-none">
+              <div className="flex items-center gap-1.5 overflow-x-auto pb-1 pointer-events-auto px-4 scrollbar-none">
                 {/* ALL button */}
                 <button
                   onClick={() => setActiveMainFilter(null)}
-                  className={`flex-shrink-0 flex items-center gap-1.5 px-4 py-2 rounded-full border font-bold text-xs transition-all duration-200 backdrop-blur-md shadow-lg cursor-pointer ${
+                  className={`flex-shrink-0 flex items-center gap-1 px-3 py-1 rounded-full border font-bold text-[10px] transition-all duration-200 backdrop-blur-md shadow-lg cursor-pointer ${
                     activeMainFilter === null
                       ? "bg-white text-slate-900 border-white shadow-white/20 ring-2 ring-white/40"
                       : "bg-slate-900/90 border-slate-700/80 text-slate-400 hover:border-slate-500 hover:text-slate-200"
@@ -1478,7 +1478,7 @@ export default function HomePage() {
                       key={f.id}
                       onClick={() => setActiveMainFilter(isActive ? null : f.id)}
                       title={f.description}
-                      className={`flex-shrink-0 flex items-center gap-2 px-4 py-2 rounded-full border font-bold text-xs transition-all duration-200 backdrop-blur-md shadow-lg cursor-pointer ${
+                      className={`flex-shrink-0 flex items-center gap-1 px-3 py-1 rounded-full border font-bold text-[10px] transition-all duration-200 backdrop-blur-md shadow-lg cursor-pointer ${
                         isActive
                           ? `bg-gradient-to-r ${f.color} ${f.border} ${f.textActive} shadow-lg ${f.glow} ring-2 ${f.ring}`
                           : `bg-slate-900/90 border-slate-700/80 text-slate-400 hover:border-slate-500 hover:text-slate-200`
@@ -1487,7 +1487,7 @@ export default function HomePage() {
                       <span className="text-sm">{f.emoji}</span>
                       <span className="whitespace-nowrap">{f.shortName}</span>
                       {isActive && (
-                        <span className="ml-1 w-4 h-4 rounded-full bg-white/20 flex items-center justify-center text-[9px] font-black">
+                        <span className="ml-1 w-3 h-3 rounded-full bg-white/20 flex items-center justify-center text-[8px] font-black">
                           ✕
                         </span>
                       )}
@@ -1513,7 +1513,7 @@ export default function HomePage() {
               style={typeof window !== "undefined" && window.innerWidth >= 640 ? { left: `${panelPos.x}px`, top: `${panelPos.y}px` } : {}}
               className="fixed bottom-0 left-0 right-0 w-full sm:absolute sm:bottom-auto sm:left-auto sm:right-auto sm:w-[300px] z-20 pointer-events-auto select-none"
             >
-              <div className="w-full bg-slate-900/95 backdrop-blur-md border-t sm:border border-slate-800/90 rounded-t-3xl sm:rounded-2xl shadow-2xl flex flex-col gap-2 sm:gap-3 max-h-[48dvh] sm:max-h-[60dvh] overflow-hidden transition-all duration-300">
+              <div className="w-full bg-slate-900/95 backdrop-blur-md border-t sm:border border-slate-800/90 rounded-t-3xl sm:rounded-2xl shadow-2xl flex flex-col gap-2 sm:gap-3 max-h-[40dvh] sm:max-h-[60dvh] overflow-hidden transition-all duration-300">
                 
                 {/* Header Drag Handle & Title (Acts as grab handle) */}
                 <div 
@@ -1571,49 +1571,49 @@ export default function HomePage() {
 
                 {/* Collapsible search and detailed filters */}
                 {isFiltersExpanded && (
-                  <div className="p-4 pt-1 flex flex-col gap-3.5 overflow-y-auto max-h-[45dvh] scrollbar-none">
+                  <div className="p-2.5 pt-0.5 flex flex-col gap-2.5 overflow-y-auto max-h-[34dvh] scrollbar-none">
                     
                     {/* Stats Comparison Card */}
                     <div className="p-3 bg-slate-950 border border-slate-800/80 rounded-xl flex flex-col gap-2 shadow-inner">
-                      <div className="text-[8px] font-black uppercase tracking-widest text-orange-500">
+                      <div className="text-[7.5px] font-black uppercase tracking-widest text-orange-500">
                         �🇺🇳� Comparación de Monitoreo Nacional
                       </div>
                       
                       <div className="grid grid-cols-3 gap-2 text-center">
-                        <div className="bg-slate-900/80 p-2 rounded-lg border border-slate-800/50">
-                          <span className="text-[7px] text-slate-400 font-extrabold uppercase block truncate">En el Mapa</span>
-                          <strong className="text-sm font-black text-sky-400">
+                        <div className="bg-slate-900/80 p-1.5 rounded-lg border border-slate-800/50">
+                          <span className="text-[6.5px] text-slate-400 font-extrabold uppercase block truncate">En el Mapa</span>
+                          <strong className="text-xs font-black text-sky-400">
                             {puntos.filter(p => p.fuente !== "Localizados VE").length}
                           </strong>
                           <span className="text-[6px] text-slate-500 block leading-none">Centros activos</span>
                         </div>
-                        <div className="bg-slate-900/80 p-2 rounded-lg border border-slate-800/50">
-                          <span className="text-[7px] text-slate-400 font-extrabold uppercase block truncate">Ayuda por Vzla</span>
-                          <strong className="text-sm font-black text-amber-500">403</strong>
+                        <div className="bg-slate-900/80 p-1.5 rounded-lg border border-slate-800/50">
+                          <span className="text-[6.5px] text-slate-400 font-extrabold uppercase block truncate">Ayuda por Vzla</span>
+                          <strong className="text-xs font-black text-amber-500">403</strong>
                           <span className="text-[6px] text-slate-500 block leading-none">Centros registrados</span>
                         </div>
-                        <div className="bg-slate-900/80 p-2 rounded-lg border border-slate-800/50">
-                          <span className="text-[7px] text-slate-400 font-extrabold uppercase block truncate">Localizados</span>
-                          <strong className="text-sm font-black text-rose-500">500</strong>
+                        <div className="bg-slate-900/80 p-1.5 rounded-lg border border-slate-800/50">
+                          <span className="text-[6.5px] text-slate-400 font-extrabold uppercase block truncate">Localizados</span>
+                          <strong className="text-xs font-black text-rose-500">500</strong>
                           <span className="text-[6px] text-slate-500 block leading-none">Personas encontradas</span>
                         </div>
                       </div>
                       
-                      <p className="text-[8px] text-slate-400 leading-normal">
+                      <p className="text-[7.2px] text-slate-400 leading-snug">
                         Nuestra app filtra y agrupa reportes del terremoto 2026. Mostramos <strong className="text-sky-400">{puntos.filter(p => p.fuente !== "Localizados VE").length} centros funcionales</strong> mapeados, de los <strong className="text-amber-500">403 centros oficiales</strong> reportados en <a href="https://ayudaparavenezuela.com/#centros" target="_blank" rel="noreferrer" className="text-amber-400 underline hover:text-amber-300">ayudaparavenezuela.com</a>.
                       </p>
                     </div>
 
                     {/* Filtro por Categorías */}
-                    <div className="flex flex-col gap-2 bg-slate-950 border border-slate-800/80 rounded-xl p-3 shadow-inner">
-                      <div className="text-[8px] font-black uppercase tracking-widest text-orange-500">
+                    <div className="flex flex-col gap-2 bg-slate-950 border border-slate-800/80 rounded-xl p-2 shadow-inner">
+                      <div className="text-[7.5px] font-black uppercase tracking-widest text-orange-500">
                         � — � Filtrar por Categoría en Mapa
                       </div>
-                      <div className="grid grid-cols-2 gap-1.5">
+                      <div className="grid grid-cols-2 gap-1">
                         <button
                           type="button"
                           onClick={() => setCategoriaFilter("todos")}
-                          className={`py-1.5 px-2 rounded-lg text-[9px] font-extrabold transition cursor-pointer text-left flex items-center gap-1 ${
+                          className={`py-1 px-1.5 rounded-lg text-[8.2px] font-extrabold transition cursor-pointer text-left flex items-center gap-1 ${
                             categoriaFilter === "todos"
                               ? "bg-orange-500 text-white shadow-md border border-orange-400"
                               : "bg-slate-900 border border-slate-800 text-slate-400 hover:text-white"
@@ -1624,7 +1624,7 @@ export default function HomePage() {
                         <button
                           type="button"
                           onClick={() => setCategoriaFilter("energia")}
-                          className={`py-1.5 px-2 rounded-lg text-[9px] font-extrabold transition cursor-pointer text-left flex items-center gap-1 ${
+                          className={`py-1 px-1.5 rounded-lg text-[8.2px] font-extrabold transition cursor-pointer text-left flex items-center gap-1 ${
                             categoriaFilter === "energia"
                               ? "bg-amber-500 text-white shadow-md border border-amber-400"
                               : "bg-slate-900 border border-slate-800 text-slate-400 hover:text-white"
@@ -1635,7 +1635,7 @@ export default function HomePage() {
                         <button
                           type="button"
                           onClick={() => setCategoriaFilter("suministros")}
-                          className={`py-1.5 px-2 rounded-lg text-[9px] font-extrabold transition cursor-pointer text-left flex items-center gap-1 ${
+                          className={`py-1 px-1.5 rounded-lg text-[8.2px] font-extrabold transition cursor-pointer text-left flex items-center gap-1 ${
                             categoriaFilter === "suministros"
                               ? "bg-sky-500 text-white shadow-md border border-sky-400"
                               : "bg-slate-900 border border-slate-800 text-slate-400 hover:text-white"
@@ -1646,7 +1646,7 @@ export default function HomePage() {
                         <button
                           type="button"
                           onClick={() => setCategoriaFilter("salud")}
-                          className={`py-1.5 px-2 rounded-lg text-[9px] font-extrabold transition cursor-pointer text-left flex items-center gap-1 ${
+                          className={`py-1 px-1.5 rounded-lg text-[8.2px] font-extrabold transition cursor-pointer text-left flex items-center gap-1 ${
                             categoriaFilter === "salud"
                               ? "bg-emerald-500 text-white shadow-md border border-emerald-400"
                               : "bg-slate-900 border border-slate-800 text-slate-400 hover:text-white"
@@ -1657,7 +1657,7 @@ export default function HomePage() {
                         <button
                           type="button"
                           onClick={() => setCategoriaFilter("senal")}
-                          className={`py-1.5 px-2 rounded-lg text-[9px] font-extrabold transition cursor-pointer text-left flex items-center gap-1 ${
+                          className={`py-1 px-1.5 rounded-lg text-[8.2px] font-extrabold transition cursor-pointer text-left flex items-center gap-1 ${
                             categoriaFilter === "senal"
                               ? "bg-indigo-500 text-white shadow-md border border-indigo-400"
                               : "bg-slate-900 border border-slate-800 text-slate-400 hover:text-white"
@@ -1668,18 +1668,18 @@ export default function HomePage() {
                         <button
                           type="button"
                           onClick={() => setCategoriaFilter("movilidad")}
-                          className={`py-1.5 px-2 rounded-lg text-[9px] font-extrabold transition cursor-pointer text-left flex items-center gap-1 ${
+                          className={`py-1 px-1.5 rounded-lg text-[8.2px] font-extrabold transition cursor-pointer text-left flex items-center gap-1 ${
                             categoriaFilter === "movilidad"
                               ? "bg-purple-500 text-white shadow-md border border-purple-400"
                               : "bg-slate-900 border border-slate-800 text-slate-400 hover:text-white"
                           }`}
                         >
-                          � —  Vehículos / Movilidad
+                          �🚛 Vehículos / Movilidad
                         </button>
                         <button
                           type="button"
                           onClick={() => setCategoriaFilter("peligro")}
-                          className={`py-1.5 px-2 rounded-lg text-[9px] font-extrabold transition cursor-pointer text-left flex items-center gap-1 ${
+                          className={`py-1 px-1.5 rounded-lg text-[8.2px] font-extrabold transition cursor-pointer text-left flex items-center gap-1 ${
                             categoriaFilter === "peligro"
                               ? "bg-rose-500 text-white shadow-md border border-rose-400"
                               : "bg-slate-900 border border-slate-800 text-slate-400 hover:text-white"
@@ -1690,7 +1690,7 @@ export default function HomePage() {
                         <button
                           type="button"
                           onClick={() => setCategoriaFilter("sismo")}
-                          className={`py-1.5 px-2 rounded-lg text-[9px] font-extrabold transition cursor-pointer text-left flex items-center gap-1 ${
+                          className={`py-1 px-1.5 rounded-lg text-[8.2px] font-extrabold transition cursor-pointer text-left flex items-center gap-1 ${
                             categoriaFilter === "sismo"
                               ? "bg-red-650 text-white shadow-md border border-red-550"
                               : "bg-slate-900 border border-slate-800 text-slate-400 hover:text-white hover:bg-red-950/20"
