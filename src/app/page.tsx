@@ -158,6 +158,16 @@ export default function HomePage() {
   // Marker Move History (for Ctrl+Z undo)
   const [moveHistory, setMoveHistory] = useState<{ id: string; lat: number; lng: number }[]>([]);
 
+  // Pending Marker Move (for confirmation popup)
+  const [pendingMove, setPendingMove] = useState<{
+    id: string;
+    nombre: string;
+    lat: number;
+    lng: number;
+    prevLat: number;
+    prevLng: number;
+  } | null>(null);
+
   // Auth State
   const [user, setUser] = useState<{ email: string; name: string; avatar: string } | null>(null);
 
@@ -361,27 +371,63 @@ export default function HomePage() {
     prevLat: number,
     prevLng: number
   ) => {
-    if (!isAdmin) return;
+    if (!isOwner) return;
+
+    const puntoObj = puntos.find((p) => p.id === id);
+    const nombre = puntoObj ? (puntoObj.nombre || puntoObj.categoria) : "Marcador";
+
+    // Show confirmation modal first
+    setPendingMove({
+      id,
+      nombre,
+      lat: newLat,
+      lng: newLng,
+      prevLat,
+      prevLng,
+    });
+
+    // Optimistically update local state so the marker stays where it was dropped while confirming
+    setPuntos((prev) =>
+      prev.map((p) => (p.id === id ? { ...p, lat: newLat, lng: newLng } : p))
+    );
+  };
+
+  const confirmMarkerMove = async () => {
+    if (!pendingMove || !isOwner) return;
+
+    const { id, lat, lng, prevLat, prevLng } = pendingMove;
 
     // Push previous position to history stack (for Ctrl+Z undo)
     setMoveHistory((prev) => [...prev, { id, lat: prevLat, lng: prevLng }]);
 
-    // Optimistically update local state
-    setPuntos((prev) =>
-      prev.map((p) => (p.id === id ? { ...p, lat: newLat, lng: newLng } : p))
-    );
-
-    // Persist to Supabase
+    // Persist new position to Supabase
     if (isSupabaseConfigured && supabase) {
       await supabase
         .from("reports")
-        .update({ lat: newLat, lng: newLng })
+        .update({ lat, lng })
         .eq("id", id);
     }
+
+    setPendingMove(null);
+  };
+
+  const cancelMarkerMove = () => {
+    if (!pendingMove) return;
+
+    // Revert the local state back to the original position
+    setPuntos((prev) =>
+      prev.map((p) =>
+        p.id === pendingMove.id
+          ? { ...p, lat: pendingMove.prevLat, lng: pendingMove.prevLng }
+          : p
+      )
+    );
+
+    setPendingMove(null);
   };
 
   const handleUndoMove = async () => {
-    if (!isAdmin || moveHistory.length === 0) return;
+    if (!isOwner || moveHistory.length === 0) return;
 
     const last = moveHistory[moveHistory.length - 1];
     setMoveHistory((prev) => prev.slice(0, -1));
@@ -942,6 +988,44 @@ export default function HomePage() {
     };
     loadData();
   }, []);
+
+  // Supabase Real-time updates subscription for points
+  useEffect(() => {
+    if (!isSupabaseConfigured || !supabase) return;
+
+    const channel = supabase
+      .channel("reports-realtime-channel")
+      .on(
+        "postgres_changes",
+        { event: "*", schema: "public", table: "reports" },
+        (payload) => {
+          if (payload.eventType === "INSERT") {
+            const newPoint = payload.new as PuntoReportado;
+            setPuntos((prev) => {
+              if (prev.some((p) => p.id === newPoint.id)) return prev;
+              return [newPoint, ...prev];
+            });
+          } else if (payload.eventType === "UPDATE") {
+            const updatedPoint = payload.new as PuntoReportado;
+            setPuntos((prev) =>
+              prev.map((p) =>
+                p.id === updatedPoint.id
+                  ? { ...p, lat: updatedPoint.lat, lng: updatedPoint.lng, aprobado: updatedPoint.aprobado }
+                  : p
+              )
+            );
+          } else if (payload.eventType === "DELETE") {
+            const deletedPoint = payload.old as { id: string };
+            setPuntos((prev) => prev.filter((p) => p.id !== deletedPoint.id));
+          }
+        }
+      )
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(channel);
+    };
+  }, [isSupabaseConfigured, supabase]);
 
   // Real-time search query listener for Desaparecidos/Localizados
   useEffect(() => {
@@ -2089,6 +2173,55 @@ export default function HomePage() {
                   </a>
                 </div>
               </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* 8.5. Marker Move Confirmation Modal */}
+      {pendingMove && isOwner && (
+        <div className="fixed inset-0 z-[1000] flex items-center justify-center p-4 bg-slate-950/80 backdrop-blur-md animate-in fade-in duration-200">
+          <div className="w-full max-w-sm bg-slate-900 border-2 border-orange-500 rounded-3xl p-6 shadow-2xl flex flex-col gap-4 animate-in scale-in-95 duration-200">
+            <div className="flex items-center gap-2 border-b border-slate-800 pb-3">
+              <span className="text-xl">📍</span>
+              <h3 className="text-sm font-black text-white uppercase tracking-wider">
+                Confirmar Posición
+              </h3>
+            </div>
+
+            <div className="text-slate-300 text-xs flex flex-col gap-3 leading-relaxed">
+              <p>
+                ¿Deseas guardar la nueva posición para el marcador{" "}
+                <strong className="text-orange-400">"{pendingMove.nombre}"</strong>?
+              </p>
+
+              <div className="bg-slate-950/60 p-3 rounded-xl border border-slate-850 flex flex-col gap-1 text-[11px] font-mono text-slate-400">
+                <div>
+                  <span className="text-slate-500">Origen:</span> {pendingMove.prevLat.toFixed(6)}, {pendingMove.prevLng.toFixed(6)}
+                </div>
+                <div>
+                  <span className="text-emerald-500">Destino:</span> {pendingMove.lat.toFixed(6)}, {pendingMove.lng.toFixed(6)}
+                </div>
+              </div>
+
+              <p className="text-[10px] text-slate-500 italic">
+                * Al confirmar, la nueva ubicación se actualizará en tiempo real en los mapas de todos los usuarios activos.
+              </p>
+            </div>
+
+            <div className="flex gap-2.5 mt-2">
+              <button
+                onClick={cancelMarkerMove}
+                className="flex-1 py-2.5 bg-slate-800 hover:bg-slate-700 text-slate-200 rounded-xl text-xs font-bold transition border border-slate-700/50 cursor-pointer text-center"
+              >
+                Cancelar
+              </button>
+              <button
+                onClick={confirmMarkerMove}
+                className="flex-1 py-2.5 bg-orange-600 hover:bg-orange-500 text-white rounded-xl text-xs font-bold transition cursor-pointer text-center shadow-lg shadow-orange-500/25"
+              >
+                Confirmar y Guardar
+              </button>
             </div>
           </div>
         </div>
