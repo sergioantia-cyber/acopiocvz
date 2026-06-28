@@ -198,6 +198,7 @@ export default function HomePage() {
   const [psychMonedaTarifa, setPsychMonedaTarifa] = useState<string>("USD");
   const [psychVerificado, setPsychVerificado] = useState<boolean>(true);
   const [psychActiveTab, setPsychActiveTab] = useState<"todos" | "gratuito" | "social">("todos");
+  const [activeBookingUrl, setActiveBookingUrl] = useState<string | null>(null);
 
   // Form State
   const [formTipo, setFormTipo] = useState<"ofrece" | "necesita">("ofrece");
@@ -2247,14 +2248,24 @@ export default function HomePage() {
                             </a>
                           )}
                           {p.booking_url && (
-                            <a
-                              href={p.booking_url}
-                              target="_blank"
-                              rel="noopener noreferrer"
-                              className={`px-2.5 py-1.5 text-[9px] font-extrabold hover:text-white border rounded-xl transition flex items-center gap-1 ml-auto ${p.es_institucion ? 'text-blue-400 bg-blue-950/20 hover:bg-blue-600/80 border-blue-900/60' : 'text-purple-400 bg-purple-955/20 hover:bg-purple-600/80 border-purple-900/60'}`}
-                            >
-                              {p.es_institucion ? "🌐 Visitar Portal" : "📅 Agendar Cita"}
-                            </a>
+                            p.es_institucion ? (
+                              <a
+                                href={p.booking_url}
+                                target="_blank"
+                                rel="noopener noreferrer"
+                                className="px-2.5 py-1.5 text-[9px] font-extrabold hover:text-white border border-blue-900/60 rounded-xl transition flex items-center gap-1 ml-auto text-blue-400 bg-blue-950/20 hover:bg-blue-600/80"
+                              >
+                                🌐 Visitar Portal
+                              </a>
+                            ) : (
+                              <button
+                                type="button"
+                                onClick={() => setActiveBookingUrl(p.booking_url!)}
+                                className="px-2.5 py-1.5 text-[9px] font-extrabold hover:text-white border border-purple-900/60 rounded-xl transition flex items-center gap-1 ml-auto text-purple-400 bg-purple-955/20 hover:bg-purple-600/80 cursor-pointer"
+                              >
+                                📅 Agendar Cita
+                              </button>
+                            )
                           )}
                         </div>
 
@@ -2544,6 +2555,48 @@ export default function HomePage() {
               </button>
             </div>
           </form>
+        </div>
+      )}
+
+      {/* 13. Modal de Agenda y Calendario Integrado (Iframe para Google Calendar/Cal.com/Calendly) */}
+      {activeBookingUrl && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/80 backdrop-blur-sm animate-in fade-in duration-200">
+          <div className="w-full max-w-4xl h-[85dvh] bg-slate-900 border border-slate-800 rounded-3xl p-6 shadow-2xl flex flex-col gap-4 animate-in scale-in-95 duration-200">
+            <div className="flex justify-between items-center border-b border-slate-800 pb-3">
+              <div className="flex items-center gap-2">
+                <span className="text-xl">📅</span>
+                <h3 className="text-sm font-black text-white uppercase tracking-wider">
+                  Agenda de Citas y Disponibilidad
+                </h3>
+              </div>
+              <button
+                onClick={() => setActiveBookingUrl(null)}
+                className="w-7 h-7 rounded-xl bg-slate-950 border border-slate-700 text-slate-400 hover:text-white flex items-center justify-center cursor-pointer transition"
+              >
+                <X className="w-4 h-4" />
+              </button>
+            </div>
+            
+            <div className="flex-1 rounded-2xl overflow-hidden border border-slate-850 bg-slate-950 relative">
+              <iframe
+                src={activeBookingUrl}
+                className="w-full h-full border-0 bg-slate-950"
+                allow="camera; microphone; geolocation; clipboard-write;"
+              />
+            </div>
+            
+            <div className="flex justify-between items-center text-[10px] text-slate-500 px-1">
+              <span>* Puedes agendar o revisar disponibilidad directamente desde este panel interactivo.</span>
+              <a
+                href={activeBookingUrl}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="text-purple-400 hover:underline font-bold"
+              >
+                Abrir en pestaña nueva ↗
+              </a>
+            </div>
+          </div>
         </div>
       )}
     </main>
