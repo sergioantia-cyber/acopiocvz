@@ -1,7 +1,7 @@
 export interface PuntoReportado {
   id: string;
   tipo: "ofrece" | "necesita";
-  categoria: "energia" | "senal" | "suministros" | "salud" | "peligro" | "movilidad";
+  categoria: "energia" | "senal" | "suministros" | "salud" | "peligro" | "movilidad" | "sismo";
   descripcion: string;
   lat: number;
   lng: number;

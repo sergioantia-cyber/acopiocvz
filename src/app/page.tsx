@@ -1417,13 +1417,24 @@ export default function HomePage() {
                         <button
                           type="button"
                           onClick={() => setCategoriaFilter("peligro")}
-                          className={`py-1.5 px-2 rounded-lg text-[9px] font-extrabold transition cursor-pointer text-left flex items-center gap-1 col-span-2 ${
+                          className={`py-1.5 px-2 rounded-lg text-[9px] font-extrabold transition cursor-pointer text-left flex items-center gap-1 ${
                             categoriaFilter === "peligro"
                               ? "bg-rose-500 text-white shadow-md border border-rose-400"
-                              : "bg-slate-900 border border-slate-800 text-slate-400 hover:text-white hover:bg-rose-950/20"
+                              : "bg-slate-900 border border-slate-800 text-slate-400 hover:text-white"
                           }`}
                         >
-                          ⚠️ Zonas de Peligro / Emergencia Civil
+                          ⚠️ Peligros Civiles
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => setCategoriaFilter("sismo")}
+                          className={`py-1.5 px-2 rounded-lg text-[9px] font-extrabold transition cursor-pointer text-left flex items-center gap-1 ${
+                            categoriaFilter === "sismo"
+                              ? "bg-red-650 text-white shadow-md border border-red-550"
+                              : "bg-slate-900 border border-slate-800 text-slate-400 hover:text-white hover:bg-red-950/20"
+                          }`}
+                        >
+                          💥 Reportes de Sismos
                         </button>
                       </div>
                     </div>

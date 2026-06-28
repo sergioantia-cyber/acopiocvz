@@ -28,13 +28,16 @@ const CATEGORY_EMOJIS: Record<string, string> = {
   salud: "🏥",
   peligro: "⚠️",
   movilidad: "🚗",
+  sismo: "💥",
 };
 
 const createCustomIcon = (punto: PuntoReportado) => {
   const emoji = CATEGORY_EMOJIS[punto.categoria] || "📌";
   
   let colorClass = "";
-  if (punto.aprobado === false) {
+  if (punto.categoria === "sismo") {
+    colorClass = "border-rose-600 bg-rose-700 shadow-rose-500/60 animate-pulse scale-105";
+  } else if (punto.aprobado === false) {
     // Blinking warning style for pending points
     colorClass = "border-amber-500 bg-amber-600/80 shadow-amber-500/50 animate-pulse";
   } else if (punto.nombre || punto.categoria === "suministros") {
