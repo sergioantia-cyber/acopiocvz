@@ -1455,9 +1455,9 @@ export default function HomePage() {
             </div>
 
             {/* 3. Top Filter Pills � —  premium, horizontal, scrollable */}
-            <div className="absolute top-[80px] sm:top-[96px] left-0 right-0 z-20 pointer-events-none">
+            <div className="absolute top-[106px] sm:top-[96px] left-0 right-0 z-20 pointer-events-none">
             
-              <div className="flex items-center gap-1.5 overflow-x-auto pb-1 pointer-events-auto px-4 scrollbar-none">
+              <div className="flex items-center flex-wrap sm:flex-nowrap items-center justify-center sm:justify-start gap-1 sm:gap-1.5 pointer-events-auto px-2 sm:px-4">
                 {/* ALL button */}
                 <button
                   onClick={() => setActiveMainFilter(null)}
