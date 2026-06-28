@@ -2309,6 +2309,15 @@ export default function HomePage() {
                       </a>.
                     </div>
                   </li>
+                  <li className="flex items-start gap-2">
+                    <span className="text-orange-500 shrink-0">🌐</span>
+                    <div>
+                      <strong>Puntos de Internet / WiFi:</strong> Información satelital proveída en tiempo real por{" "}
+                      <a href="https://www.reconectavenezuela.com/" target="_blank" rel="noreferrer" className="text-sky-400 underline hover:text-sky-300 transition font-bold">
+                        Reconecta Venezuela
+                      </a>.
+                    </div>
+                  </li>
                 </ul>
               </div>
 
