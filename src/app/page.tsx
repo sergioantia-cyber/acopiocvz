@@ -155,6 +155,9 @@ export default function HomePage() {
   const [isDragging, setIsDragging] = useState(false);
   const [dragStart, setDragStart] = useState({ x: 0, y: 0 });
 
+  // Marker Move History (for Ctrl+Z undo)
+  const [moveHistory, setMoveHistory] = useState<{ id: string; lat: number; lng: number }[]>([]);
+
   // Auth State
   const [user, setUser] = useState<{ email: string; name: string; avatar: string } | null>(null);
 
@@ -349,6 +352,52 @@ export default function HomePage() {
         .eq("id", id);
     }
     alert("Reporte eliminado.");
+  };
+
+  const handleMarkerMove = async (
+    id: string,
+    newLat: number,
+    newLng: number,
+    prevLat: number,
+    prevLng: number
+  ) => {
+    if (!isAdmin) return;
+
+    // Push previous position to history stack (for Ctrl+Z undo)
+    setMoveHistory((prev) => [...prev, { id, lat: prevLat, lng: prevLng }]);
+
+    // Optimistically update local state
+    setPuntos((prev) =>
+      prev.map((p) => (p.id === id ? { ...p, lat: newLat, lng: newLng } : p))
+    );
+
+    // Persist to Supabase
+    if (isSupabaseConfigured && supabase) {
+      await supabase
+        .from("reports")
+        .update({ lat: newLat, lng: newLng })
+        .eq("id", id);
+    }
+  };
+
+  const handleUndoMove = async () => {
+    if (!isAdmin || moveHistory.length === 0) return;
+
+    const last = moveHistory[moveHistory.length - 1];
+    setMoveHistory((prev) => prev.slice(0, -1));
+
+    // Restore previous position in local state
+    setPuntos((prev) =>
+      prev.map((p) => (p.id === last.id ? { ...p, lat: last.lat, lng: last.lng } : p))
+    );
+
+    // Persist restored position to Supabase
+    if (isSupabaseConfigured && supabase) {
+      await supabase
+        .from("reports")
+        .update({ lat: last.lat, lng: last.lng })
+        .eq("id", last.id);
+    }
   };
 
   const handleAddAdmin = async (e: React.FormEvent) => {
@@ -935,6 +984,23 @@ export default function HomePage() {
     getAddress();
   }, [selectedCoords]);
 
+  // Ctrl+Z undo for admin marker moves
+  useEffect(() => {
+    if (!isAdmin) return;
+    const handleKeyDown = (e: KeyboardEvent) => {
+      // Only fire when not typing in an input/textarea
+      const tag = (e.target as HTMLElement)?.tagName?.toLowerCase();
+      if (tag === "input" || tag === "textarea" || tag === "select") return;
+      if ((e.ctrlKey || e.metaKey) && e.key === "z") {
+        e.preventDefault();
+        handleUndoMove();
+      }
+    };
+    window.addEventListener("keydown", handleKeyDown);
+    return () => window.removeEventListener("keydown", handleKeyDown);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [isAdmin, moveHistory]);
+
   const handleLocationSelected = (lat: number, lng: number) => {
     setSelectedCoords({ lat, lng });
   };
@@ -1254,6 +1320,7 @@ export default function HomePage() {
                 isAdmin={isAdmin}
                 onApprove={handleApprovePunto}
                 onDelete={handleDeletePunto}
+                onMarkerMove={handleMarkerMove}
               />
             </div>
 

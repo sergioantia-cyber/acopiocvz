@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { MapContainer, TileLayer, Marker, Popup, useMapEvents, Circle } from "react-leaflet";
 import MarkerClusterGroup from "react-leaflet-cluster";
 import L from "leaflet";
@@ -19,6 +19,7 @@ interface MapaColaborativoProps {
   isAdmin?: boolean;
   onApprove?: (id: string) => void;
   onDelete?: (id: string) => void;
+  onMarkerMove?: (id: string, lat: number, lng: number, prevLat: number, prevLng: number) => void;
 }
 
 const CATEGORY_EMOJIS: Record<string, string> = {
@@ -31,7 +32,7 @@ const CATEGORY_EMOJIS: Record<string, string> = {
   sismo: "💥",
 };
 
-const createCustomIcon = (punto: PuntoReportado) => {
+const createCustomIcon = (punto: PuntoReportado, isDragging = false) => {
   const emoji = CATEGORY_EMOJIS[punto.categoria] || "📌";
   
   let colorClass = "";
@@ -55,10 +56,11 @@ const createCustomIcon = (punto: PuntoReportado) => {
   }
 
   const isExt = punto.fuente && !punto.nombre;
+  const dragRing = isDragging ? " ring-4 ring-orange-400 ring-offset-1 ring-offset-slate-900 scale-125" : "";
 
   return L.divIcon({
     html: `
-      <div class="relative flex items-center justify-center w-9 h-9 rounded-full text-white text-lg font-semibold shadow-2xl border-2 ${colorClass} transition-transform hover:scale-115 duration-200">
+      <div class="relative flex items-center justify-center w-9 h-9 rounded-full text-white text-lg font-semibold shadow-2xl border-2 ${colorClass}${dragRing} transition-transform hover:scale-115 duration-200">
         <span class="z-10">${emoji}</span>
         <span class="absolute -bottom-1 w-2 h-2 rotate-45 ${colorClass} border-r-2 border-b-2"></span>
         ${isExt ? `<span class="absolute -top-1.5 -right-1.5 flex h-3.5 w-3.5 items-center justify-center rounded-full bg-slate-900 border border-slate-700 text-[8px] font-bold text-slate-300">ext</span>` : ""}
@@ -111,14 +113,24 @@ export default function MapaColaborativo({
   isAdmin = false,
   onApprove,
   onDelete,
+  onMarkerMove,
 }: MapaColaborativoProps) {
   const defaultCenter: [number, number] = userLocation || [10.4806, -66.9036];
   const [isMounted, setIsMounted] = useState(false);
   const [zoomLevel, setZoomLevel] = useState(7);
+  const [draggingId, setDraggingId] = useState<string | null>(null);
+  const [moveToast, setMoveToast] = useState<string | null>(null);
+  const toastTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   useEffect(() => {
     setIsMounted(true);
   }, []);
+
+  const showToast = (msg: string) => {
+    setMoveToast(msg);
+    if (toastTimerRef.current) clearTimeout(toastTimerRef.current);
+    toastTimerRef.current = setTimeout(() => setMoveToast(null), 3200);
+  };
 
   if (!isMounted) {
     return (
@@ -130,253 +142,309 @@ export default function MapaColaborativo({
 
   const lightCircleOpacity = Math.min(0.75, Math.max(0.15, (zoomLevel - 6) * 0.06));
 
+  // A punto is draggable if admin mode is on and it's not an external/sismo point
+  const isDraggablePunto = (punto: PuntoReportado) =>
+    isAdmin && !punto.fuente && punto.categoria !== "sismo";
+
   const renderMarker = (punto: PuntoReportado) => {
     const hasDetails = !!punto.nombre && !!punto.direccion;
+    const canDrag = isDraggablePunto(punto);
+    const isDraggingThis = draggingId === punto.id;
     
     return (
       <Marker
         key={punto.id}
         position={[punto.lat, punto.lng]}
-        icon={createCustomIcon(punto)}
+        icon={createCustomIcon(punto, isDraggingThis)}
+        draggable={canDrag}
+        eventHandlers={canDrag ? {
+          dragstart: () => {
+            setDraggingId(punto.id);
+          },
+          dragend: (e) => {
+            setDraggingId(null);
+            const marker = e.target;
+            const newPos = marker.getLatLng();
+            const prevLat = punto.lat;
+            const prevLng = punto.lng;
+            if (
+              Math.abs(newPos.lat - prevLat) > 0.00001 ||
+              Math.abs(newPos.lng - prevLng) > 0.00001
+            ) {
+              onMarkerMove?.(punto.id, newPos.lat, newPos.lng, prevLat, prevLng);
+              showToast(`📍 "${punto.nombre || punto.categoria}" movido · Ctrl+Z para deshacer`);
+            }
+          },
+        } : undefined}
       >
-        <Popup>
-          {hasDetails ? (
-            /* Premium detailed popup layout (matches MRW screenshot exactly) */
-            <div className="p-4 text-slate-100 flex flex-col gap-2.5 font-sans min-w-[290px] bg-[#111113] rounded-2xl shadow-2xl border border-slate-800/50">
-              {/* Header Pill depending on source & needs & approval */}
-              <div className="flex items-center gap-2 flex-wrap">
-                {punto.aprobado === false && (
-                  <span className="text-[9px] font-extrabold uppercase bg-amber-500 text-slate-950 px-2 py-0.5 rounded-full flex items-center gap-1 shadow-lg shadow-amber-500/25 animate-pulse">
-                    ⚠️ Pendiente de Aprobación
-                  </span>
+        {/* Show drag hint for admin on hover */}
+        {canDrag && (
+          <Popup>
+            <div className="p-2 bg-[#111113] rounded-xl text-slate-300 text-[10px] font-medium min-w-[180px]">
+              <span className="text-orange-400 font-extrabold text-xs block mb-1">🖱️ Modo Admin</span>
+              <span>Arrastra este marcador para moverlo.<br/>Usa <kbd className="bg-slate-800 px-1 rounded text-[9px]">Ctrl+Z</kbd> para deshacer.</span>
+            </div>
+          </Popup>
+        )}
+        {!canDrag && (
+          <Popup>
+            {hasDetails ? (
+              /* Premium detailed popup layout (matches MRW screenshot exactly) */
+              <div className="p-4 text-slate-100 flex flex-col gap-2.5 font-sans min-w-[290px] bg-[#111113] rounded-2xl shadow-2xl border border-slate-800/50">
+                {/* Header Pill depending on source & needs & approval */}
+                <div className="flex items-center gap-2 flex-wrap">
+                  {punto.aprobado === false && (
+                    <span className="text-[9px] font-extrabold uppercase bg-amber-500 text-slate-950 px-2 py-0.5 rounded-full flex items-center gap-1 shadow-lg shadow-amber-500/25 animate-pulse">
+                      ⚠️ Pendiente de Aprobación
+                    </span>
+                  )}
+                  {punto.fuente === "Caracas Ayuda" ? (
+                    <span className="text-[9px] font-extrabold uppercase tracking-wider bg-sky-950/70 text-sky-400 border border-sky-800/40 px-2.5 py-0.5 rounded-full flex items-center gap-1">
+                      📦 Centro de Acopio
+                    </span>
+                  ) : punto.fuente === "Ayuda por Venezuela" ? (
+                    <span className="text-[9px] font-extrabold uppercase tracking-wider bg-rose-950/70 text-rose-400 border border-rose-800/40 px-2.5 py-0.5 rounded-full flex items-center gap-1">
+                      🆘 Necesita Ayuda
+                    </span>
+                  ) : (
+                    <span className="text-[9px] font-extrabold uppercase tracking-wider bg-emerald-950/70 text-emerald-400 border border-emerald-800/40 px-2.5 py-0.5 rounded-full flex items-center gap-1">
+                      📍 Reporte: {punto.fuente || "Colaborativo"}
+                    </span>
+                  )}
+                </div>
+
+                {/* Name */}
+                <h3 className="text-sm font-black text-sky-400 tracking-wide mt-0.5 leading-tight">
+                  {punto.nombre}
+                </h3>
+
+                {/* Address */}
+                <p className="text-[11px] text-slate-300 leading-relaxed font-normal">
+                  {punto.direccion}
+                </p>
+
+                {/* Description / Details */}
+                {punto.descripcion && (
+                  <div className="text-[11px] text-slate-300 p-2 bg-slate-950/60 rounded-xl border border-slate-900 leading-relaxed">
+                    <div className="text-[8px] uppercase tracking-widest text-slate-500 font-extrabold mb-1">Detalles del punto</div>
+                    <span className="font-normal">{punto.descripcion}</span>
+                  </div>
                 )}
-                {punto.fuente === "Caracas Ayuda" ? (
-                  <span className="text-[9px] font-extrabold uppercase tracking-wider bg-sky-950/70 text-sky-400 border border-sky-800/40 px-2.5 py-0.5 rounded-full flex items-center gap-1">
-                    📦 Centro de Acopio
-                  </span>
-                ) : punto.fuente === "Ayuda por Venezuela" ? (
-                  <span className="text-[9px] font-extrabold uppercase tracking-wider bg-rose-950/70 text-rose-400 border border-rose-800/40 px-2.5 py-0.5 rounded-full flex items-center gap-1">
-                    🆘 Necesita Ayuda
-                  </span>
-                ) : (
-                  <span className="text-[9px] font-extrabold uppercase tracking-wider bg-emerald-950/70 text-emerald-400 border border-emerald-800/40 px-2.5 py-0.5 rounded-full flex items-center gap-1">
-                    📍 Reporte: {punto.fuente || "Colaborativo"}
-                  </span>
+
+                {/* Accepted Items */}
+                {punto.aceptan && (
+                  <div className="text-[11px] leading-relaxed">
+                    <span className="font-bold text-white">{punto.tipo === "necesita" ? "Necesitan: " : "Aceptan: "}</span>
+                    <span className="text-slate-300">{punto.aceptan}</span>
+                  </div>
                 )}
-              </div>
 
-              {/* Name */}
-              <h3 className="text-sm font-black text-sky-400 tracking-wide mt-0.5 leading-tight">
-                {punto.nombre}
-              </h3>
+                {/* Contact Number */}
+                {punto.contacto && (
+                  <div className="text-[11px]">
+                    <span className="font-bold text-white">Contacto: </span>
+                    <a 
+                      href={`tel:${punto.contacto.replace(/\s+/g, "")}`} 
+                      className="text-sky-400 underline font-semibold hover:text-sky-300 transition"
+                    >
+                      {punto.contacto}
+                    </a>
+                  </div>
+                )}
 
-              {/* Address */}
-              <p className="text-[11px] text-slate-300 leading-relaxed font-normal">
-                {punto.direccion}
-              </p>
-
-              {/* Description / Details */}
-              {punto.descripcion && (
-                <div className="text-[11px] text-slate-300 p-2 bg-slate-950/60 rounded-xl border border-slate-900 leading-relaxed">
-                  <div className="text-[8px] uppercase tracking-widest text-slate-500 font-extrabold mb-1">Detalles del punto</div>
-                  <span className="font-normal">{punto.descripcion}</span>
+                {/* Region & Source */}
+                <div className="flex justify-between items-center text-[10px] text-slate-400 font-medium mt-1">
+                  <div className="flex items-center gap-1">
+                    <span>📍</span>
+                    <span>{punto.region || "Venezuela"}</span>
+                  </div>
+                  <span className="text-[8px] text-slate-500 uppercase tracking-wider font-extrabold">{punto.fuente}</span>
                 </div>
-              )}
 
-              {/* Accepted Items */}
-              {punto.aceptan && (
-                <div className="text-[11px] leading-relaxed">
-                  <span className="font-bold text-white">{punto.tipo === "necesita" ? "Necesitan: " : "Aceptan: "}</span>
-                  <span className="text-slate-300">{punto.aceptan}</span>
-                </div>
-              )}
-
-              {/* Contact Number */}
-              {punto.contacto && (
-                <div className="text-[11px]">
-                  <span className="font-bold text-white">Contacto: </span>
-                  <a 
-                    href={`tel:${punto.contacto.replace(/\s+/g, "")}`} 
-                    className="text-sky-400 underline font-semibold hover:text-sky-300 transition"
-                  >
-                    {punto.contacto}
-                  </a>
-                </div>
-              )}
-
-              {/* Region & Source */}
-              <div className="flex justify-between items-center text-[10px] text-slate-400 font-medium mt-1">
-                <div className="flex items-center gap-1">
-                  <span>📍</span>
-                  <span>{punto.region || "Venezuela"}</span>
-                </div>
-                <span className="text-[8px] text-slate-500 uppercase tracking-wider font-extrabold">{punto.fuente}</span>
-              </div>
-
-              {/* Action Buttons: Maps, Whatsapp & Call */}
-              <div className="flex flex-wrap gap-2 mt-2 pt-2.5 border-t border-slate-800/80">
-                <a
-                  href={`https://www.google.com/maps/search/?api=1&query=${punto.lat},${punto.lng}`}
-                  target="_blank"
-                  rel="noreferrer"
-                  className="flex-1 min-w-[70px] flex items-center justify-center gap-1 py-2 bg-blue-600 hover:bg-blue-500 text-white rounded-xl text-[9px] font-extrabold transition shadow-lg cursor-pointer"
-                >
-                  🧭 Maps
-                </a>
-                
-                {punto.whatsapp && (
+                {/* Action Buttons: Maps, Whatsapp & Call */}
+                <div className="flex flex-wrap gap-2 mt-2 pt-2.5 border-t border-slate-800/80">
                   <a
-                    href={punto.whatsapp}
+                    href={`https://www.google.com/maps/search/?api=1&query=${punto.lat},${punto.lng}`}
                     target="_blank"
                     rel="noreferrer"
-                    className="flex-1 min-w-[70px] flex items-center justify-center gap-1 py-2 bg-[#25d366] hover:bg-[#20ba56] text-white rounded-xl text-[9px] font-extrabold transition shadow-lg cursor-pointer"
+                    className="flex-1 min-w-[70px] flex items-center justify-center gap-1 py-2 bg-blue-600 hover:bg-blue-500 text-white rounded-xl text-[9px] font-extrabold transition shadow-lg cursor-pointer"
                   >
-                    💬 WhatsApp
+                    🧭 Maps
                   </a>
-                )}
-
-                {punto.contacto && (
-                  <a
-                    href={`tel:${punto.contacto.replace(/\s+/g, "")}`}
-                    className="flex-1 min-w-[70px] flex items-center justify-center gap-1 py-2 bg-slate-800 hover:bg-slate-700 text-slate-100 rounded-xl text-[9px] font-extrabold transition border border-slate-700/50 shadow-lg cursor-pointer"
-                  >
-                    📞 Llamar
-                  </a>
-                )}
-
-                {onEdit && punto.aprobado !== false && (
-                  <button
-                    onClick={() => onEdit(punto)}
-                    className="flex-1 min-w-[70px] flex items-center justify-center gap-1 py-2 bg-orange-600 hover:bg-orange-500 text-white rounded-xl text-[9px] font-extrabold transition border border-orange-500/30 shadow-lg cursor-pointer"
-                  >
-                    ✏️ Editar
-                  </button>
-                )}
-
-                {/* Admin Approvals & Delete Moderation Buttons */}
-                {isAdmin && punto.aprobado === false && (
-                  <div className="w-full flex gap-2 mt-1.5">
-                    {onApprove && (
-                      <button
-                        onClick={() => onApprove(punto.id)}
-                        className="flex-1 py-2 bg-emerald-600 hover:bg-emerald-500 text-white rounded-xl text-[9px] font-extrabold transition shadow-lg cursor-pointer flex items-center justify-center gap-1"
-                      >
-                        ✅ Aprobar
-                      </button>
-                    )}
-                    {onDelete && (
-                      <button
-                        onClick={() => onDelete(punto.id)}
-                        className="flex-1 py-2 bg-rose-600 hover:bg-rose-500 text-white rounded-xl text-[9px] font-extrabold transition shadow-lg cursor-pointer flex items-center justify-center gap-1"
-                      >
-                        ❌ Rechazar
-                      </button>
-                    )}
-                  </div>
-                )}
-              </div>
-            </div>
-          ) : (
-            /* Standard community report popup layout, modernized to match premium aesthetics */
-            <div className="p-4 text-slate-100 flex flex-col gap-2 font-sans min-w-[240px] bg-[#111113] rounded-2xl">
-              <div className="flex items-center gap-1.5 flex-wrap">
-                {punto.aprobado === false && (
-                  <span className="text-[8px] font-black uppercase bg-amber-500 text-slate-950 px-2 py-0.5 rounded-full flex items-center gap-0.5 shadow-lg shadow-amber-500/25 animate-pulse">
-                    ⚠️ Pendiente
-                  </span>
-                )}
-                <span className="text-base">{CATEGORY_EMOJIS[punto.categoria]}</span>
-                <span className="font-bold text-slate-100 text-xs capitalize font-sans">
-                  {punto.categoria}
-                </span>
-                {punto.fuente ? (
-                  <span className="ml-auto text-[9px] px-2 py-0.5 rounded-full bg-slate-800 border border-slate-700 text-slate-300 font-bold uppercase">
-                    {punto.fuente}
-                  </span>
-                ) : (
-                  <span
-                    className={`ml-auto text-[9px] px-2 py-0.5 rounded-full font-bold uppercase ${
-                      punto.tipo === "ofrece"
-                        ? "bg-emerald-500/20 text-emerald-400"
-                        : "bg-rose-500/20 text-rose-400"
-                    }`}
-                  >
-                    {punto.tipo}
-                  </span>
-                )}
-              </div>
-              
-              <p className="text-slate-300 text-xs my-1.5 leading-relaxed whitespace-pre-wrap">
-                {punto.descripcion}
-              </p>
-              
-              <div className="flex items-center justify-between text-[11px] text-slate-400 pt-2 border-t border-slate-800/60">
-                {punto.fuente ? (
-                  <span className="text-[10px] text-slate-500 italic">Reporte externo verificado</span>
-                ) : (
-                  <>
-                    <span>
-                      Votos: <strong className="text-white">{punto.confirmations}</strong>
-                    </span>
-                    <button
-                      onClick={() => onConfirm(punto.id)}
-                      className="px-2.5 py-1 bg-orange-600 hover:bg-orange-500 text-white rounded-lg transition font-medium cursor-pointer"
+                  
+                  {punto.whatsapp && (
+                    <a
+                      href={punto.whatsapp}
+                      target="_blank"
+                      rel="noreferrer"
+                      className="flex-1 min-w-[70px] flex items-center justify-center gap-1 py-2 bg-[#25d366] hover:bg-[#20ba56] text-white rounded-xl text-[9px] font-extrabold transition shadow-lg cursor-pointer"
                     >
-                      Confirmar Vigencia
+                      💬 WhatsApp
+                    </a>
+                  )}
+
+                  {punto.contacto && (
+                    <a
+                      href={`tel:${punto.contacto.replace(/\s+/g, "")}`}
+                      className="flex-1 min-w-[70px] flex items-center justify-center gap-1 py-2 bg-slate-800 hover:bg-slate-700 text-slate-100 rounded-xl text-[9px] font-extrabold transition border border-slate-700/50 shadow-lg cursor-pointer"
+                    >
+                      📞 Llamar
+                    </a>
+                  )}
+
+                  {onEdit && punto.aprobado !== false && (
+                    <button
+                      onClick={() => onEdit(punto)}
+                      className="flex-1 min-w-[70px] flex items-center justify-center gap-1 py-2 bg-orange-600 hover:bg-orange-500 text-white rounded-xl text-[9px] font-extrabold transition border border-orange-500/30 shadow-lg cursor-pointer"
+                    >
+                      ✏️ Editar
                     </button>
-                  </>
-                )}
-              </div>
+                  )}
 
-              <div className="mt-1 flex gap-2">
-                <a
-                  href={`https://www.google.com/maps/search/?api=1&query=${punto.lat},${punto.lng}`}
-                  target="_blank"
-                  rel="noreferrer"
-                  className="flex-1 flex items-center justify-center gap-1 py-1.5 bg-blue-600 hover:bg-blue-500 text-white rounded-lg text-[10px] font-bold transition shadow-lg cursor-pointer"
-                >
-                  🧭 Cómo llegar
-                </a>
-                {onEdit && punto.aprobado !== false && (
-                  <button
-                    onClick={() => onEdit(punto)}
-                    className="flex-1 flex items-center justify-center gap-1 py-1.5 bg-orange-600 hover:bg-orange-500 text-white rounded-lg text-[10px] font-bold transition shadow-lg cursor-pointer"
+                  {/* Admin Approvals & Delete Moderation Buttons */}
+                  {isAdmin && punto.aprobado === false && (
+                    <div className="w-full flex gap-2 mt-1.5">
+                      {onApprove && (
+                        <button
+                          onClick={() => onApprove(punto.id)}
+                          className="flex-1 py-2 bg-emerald-600 hover:bg-emerald-500 text-white rounded-xl text-[9px] font-extrabold transition shadow-lg cursor-pointer flex items-center justify-center gap-1"
+                        >
+                          ✅ Aprobar
+                        </button>
+                      )}
+                      {onDelete && (
+                        <button
+                          onClick={() => onDelete(punto.id)}
+                          className="flex-1 py-2 bg-rose-600 hover:bg-rose-500 text-white rounded-xl text-[9px] font-extrabold transition shadow-lg cursor-pointer flex items-center justify-center gap-1"
+                        >
+                          ❌ Rechazar
+                        </button>
+                      )}
+                    </div>
+                  )}
+                </div>
+              </div>
+            ) : (
+              /* Standard community report popup layout, modernized to match premium aesthetics */
+              <div className="p-4 text-slate-100 flex flex-col gap-2 font-sans min-w-[240px] bg-[#111113] rounded-2xl">
+                <div className="flex items-center gap-1.5 flex-wrap">
+                  {punto.aprobado === false && (
+                    <span className="text-[8px] font-black uppercase bg-amber-500 text-slate-950 px-2 py-0.5 rounded-full flex items-center gap-0.5 shadow-lg shadow-amber-500/25 animate-pulse">
+                      ⚠️ Pendiente
+                    </span>
+                  )}
+                  <span className="text-base">{CATEGORY_EMOJIS[punto.categoria]}</span>
+                  <span className="font-bold text-slate-100 text-xs capitalize font-sans">
+                    {punto.categoria}
+                  </span>
+                  {punto.fuente ? (
+                    <span className="ml-auto text-[9px] px-2 py-0.5 rounded-full bg-slate-800 border border-slate-700 text-slate-300 font-bold uppercase">
+                      {punto.fuente}
+                    </span>
+                  ) : (
+                    <span
+                      className={`ml-auto text-[9px] px-2 py-0.5 rounded-full font-bold uppercase ${
+                        punto.tipo === "ofrece"
+                          ? "bg-emerald-500/20 text-emerald-400"
+                          : "bg-rose-500/20 text-rose-400"
+                      }`}
+                    >
+                      {punto.tipo}
+                    </span>
+                  )}
+                </div>
+                
+                <p className="text-slate-300 text-xs my-1.5 leading-relaxed whitespace-pre-wrap">
+                  {punto.descripcion}
+                </p>
+                
+                <div className="flex items-center justify-between text-[11px] text-slate-400 pt-2 border-t border-slate-800/60">
+                  {punto.fuente ? (
+                    <span className="text-[10px] text-slate-500 italic">Reporte externo verificado</span>
+                  ) : (
+                    <>
+                      <span>
+                        Votos: <strong className="text-white">{punto.confirmations}</strong>
+                      </span>
+                      <button
+                        onClick={() => onConfirm(punto.id)}
+                        className="px-2.5 py-1 bg-orange-600 hover:bg-orange-500 text-white rounded-lg transition font-medium cursor-pointer"
+                      >
+                        Confirmar Vigencia
+                      </button>
+                    </>
+                  )}
+                </div>
+
+                <div className="mt-1 flex gap-2">
+                  <a
+                    href={`https://www.google.com/maps/search/?api=1&query=${punto.lat},${punto.lng}`}
+                    target="_blank"
+                    rel="noreferrer"
+                    className="flex-1 flex items-center justify-center gap-1 py-1.5 bg-blue-600 hover:bg-blue-500 text-white rounded-lg text-[10px] font-bold transition shadow-lg cursor-pointer"
                   >
-                    ✏️ Editar
-                  </button>
-                )}
+                    🧭 Cómo llegar
+                  </a>
+                  {onEdit && punto.aprobado !== false && (
+                    <button
+                      onClick={() => onEdit(punto)}
+                      className="flex-1 flex items-center justify-center gap-1 py-1.5 bg-orange-600 hover:bg-orange-500 text-white rounded-lg text-[10px] font-bold transition shadow-lg cursor-pointer"
+                    >
+                      ✏️ Editar
+                    </button>
+                  )}
 
-                {/* Admin Approvals & Delete Moderation Buttons */}
-                {isAdmin && punto.aprobado === false && (
-                  <div className="w-full flex gap-2 mt-1.5">
-                    {onApprove && (
-                      <button
-                        onClick={() => onApprove(punto.id)}
-                        className="flex-1 py-1.5 bg-emerald-600 hover:bg-emerald-500 text-white rounded-lg text-[9px] font-bold transition shadow-lg cursor-pointer"
-                      >
-                        Aprobar
-                      </button>
-                    )}
-                    {onDelete && (
-                      <button
-                        onClick={() => onDelete(punto.id)}
-                        className="flex-1 py-1.5 bg-rose-600 hover:bg-rose-500 text-white rounded-lg text-[9px] font-bold transition shadow-lg cursor-pointer"
-                      >
-                        Rechazar
-                      </button>
-                    )}
-                  </div>
-                )}
+                  {/* Admin Approvals & Delete Moderation Buttons */}
+                  {isAdmin && punto.aprobado === false && (
+                    <div className="w-full flex gap-2 mt-1.5">
+                      {onApprove && (
+                        <button
+                          onClick={() => onApprove(punto.id)}
+                          className="flex-1 py-1.5 bg-emerald-600 hover:bg-emerald-500 text-white rounded-lg text-[9px] font-bold transition shadow-lg cursor-pointer"
+                        >
+                          Aprobar
+                        </button>
+                      )}
+                      {onDelete && (
+                        <button
+                          onClick={() => onDelete(punto.id)}
+                          className="flex-1 py-1.5 bg-rose-600 hover:bg-rose-500 text-white rounded-lg text-[9px] font-bold transition shadow-lg cursor-pointer"
+                        >
+                          Rechazar
+                        </button>
+                      )}
+                    </div>
+                  )}
+                </div>
               </div>
-            </div>
-          )}
-        </Popup>
+            )}
+          </Popup>
+        )}
       </Marker>
     );
   };
 
   return (
     <div className="w-full h-full min-h-[400px] md:min-h-full relative rounded-2xl overflow-hidden border-4 border-orange-500 shadow-2xl bg-slate-900">
+      {/* Drag mode hint banner for admins */}
+      {isAdmin && (
+        <div className="absolute top-2 left-1/2 -translate-x-1/2 z-[500] pointer-events-none">
+          <div className="flex items-center gap-2 bg-slate-900/90 backdrop-blur-md border border-orange-500/40 text-orange-300 text-[9px] font-extrabold uppercase tracking-wider px-3 py-1.5 rounded-full shadow-lg shadow-orange-500/10">
+            <span>🖱️</span>
+            <span>Modo Admin — Arrastra marcadores · Ctrl+Z deshace</span>
+          </div>
+        </div>
+      )}
+
+      {/* Move toast notification */}
+      {moveToast && (
+        <div className="absolute bottom-6 left-1/2 -translate-x-1/2 z-[500] pointer-events-none animate-in slide-in-from-bottom-2 duration-200">
+          <div className="flex items-center gap-2 bg-slate-900/95 backdrop-blur-md border border-emerald-500/40 text-emerald-300 text-[10px] font-bold px-4 py-2 rounded-full shadow-xl shadow-emerald-500/10">
+            {moveToast}
+          </div>
+        </div>
+      )}
+
       <MapContainer
         center={defaultCenter}
         zoom={userLocation ? 13 : 7}
