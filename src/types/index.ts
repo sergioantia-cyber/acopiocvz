@@ -36,6 +36,7 @@ export interface Psychologist {
   idiomas?: string;
   modalidad?: string;
   booking_url?: string;
+  es_institucion?: boolean;
   activo?: boolean;
   created_at?: string;
 }

@@ -178,6 +178,7 @@ export default function HomePage() {
   const [psychIdiomas, setPsychIdiomas] = useState("Español");
   const [psychModalidad, setPsychModalidad] = useState("online");
   const [psychBookingUrl, setPsychBookingUrl] = useState("");
+  const [psychEsInstitucion, setPsychEsInstitucion] = useState(false);
 
   // Form State
   const [formTipo, setFormTipo] = useState<"ofrece" | "necesita">("ofrece");
@@ -363,14 +364,14 @@ export default function HomePage() {
 
   const handleSavePsychologist = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!psychNombre || !psychTitulo || !psychEspecialidad) {
-      alert("Nombre, título y especialidad son obligatorios");
+    if (!psychNombre || !psychEspecialidad || (!psychEsInstitucion && !psychTitulo)) {
+      alert("Nombre, especialidad y título (para profesionales) son obligatorios");
       return;
     }
 
     const payload: Omit<Psychologist, "id"> & { id?: string } = {
       nombre: psychNombre,
-      titulo: psychTitulo,
+      titulo: psychEsInstitucion ? (psychTitulo || "Línea de Ayuda / Institución") : psychTitulo,
       especialidad: psychEspecialidad,
       descripcion: psychDescripcion,
       telefono: psychTelefono,
@@ -380,6 +381,7 @@ export default function HomePage() {
       idiomas: psychIdiomas,
       modalidad: psychModalidad,
       booking_url: psychBookingUrl,
+      es_institucion: psychEsInstitucion,
       activo: true,
     };
 
@@ -429,13 +431,13 @@ export default function HomePage() {
   };
 
   const handleDeletePsychologist = async (id: string) => {
-    if (!window.confirm("¿Seguro que deseas eliminar este psicólogo/a de la base de datos?")) return;
+    if (!window.confirm("¿Seguro que deseas eliminar este psicólogo/a o institución de la base de datos?")) return;
 
     if (isSupabaseConfigured && supabase) {
       const { error } = await supabase.from("psychologists").delete().eq("id", id);
       if (error) {
         console.error("Error deleting psychologist:", error);
-        alert("Error al eliminar psicólogo: " + error.message);
+        alert("Error al eliminar psicólogo/institución: " + error.message);
         return;
       }
     }
@@ -460,6 +462,7 @@ export default function HomePage() {
     setPsychIdiomas(p.idiomas || "Español");
     setPsychModalidad(p.modalidad || "online");
     setPsychBookingUrl(p.booking_url || "");
+    setPsychEsInstitucion(!!p.es_institucion);
     setIsPsychFormOpen(true);
   };
 
@@ -476,6 +479,7 @@ export default function HomePage() {
     setPsychIdiomas("Español");
     setPsychModalidad("online");
     setPsychBookingUrl("");
+    setPsychEsInstitucion(false);
     setIsPsychFormOpen(false);
   };
 
@@ -1841,7 +1845,7 @@ export default function HomePage() {
                     Asistencia Psicológica Gratuita
                   </h3>
                   <span className="text-[8px] text-slate-500 font-bold uppercase tracking-wider block mt-0.5">
-                    Directorio de profesionales voluntarios
+                    Directorio de profesionales e instituciones voluntarias
                   </span>
                 </div>
               </div>
@@ -1850,11 +1854,12 @@ export default function HomePage() {
                   <button
                     onClick={() => {
                       setEditingPsych(null);
+                      setPsychEsInstitucion(false);
                       setIsPsychFormOpen(true);
                     }}
                     className="flex items-center gap-1.5 px-3 py-1.5 text-[10px] font-bold text-purple-400 bg-purple-955/40 border border-purple-900/60 rounded-xl hover:bg-purple-950 hover:border-purple-700 transition cursor-pointer"
                   >
-                    <Plus className="w-3.5 h-3.5" /> Registrar Profesional
+                    <Plus className="w-3.5 h-3.5" /> Registrar Profesional / Institución
                   </button>
                 )}
                 <button
@@ -1870,7 +1875,7 @@ export default function HomePage() {
             <div className="relative">
               <input
                 type="text"
-                placeholder="Buscar por nombre, especialidad o palabra clave..."
+                placeholder="Buscar por nombre, especialidad, institución o palabra clave..."
                 value={searchPsych}
                 onChange={(e) => setSearchPsych(e.target.value)}
                 className="w-full pl-9 pr-4 py-2 text-xs bg-slate-950/80 border border-slate-850 rounded-2xl text-slate-200 placeholder-slate-500 focus:outline-none focus:border-purple-500/50 transition-colors"
@@ -1891,7 +1896,7 @@ export default function HomePage() {
                 );
               }).length === 0 ? (
                 <div className="py-12 text-center text-xs text-slate-500">
-                  No se encontraron profesionales registrados que coincidan con la búsqueda.
+                  No se encontraron profesionales o instituciones registradas que coincidan con la búsqueda.
                 </div>
               ) : (
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
@@ -1909,13 +1914,15 @@ export default function HomePage() {
                     .map((p) => (
                       <div
                         key={p.id}
-                        className="bg-slate-950/60 p-4 rounded-2xl border border-slate-850 flex flex-col justify-between gap-3 shadow-lg relative group overflow-hidden hover:border-slate-800 transition-colors"
+                        className={`p-4 rounded-2xl border flex flex-col justify-between gap-3 shadow-lg relative group overflow-hidden hover:border-slate-800 transition-colors bg-slate-950/60 border-slate-850`}
                       >
                         <div className="flex gap-3">
-                          {/* Foto de perfil */}
-                          <div className="w-12 h-12 rounded-2xl bg-purple-950/40 border border-purple-900/40 flex-shrink-0 overflow-hidden flex items-center justify-center">
+                          {/* Foto de perfil o ícono de institución */}
+                          <div className={`w-12 h-12 rounded-2xl border flex-shrink-0 overflow-hidden flex items-center justify-center ${p.es_institucion ? 'bg-blue-950/40 border-blue-900/40' : 'bg-purple-955/40 border-purple-900/40'}`}>
                             {p.foto_url ? (
                               <img src={p.foto_url} alt={p.nombre} className="w-full h-full object-cover" />
+                            ) : p.es_institucion ? (
+                              <span className="text-lg font-bold text-blue-400">🏢</span>
                             ) : (
                               <span className="text-base font-bold text-purple-400">
                                 {p.nombre.charAt(0).toUpperCase()}
@@ -1925,8 +1932,15 @@ export default function HomePage() {
 
                           {/* Info principal */}
                           <div className="flex-1 min-w-0">
-                            <h4 className="text-xs font-black text-white truncate">{p.nombre}</h4>
-                            <span className="text-[9px] text-purple-400 font-extrabold block truncate">
+                            <div className="flex items-center gap-1.5 flex-wrap">
+                              <h4 className="text-xs font-black text-white truncate max-w-[70%]">{p.nombre}</h4>
+                              {p.es_institucion && (
+                                <span className="px-1.5 py-0.5 rounded bg-blue-950/80 border border-blue-900/50 text-[7px] font-extrabold text-blue-400 uppercase tracking-wider flex-shrink-0">
+                                  Línea de Ayuda
+                                </span>
+                              )}
+                            </div>
+                            <span className={`text-[9px] font-extrabold block truncate ${p.es_institucion ? 'text-blue-400' : 'text-purple-400'}`}>
                               {p.titulo}
                             </span>
                             <span className="inline-block mt-1 px-2 py-0.5 rounded-lg bg-slate-900 text-[8px] font-bold text-slate-400 border border-slate-800/80">
@@ -1945,9 +1959,11 @@ export default function HomePage() {
                           <span className="text-[8px] font-bold px-1.5 py-0.5 rounded bg-slate-900 text-slate-500 border border-slate-850">
                             🗣️ {p.idiomas || "Español"}
                           </span>
-                          <span className="text-[8px] font-bold px-1.5 py-0.5 rounded bg-slate-900 text-slate-500 border border-slate-850">
-                            💻 {p.modalidad === "online" ? "Online" : p.modalidad === "presencial" ? "Presencial" : "Ambas"}
-                          </span>
+                          {!p.es_institucion && (
+                            <span className="text-[8px] font-bold px-1.5 py-0.5 rounded bg-slate-900 text-slate-500 border border-slate-850">
+                              💻 {p.modalidad === "online" ? "Online" : p.modalidad === "presencial" ? "Presencial" : "Ambas"}
+                            </span>
+                          )}
                         </div>
 
                         {/* Botones de acción */}
@@ -1967,7 +1983,7 @@ export default function HomePage() {
                               href={`tel:${p.telefono}`}
                               className="px-2.5 py-1.5 text-[9px] font-extrabold text-blue-400 hover:text-white bg-blue-950/20 hover:bg-blue-600/80 border border-blue-900/60 rounded-xl transition flex items-center gap-1"
                             >
-                              📞 Llamar
+                              📞 {p.es_institucion ? "Línea de Ayuda" : "Llamar"}
                             </a>
                           )}
                           {p.booking_url && (
@@ -1975,9 +1991,9 @@ export default function HomePage() {
                               href={p.booking_url}
                               target="_blank"
                               rel="noopener noreferrer"
-                              className="px-2.5 py-1.5 text-[9px] font-extrabold text-purple-400 hover:text-white bg-purple-950/20 hover:bg-purple-600/80 border border-purple-900/60 rounded-xl transition flex items-center gap-1 ml-auto"
+                              className={`px-2.5 py-1.5 text-[9px] font-extrabold hover:text-white border rounded-xl transition flex items-center gap-1 ml-auto ${p.es_institucion ? 'text-blue-400 bg-blue-950/20 hover:bg-blue-600/80 border-blue-900/60' : 'text-purple-400 bg-purple-955/20 hover:bg-purple-600/80 border-purple-900/60'}`}
                             >
-                              📅 Agendar Cita
+                              {p.es_institucion ? "🌐 Visitar Portal" : "📅 Agendar Cita"}
                             </a>
                           )}
                         </div>
@@ -1989,7 +2005,7 @@ export default function HomePage() {
                               type="button"
                               onClick={() => handleStartEditPsych(p)}
                               className="w-6 h-6 rounded-lg bg-slate-900 border border-slate-800 text-slate-400 hover:text-white flex items-center justify-center cursor-pointer transition"
-                              title="Editar Psicólogo"
+                              title="Editar Psicólogo/Institución"
                             >
                               ✏️
                             </button>
@@ -1997,7 +2013,7 @@ export default function HomePage() {
                               type="button"
                               onClick={() => handleDeletePsychologist(p.id)}
                               className="w-6 h-6 rounded-lg bg-slate-900 border border-slate-800 text-rose-500 hover:text-white hover:bg-rose-650 flex items-center justify-center cursor-pointer transition"
-                              title="Eliminar Psicólogo"
+                              title="Eliminar"
                             >
                               🗑️
                             </button>
@@ -2021,9 +2037,9 @@ export default function HomePage() {
           >
             <div className="flex justify-between items-center border-b border-slate-800 pb-3">
               <div className="flex items-center gap-2">
-                <span className="text-xl">🧑‍⚕️</span>
+                <span className="text-xl">{psychEsInstitucion ? "🏢" : "🧑‍⚕️"}</span>
                 <h3 className="text-sm font-black text-white uppercase tracking-wider">
-                  {editingPsych ? "Editar Psicólogo" : "Registrar Psicólogo"}
+                  {editingPsych ? "Editar Registro" : "Registrar Profesional/Institución"}
                 </h3>
               </div>
               <button
@@ -2035,56 +2051,84 @@ export default function HomePage() {
               </button>
             </div>
 
+            {/* Selector de Tipo de Registro */}
+            {!editingPsych && (
+              <div className="flex gap-2 p-1 bg-slate-950 rounded-2xl border border-slate-850">
+                <button
+                  type="button"
+                  onClick={() => setPsychEsInstitucion(false)}
+                  className={`flex-1 py-1.5 rounded-xl text-[10px] font-bold transition ${!psychEsInstitucion ? 'bg-purple-650 text-white shadow-md' : 'text-slate-400 hover:text-white'}`}
+                >
+                  🧑‍⚕️ Profesional
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setPsychEsInstitucion(true)}
+                  className={`flex-1 py-1.5 rounded-xl text-[10px] font-bold transition ${psychEsInstitucion ? 'bg-blue-650 text-white shadow-md' : 'text-slate-400 hover:text-white'}`}
+                >
+                  🏢 Institución / Línea
+                </button>
+              </div>
+            )}
+
             <div className="flex flex-col gap-3 text-xs">
               <div className="flex flex-col gap-1">
-                <label className="text-[9px] font-extrabold text-slate-500 uppercase tracking-wider">Nombre Completo *</label>
+                <label className="text-[9px] font-extrabold text-slate-500 uppercase tracking-wider">
+                  {psychEsInstitucion ? "Nombre de la Institución / Línea *" : "Nombre Completo *"}
+                </label>
                 <input
                   type="text"
                   required
                   value={psychNombre}
                   onChange={(e) => setPsychNombre(e.target.value)}
                   className="w-full px-3 py-2 bg-slate-950 border border-slate-850 rounded-xl text-slate-200 focus:outline-none focus:border-purple-500 transition-colors"
-                  placeholder="Ej: Dra. María Rodríguez"
+                  placeholder={psychEsInstitucion ? "Ej: Cruz Roja - Línea de Apoyo Psicológico" : "Ej: Dra. María Rodríguez"}
                 />
               </div>
 
-              <div className="flex flex-col gap-1">
-                <label className="text-[9px] font-extrabold text-slate-500 uppercase tracking-wider">Título Académico *</label>
-                <input
-                  type="text"
-                  required
-                  value={psychTitulo}
-                  onChange={(e) => setPsychTitulo(e.target.value)}
-                  className="w-full px-3 py-2 bg-slate-950 border border-slate-850 rounded-xl text-slate-200 focus:outline-none focus:border-purple-500 transition-colors"
-                  placeholder="Ej: Psicólogo Clínico (UCV)"
-                />
-              </div>
+              {!psychEsInstitucion && (
+                <div className="flex flex-col gap-1">
+                  <label className="text-[9px] font-extrabold text-slate-500 uppercase tracking-wider">Título Académico *</label>
+                  <input
+                    type="text"
+                    required={!psychEsInstitucion}
+                    value={psychTitulo}
+                    onChange={(e) => setPsychTitulo(e.target.value)}
+                    className="w-full px-3 py-2 bg-slate-950 border border-slate-850 rounded-xl text-slate-200 focus:outline-none focus:border-purple-500 transition-colors"
+                    placeholder="Ej: Psicólogo Clínico (UCV)"
+                  />
+                </div>
+              )}
 
               <div className="flex flex-col gap-1">
-                <label className="text-[9px] font-extrabold text-slate-500 uppercase tracking-wider">Especialidad *</label>
+                <label className="text-[9px] font-extrabold text-slate-500 uppercase tracking-wider">
+                  {psychEsInstitucion ? "Tipo de Ayuda / Enfoque *" : "Especialidad *"}
+                </label>
                 <input
                   type="text"
                   required
                   value={psychEspecialidad}
                   onChange={(e) => setPsychEspecialidad(e.target.value)}
                   className="w-full px-3 py-2 bg-slate-950 border border-slate-850 rounded-xl text-slate-200 focus:outline-none focus:border-purple-500 transition-colors"
-                  placeholder="Ej: Trauma, duelo, ansiedad en crisis"
+                  placeholder={psychEsInstitucion ? "Ej: Línea telefónica nacional, apoyo en crisis, prevención del suicidio" : "Ej: Trauma, duelo, ansiedad en crisis"}
                 />
               </div>
 
               <div className="grid grid-cols-2 gap-3">
                 <div className="flex flex-col gap-1">
-                  <label className="text-[9px] font-extrabold text-slate-500 uppercase tracking-wider">Teléfono</label>
+                  <label className="text-[9px] font-extrabold text-slate-500 uppercase tracking-wider">
+                    {psychEsInstitucion ? "Número de la Línea de Ayuda" : "Teléfono"}
+                  </label>
                   <input
                     type="text"
                     value={psychTelefono}
                     onChange={(e) => setPsychTelefono(e.target.value)}
                     className="w-full px-3 py-2 bg-slate-950 border border-slate-850 rounded-xl text-slate-200 focus:outline-none focus:border-purple-500 transition-colors"
-                    placeholder="Ej: +584121234567"
+                    placeholder="Ej: 0800-AYUDA-00 / +582121234567"
                   />
                 </div>
                 <div className="flex flex-col gap-1">
-                  <label className="text-[9px] font-extrabold text-slate-500 uppercase tracking-wider">WhatsApp</label>
+                  <label className="text-[9px] font-extrabold text-slate-500 uppercase tracking-wider">WhatsApp (opcional)</label>
                   <input
                     type="text"
                     value={psychWhatsapp}
@@ -2103,7 +2147,7 @@ export default function HomePage() {
                     value={psychEmail}
                     onChange={(e) => setPsychEmail(e.target.value)}
                     className="w-full px-3 py-2 bg-slate-950 border border-slate-850 rounded-xl text-slate-200 focus:outline-none focus:border-purple-500 transition-colors"
-                    placeholder="Ej: maria@correo.com"
+                    placeholder="Ej: contacto@institucion.org"
                   />
                 </div>
                 <div className="flex flex-col gap-1">
@@ -2118,50 +2162,56 @@ export default function HomePage() {
                 </div>
               </div>
 
-              <div className="grid grid-cols-2 gap-3">
-                <div className="flex flex-col gap-1">
-                  <label className="text-[9px] font-extrabold text-slate-500 uppercase tracking-wider">Modalidad</label>
-                  <select
-                    value={psychModalidad}
-                    onChange={(e) => setPsychModalidad(e.target.value)}
-                    className="w-full px-3 py-2 bg-slate-950 border border-slate-850 rounded-xl text-slate-200 focus:outline-none focus:border-purple-500 transition-colors"
-                  >
-                    <option value="online">Online</option>
-                    <option value="presencial">Presencial</option>
-                    <option value="ambas">Ambas</option>
-                  </select>
+              {!psychEsInstitucion && (
+                <div className="grid grid-cols-2 gap-3">
+                  <div className="flex flex-col gap-1">
+                    <label className="text-[9px] font-extrabold text-slate-500 uppercase tracking-wider">Modalidad</label>
+                    <select
+                      value={psychModalidad}
+                      onChange={(e) => setPsychModalidad(e.target.value)}
+                      className="w-full px-3 py-2 bg-slate-950 border border-slate-850 rounded-xl text-slate-200 focus:outline-none focus:border-purple-500 transition-colors"
+                    >
+                      <option value="online">Online</option>
+                      <option value="presencial">Presencial</option>
+                      <option value="ambas">Ambas</option>
+                    </select>
+                  </div>
+                  <div className="flex flex-col gap-1">
+                    <label className="text-[9px] font-extrabold text-slate-500 uppercase tracking-wider">URL de Foto</label>
+                    <input
+                      type="url"
+                      value={psychFotoUrl}
+                      onChange={(e) => setPsychFotoUrl(e.target.value)}
+                      className="w-full px-3 py-2 bg-slate-950 border border-slate-850 rounded-xl text-slate-200 focus:outline-none focus:border-purple-500 transition-colors"
+                      placeholder="https://ejemplo.com/foto.jpg"
+                    />
+                  </div>
                 </div>
-                <div className="flex flex-col gap-1">
-                  <label className="text-[9px] font-extrabold text-slate-500 uppercase tracking-wider">URL de Foto</label>
-                  <input
-                    type="url"
-                    value={psychFotoUrl}
-                    onChange={(e) => setPsychFotoUrl(e.target.value)}
-                    className="w-full px-3 py-2 bg-slate-950 border border-slate-850 rounded-xl text-slate-200 focus:outline-none focus:border-purple-500 transition-colors"
-                    placeholder="https://ejemplo.com/foto.jpg"
-                  />
-                </div>
-              </div>
+              )}
 
               <div className="flex flex-col gap-1">
-                <label className="text-[9px] font-extrabold text-slate-500 uppercase tracking-wider">Enlace de Reservas (Cal.com / Calendly)</label>
+                <label className="text-[9px] font-extrabold text-slate-500 uppercase tracking-wider">
+                  {psychEsInstitucion ? "Enlace al Portal Oficial (Web) / Portal de Citas" : "Enlace de Reservas (Cal.com / Calendly)"}
+                </label>
                 <input
                   type="url"
                   value={psychBookingUrl}
                   onChange={(e) => setPsychBookingUrl(e.target.value)}
                   className="w-full px-3 py-2 bg-slate-950 border border-slate-850 rounded-xl text-slate-200 focus:outline-none focus:border-purple-500 transition-colors"
-                  placeholder="https://cal.com/maria-rod/consulta"
+                  placeholder={psychEsInstitucion ? "https://cruzroja.org.ve/ayuda" : "https://cal.com/maria-rod/consulta"}
                 />
               </div>
 
               <div className="flex flex-col gap-1">
-                <label className="text-[9px] font-extrabold text-slate-500 uppercase tracking-wider">Descripción / Bio Corta</label>
+                <label className="text-[9px] font-extrabold text-slate-500 uppercase tracking-wider">
+                  {psychEsInstitucion ? "Descripción de la Institución y Servicios" : "Descripción / Bio Corta"}
+                </label>
                 <textarea
                   rows={2}
                   value={psychDescripcion}
                   onChange={(e) => setPsychDescripcion(e.target.value)}
                   className="w-full px-3 py-2 bg-slate-950 border border-slate-850 rounded-xl text-slate-200 focus:outline-none focus:border-purple-500 transition-colors resize-none"
-                  placeholder="Breve reseña sobre la trayectoria profesional o modalidad de atención..."
+                  placeholder={psychEsInstitucion ? "Línea activa las 24 horas, atención psicológica gratuita telefónica..." : "Breve reseña sobre la trayectoria profesional o modalidad de atención..."}
                 />
               </div>
             </div>
@@ -2178,7 +2228,7 @@ export default function HomePage() {
                 type="submit"
                 className="flex-1 py-2 bg-purple-650 hover:bg-purple-600 text-white rounded-xl transition cursor-pointer text-[10px] font-bold shadow-lg shadow-purple-950/20"
               >
-                Guardar Profesional
+                Guardar
               </button>
             </div>
           </form>

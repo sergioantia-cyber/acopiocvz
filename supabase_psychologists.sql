@@ -12,6 +12,7 @@ CREATE TABLE IF NOT EXISTS psychologists (
   idiomas TEXT,
   modalidad TEXT DEFAULT 'online',
   booking_url TEXT,
+  es_institucion BOOLEAN DEFAULT false,
   activo BOOLEAN DEFAULT true,
   created_at TIMESTAMP WITH TIME ZONE DEFAULT timezone('utc'::text, now())
 );
