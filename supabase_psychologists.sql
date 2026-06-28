@@ -29,3 +29,12 @@ ALTER TABLE psychologists ADD COLUMN IF NOT EXISTS tipo_servicio TEXT DEFAULT 'g
 ALTER TABLE psychologists ADD COLUMN IF NOT EXISTS monto_tarifa NUMERIC DEFAULT 0;
 ALTER TABLE psychologists ADD COLUMN IF NOT EXISTS moneda_tarifa TEXT DEFAULT 'USD';
 ALTER TABLE psychologists ADD COLUMN IF NOT EXISTS verificado BOOLEAN DEFAULT true;
+
+-- Crear la tabla de permisos de psicólogo
+CREATE TABLE IF NOT EXISTS psychologist_permissions (
+  email TEXT PRIMARY KEY,
+  creado_at TIMESTAMP WITH TIME ZONE DEFAULT timezone('utc'::text, now()) NOT NULL
+);
+
+-- Deshabilitar RLS
+ALTER TABLE psychologist_permissions DISABLE ROW LEVEL SECURITY;

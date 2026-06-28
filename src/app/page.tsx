@@ -124,10 +124,12 @@ export default function HomePage() {
 
   // Admin & Moderation states
   const [admins, setAdmins] = useState<string[]>([]);
+  const [authorizedPsychs, setAuthorizedPsychs] = useState<string[]>([]);
   const [isAdminPanelOpen, setIsAdminPanelOpen] = useState(false);
   const [isCreditsOpen, setIsCreditsOpen] = useState(false);
   const [isONUReportOpen, setIsONUReportOpen] = useState(false);
   const [newAdminEmail, setNewAdminEmail] = useState("");
+  const [newPsychPermEmail, setNewPsychPermEmail] = useState("");
 
   // Dynamic ONU Report statistics states
   const [onuFallecidos, setOnuFallecidos] = useState(1430);
@@ -163,6 +165,11 @@ export default function HomePage() {
   ));
   
   const isOwner = !!(user && user.email.toLowerCase() === "sergioantia11@gmail.com");
+  
+  const isPsychologist = !!(user && (
+    authorizedPsychs.includes(user.email.toLowerCase()) ||
+    isAdmin
+  ));
 
   // Edit Point States
   const [editingPunto, setEditingPunto] = useState<PuntoReportado | null>(null);
@@ -385,7 +392,52 @@ export default function HomePage() {
     }
     
     setAdmins(admins.filter((a) => a !== email));
-    alert("Administrador removido.");
+    setNewAdminEmail("");
+    alert(`¡Se han revocado los permisos de administrador a ${email}!`);
+  };
+
+  const handleAddPsychPerm = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!isAdmin || !newPsychPermEmail.trim()) return;
+    
+    const emailToInsert = newPsychPermEmail.trim().toLowerCase();
+    
+    if (authorizedPsychs.includes(emailToInsert)) {
+      alert("Este correo ya tiene permisos de psicólogo.");
+      return;
+    }
+    
+    if (isSupabaseConfigured && supabase) {
+      const { error } = await supabase.from("psychologist_permissions").insert([{ email: emailToInsert }]);
+      if (error) {
+        alert("Error al autorizar psicólogo: " + error.message);
+        return;
+      }
+    }
+    
+    const updatedList = [...authorizedPsychs, emailToInsert];
+    setAuthorizedPsychs(updatedList);
+    localStorage.setItem("punto_de_apoyo_authorized_psychs", JSON.stringify(updatedList));
+    setNewPsychPermEmail("");
+    alert(`¡Se han otorgado permisos de psicólogo a ${emailToInsert}!`);
+  };
+
+  const handleRemovePsychPerm = async (email: string) => {
+    if (!isAdmin) return;
+    if (!confirm(`¿Estás seguro de que deseas remover a ${email} como psicólogo autorizado?`)) return;
+    
+    if (isSupabaseConfigured && supabase) {
+      const { error } = await supabase.from("psychologist_permissions").delete().eq("email", email);
+      if (error) {
+        alert("Error al remover psicólogo: " + error.message);
+        return;
+      }
+    }
+    
+    const updatedList = authorizedPsychs.filter((a) => a !== email);
+    setAuthorizedPsychs(updatedList);
+    localStorage.setItem("punto_de_apoyo_authorized_psychs", JSON.stringify(updatedList));
+    alert(`¡Se han revocado los permisos de psicólogo a ${email}!`);
   };
 
   const handleSavePsychologist = async (e: React.FormEvent) => {
@@ -751,6 +803,12 @@ export default function HomePage() {
           setAdmins(adminsData.map((a: any) => a.email.toLowerCase()));
         }
 
+        // Load psychologist permissions list
+        const { data: permData } = await supabase.from("psychologist_permissions").select("email");
+        if (permData) {
+          setAuthorizedPsychs(permData.map((p: any) => p.email.toLowerCase()));
+        }
+
         // Fetch psychologists list
         const { data: psychs, error: psychErr } = await supabase
           .from("psychologists")
@@ -785,6 +843,11 @@ export default function HomePage() {
         const localPsychs = localStorage.getItem("punto_de_apoyo_psychologists");
         if (localPsychs) {
           setPsychologists(JSON.parse(localPsychs));
+        }
+
+        const localPerms = localStorage.getItem("punto_de_apoyo_authorized_psychs");
+        if (localPerms) {
+          setAuthorizedPsychs(JSON.parse(localPerms));
         }
       }
 
@@ -2050,6 +2113,60 @@ export default function HomePage() {
                 </div>
               )}
 
+              {/* Sección 1.5: Autorizar Psicólogos (Todos los Admins) */}
+              <div className="border-t border-slate-800/80 pt-4 mt-2 flex flex-col gap-3">
+                <span className="text-[10px] font-extrabold text-orange-400 uppercase tracking-widest block">
+                  🧠 Autorizar Psicólogos
+                </span>
+
+                {/* Grant Psychologist Permission Form */}
+                <form onSubmit={handleAddPsychPerm} className="flex flex-col gap-1.5 bg-slate-950/40 p-3 rounded-xl border border-slate-850">
+                  <label className="text-[9px] font-bold text-slate-400 uppercase tracking-wider">
+                    Autorizar correo de Psicólogo
+                  </label>
+                  <div className="flex gap-2">
+                    <input
+                      type="email"
+                      required
+                      value={newPsychPermEmail}
+                      onChange={(e) => setNewPsychPermEmail(e.target.value)}
+                      placeholder="psicologo@correo.com"
+                      className="flex-1 px-3 py-1.5 bg-slate-950 border border-slate-800 rounded-xl text-slate-200 text-xs focus:outline-none focus:border-orange-500/50"
+                    />
+                    <button
+                      type="submit"
+                      className="px-3 py-1.5 bg-orange-600 hover:bg-orange-500 text-white rounded-xl text-xs font-bold transition shadow-lg cursor-pointer"
+                    >
+                      Autorizar
+                    </button>
+                  </div>
+                </form>
+
+                {/* Authorized Psychologists List */}
+                <div className="flex flex-col gap-2 max-h-[15dvh] overflow-y-auto pr-1">
+                  <span className="text-[9px] font-bold text-slate-450 uppercase tracking-wider block">
+                    Psicólogos Autorizados
+                  </span>
+                  {authorizedPsychs.length === 0 ? (
+                    <div className="text-center py-3 text-slate-500 text-[10px] italic">
+                      No hay psicólogos autorizados registrados.
+                    </div>
+                  ) : (
+                    authorizedPsychs.map((email) => (
+                      <div key={email} className="flex justify-between items-center bg-slate-950/45 p-2.5 rounded-xl border border-slate-850 hover:border-slate-800 transition">
+                        <span className="text-xs text-slate-350 font-medium truncate flex-1 mr-2">{email}</span>
+                        <button
+                          onClick={() => handleRemovePsychPerm(email)}
+                          className="px-2 py-0.5 text-[8px] font-extrabold text-rose-400 hover:text-white hover:bg-rose-950 border border-rose-900/30 rounded transition shrink-0 cursor-pointer"
+                        >
+                          Revocar
+                        </button>
+                      </div>
+                    ))
+                  )}
+                </div>
+              </div>
+
               {/* Sección 2: Gestión de Alertas Críticas (Todos los Admins) */}
               <div className="border-t border-slate-800/80 pt-4 mt-2 flex flex-col gap-3">
                 <span className="text-[10px] font-extrabold text-orange-400 uppercase tracking-widest block">
@@ -2372,16 +2489,19 @@ export default function HomePage() {
                 </div>
               </div>
               <div className="flex items-center gap-2">
-                {isAdmin && (
+                {isPsychologist && (
                   <button
                     onClick={() => {
                       setEditingPsych(null);
                       setPsychEsInstitucion(false);
+                      if (!isAdmin && user) {
+                        setPsychEmail(user.email);
+                      }
                       setIsPsychFormOpen(true);
                     }}
                     className="flex items-center gap-1.5 px-3 py-1.5 text-[10px] font-bold text-purple-400 bg-purple-955/40 border border-purple-900/60 rounded-xl hover:bg-purple-950 hover:border-purple-700 transition cursor-pointer"
                   >
-                    <Plus className="w-3.5 h-3.5" /> Registrar Profesional / Institución
+                    <Plus className="w-3.5 h-3.5" /> {isAdmin ? "Registrar Profesional / Institución" : "Crear mi Perfil de Psicólogo"}
                   </button>
                 )}
                 <button
@@ -2578,9 +2698,9 @@ export default function HomePage() {
                         </div>
 
                         {/* Botones de Moderación */}
-                        {isAdmin && (
+                        {(isAdmin || (user && p.email && p.email.toLowerCase() === user.email.toLowerCase())) && (
                           <div className="absolute top-2 right-2 flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
-                            {p.activo === false && (
+                            {isAdmin && p.activo === false && (
                               <button
                                 type="button"
                                 onClick={() => handleToggleApprovePsych(p)}
@@ -2594,18 +2714,20 @@ export default function HomePage() {
                               type="button"
                               onClick={() => handleStartEditPsych(p)}
                               className="w-6 h-6 rounded-lg bg-slate-900 border border-slate-800 text-slate-400 hover:text-white flex items-center justify-center cursor-pointer transition"
-                              title="Editar Psicólogo/Institución"
+                              title="Editar Perfil"
                             >
                               ✏️
                             </button>
-                            <button
-                              type="button"
-                              onClick={() => handleDeletePsychologist(p.id)}
-                              className="w-6 h-6 rounded-lg bg-slate-900 border border-slate-800 text-rose-500 hover:text-white hover:bg-rose-650 flex items-center justify-center cursor-pointer transition"
-                              title="Eliminar"
-                            >
-                              🗑️
-                            </button>
+                            {isAdmin && (
+                              <button
+                                type="button"
+                                onClick={() => handleDeletePsychologist(p.id)}
+                                className="w-6 h-6 rounded-lg bg-slate-900 border border-slate-800 text-rose-500 hover:text-white hover:bg-rose-650 flex items-center justify-center cursor-pointer transition"
+                                title="Eliminar"
+                              >
+                                🗑️
+                              </button>
+                            )}
                           </div>
                         )}
                       </div>
@@ -2752,7 +2874,8 @@ export default function HomePage() {
                     type="email"
                     value={psychEmail}
                     onChange={(e) => setPsychEmail(e.target.value)}
-                    className="w-full px-3 py-2 bg-slate-950 border border-slate-850 rounded-xl text-slate-200 focus:outline-none focus:border-purple-500 transition-colors"
+                    disabled={!isAdmin}
+                    className={`w-full px-3 py-2 bg-slate-950 border border-slate-850 rounded-xl text-slate-200 focus:outline-none focus:border-purple-500 transition-colors ${!isAdmin ? 'opacity-65 cursor-not-allowed text-slate-400' : ''}`}
                     placeholder="Ej: contacto@institucion.org"
                   />
                 </div>
