@@ -112,9 +112,5 @@ VALUES (
 
 
 -- 6. Habilitar la replicación en tiempo real (Supabase Realtime) para la tabla reports
-begin;
-  -- Remover si ya existe para evitar errores de duplicado
-  alter publication supabase_realtime drop table if exists reports;
-  -- Añadir la tabla a la publicación de tiempo real
-  alter publication supabase_realtime add table reports;
-commit;
+-- Nota: Si ya está agregada, arrojará un aviso de que ya es miembro, lo cual es correcto y seguro.
+alter publication supabase_realtime add table reports;
