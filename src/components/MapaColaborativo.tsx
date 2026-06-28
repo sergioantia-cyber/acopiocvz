@@ -147,10 +147,45 @@ export default function MapaColaborativo({
   const [zoomLevel, setZoomLevel] = useState(7);
   const [draggingId, setDraggingId] = useState<string | null>(null);
   const [mapLocked, setMapLocked] = useState(false);
+  const [isShiftPressed, setIsShiftPressed] = useState(false);
   const [moveToast, setMoveToast] = useState<string | null>(null);
   const toastTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   useEffect(() => { setIsMounted(true); }, []);
+
+  // Listen to Shift key to lock/unlock map panning & enable/disable marker dragging
+  useEffect(() => {
+    if (!isOwner) return;
+
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === "Shift") {
+        setIsShiftPressed(true);
+        setMapLocked(true);
+      }
+    };
+
+    const handleKeyUp = (e: KeyboardEvent) => {
+      if (e.key === "Shift") {
+        setIsShiftPressed(false);
+        setMapLocked(false);
+      }
+    };
+
+    const handleBlur = () => {
+      setIsShiftPressed(false);
+      setMapLocked(false);
+    };
+
+    window.addEventListener("keydown", handleKeyDown);
+    window.addEventListener("keyup", handleKeyUp);
+    window.addEventListener("blur", handleBlur);
+
+    return () => {
+      window.removeEventListener("keydown", handleKeyDown);
+      window.removeEventListener("keyup", handleKeyUp);
+      window.removeEventListener("blur", handleBlur);
+    };
+  }, [isOwner]);
 
   const showToast = (msg: string) => {
     setMoveToast(msg);
@@ -168,9 +203,9 @@ export default function MapaColaborativo({
 
   const lightCircleOpacity = Math.min(0.75, Math.max(0.15, (zoomLevel - 6) * 0.06));
 
-  // Only owner can drag; only specific categories; no external/sismo points
+  // Only owner can drag, and only when map is locked (either via Shift key or manual toggle)
   const isDraggablePunto = (p: PuntoReportado) =>
-    isOwner && !p.fuente && DRAGGABLE_CATEGORIES.has(p.categoria) && p.categoria !== "sismo";
+    isOwner && (isShiftPressed || mapLocked) && !p.fuente && DRAGGABLE_CATEGORIES.has(p.categoria) && p.categoria !== "sismo";
 
   const renderMarker = (punto: PuntoReportado) => {
     const hasDetails = !!punto.nombre && !!punto.direccion;
@@ -453,9 +488,19 @@ export default function MapaColaborativo({
       {/* Owner drag mode hint banner */}
       {isOwner && (
         <div className="absolute top-2 left-1/2 -translate-x-1/2 z-[500] pointer-events-none">
-          <div className="flex items-center gap-2 bg-slate-900/90 backdrop-blur-md border border-orange-500/40 text-orange-300 text-[9px] font-extrabold uppercase tracking-wider px-3 py-1.5 rounded-full shadow-lg shadow-orange-500/10">
+          <div className="flex items-center gap-3 bg-slate-900/90 backdrop-blur-md border border-orange-500/40 text-orange-300 text-[9px] font-extrabold uppercase tracking-wider px-4 py-2 rounded-full shadow-lg shadow-orange-500/10 pointer-events-auto">
             <span>🖱️</span>
-            <span>Dueño — Arrastra acopio, hospitales y WiFi · Ctrl+Z deshace</span>
+            <span>Dueño — Mantén SHIFT para arrastrar</span>
+            <button
+              onClick={() => setMapLocked((prev) => !prev)}
+              className={`ml-1.5 px-2.5 py-1 rounded-lg text-[8px] font-black uppercase transition-all duration-150 cursor-pointer ${
+                mapLocked
+                  ? "bg-orange-500 text-slate-950 shadow-md shadow-orange-500/25"
+                  : "bg-slate-950/80 text-orange-400 border border-orange-500/30 hover:border-orange-500"
+              }`}
+            >
+              {mapLocked ? "🔒 Bloqueado" : "🔓 Bloquear Mapa"}
+            </button>
           </div>
         </div>
       )}
