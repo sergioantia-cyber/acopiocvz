@@ -188,6 +188,15 @@ export default function MapaColaborativo({
                 {punto.direccion}
               </p>
 
+              {punto.fuente === "Reconecta Venezuela" && (
+                <div className="text-[10px] text-amber-300 p-2 bg-amber-950/40 rounded-xl border border-amber-900/40 leading-relaxed font-bold flex flex-col gap-1">
+                  <span>🛰️ Red WiFi Abierta: STARLINK</span>
+                  <span className="text-[8.5px] text-amber-400/90 font-semibold leading-tight">
+                    Este punto de conexión satelital gratuito es temporal y no permanente.
+                  </span>
+                </div>
+              )}
+
               {punto.descripcion && (
                 <div className="text-[11px] text-slate-300 p-2 bg-slate-950/60 rounded-xl border border-slate-900 leading-relaxed">
                   <div className="text-[8px] uppercase tracking-widest text-slate-500 font-extrabold mb-1">

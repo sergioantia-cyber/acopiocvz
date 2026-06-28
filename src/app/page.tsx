@@ -198,6 +198,7 @@ export default function HomePage() {
   // Psychological Assistance States
   const [psychologists, setPsychologists] = useState<Psychologist[]>([]);
   const [isPsychOpen, setIsPsychOpen] = useState(false);
+  const [reconectaSites, setReconectaSites] = useState<PuntoReportado[]>([]);
   const [isNewsOpen, setIsNewsOpen] = useState(false);
   const [isNewsFormOpen, setIsNewsFormOpen] = useState(false);
   const [isPsychFormOpen, setIsPsychFormOpen] = useState(false);
@@ -910,6 +911,42 @@ export default function HomePage() {
     }
   }, []);
 
+  const fetchReconectaPoints = async () => {
+    try {
+      const res = await fetch("/api/reconecta");
+      if (!res.ok) throw new Error("API response not OK");
+      const data = await res.json();
+      if (data && data.sites) {
+        // Convert Reconecta sites into PuntoReportado format
+        const reconectaPuntos: PuntoReportado[] = data.sites.map((site: any) => ({
+          id: `reconecta-${site.id}`,
+          tipo: "ofrece",
+          categoria: "senal",
+          nombre: site.name,
+          descripcion: `Punto de acceso satelital gratuito y libre de Reconecta Venezuela. Red WiFi: STARLINK. Estado: ${site.status.toUpperCase()}. Usuarios conectados: ${site.users ?? 0}. (⚠️ NOTA: Este es un punto satelital de acceso libre temporal. NO es una infraestructura fija permanente).`,
+          direccion: site.address,
+          lat: site.lat,
+          lng: site.lng,
+          confirmations: site.users || 0,
+          creadoAt: data.updatedAt || new Date().toISOString(),
+          expiresAt: new Date(Date.now() + 30 * 24 * 3600000).toISOString(),
+          aprobado: true,
+          fuente: "Reconecta Venezuela",
+          region: site.region,
+        }));
+        setReconectaSites(reconectaPuntos);
+      }
+    } catch (err) {
+      console.error("Error fetching Reconecta Venezuela points:", err);
+    }
+  };
+
+  useEffect(() => {
+    fetchReconectaPoints();
+    const interval = setInterval(fetchReconectaPoints, 30 * 60 * 1000); // Poll every 30 minutes
+    return () => clearInterval(interval);
+  }, []);
+
   useEffect(() => {
     const loadData = async () => {
       let dbPuntos: PuntoReportado[] = [];
@@ -1208,7 +1245,7 @@ export default function HomePage() {
     setFormDireccion("");
   };
 
-  const filteredPuntos = puntos.filter((punto) => {
+  const filteredPuntos = [...puntos, ...reconectaSites].filter((punto) => {
     // Exclude news/noticias from map rendering
     if (punto.tipo === "noticia") return false;
 
