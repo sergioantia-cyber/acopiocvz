@@ -197,7 +197,7 @@ export default function HomePage() {
   const [psychMontoTarifa, setPsychMontoTarifa] = useState<number>(0);
   const [psychMonedaTarifa, setPsychMonedaTarifa] = useState<string>("USD");
   const [psychVerificado, setPsychVerificado] = useState<boolean>(true);
-  const [psychActiveTab, setPsychActiveTab] = useState<"todos" | "gratuito" | "social">("todos");
+  const [psychActiveTab, setPsychActiveTab] = useState<"todos" | "gratuito" | "social" | "lineas">("todos");
   const [activeBookingUrl, setActiveBookingUrl] = useState<string | null>(null);
 
   // Form State
@@ -410,8 +410,8 @@ export default function HomePage() {
       booking_url: psychBookingUrl,
       es_institucion: psychEsInstitucion,
       activo: isApproved,
-      tipo_servicio: psychTipoServicio,
-      monto_tarifa: psychTipoServicio === "social" ? Number(psychMontoTarifa) : 0,
+      tipo_servicio: psychEsInstitucion ? "gratuito" : psychTipoServicio,
+      monto_tarifa: (!psychEsInstitucion && psychTipoServicio === "social") ? Number(psychMontoTarifa) : 0,
       moneda_tarifa: psychMonedaTarifa,
       verificado: psychVerificado,
     };
@@ -938,12 +938,15 @@ export default function HomePage() {
       // Ocultar psicólogos inactivos a menos que sea administrador
       if (p.activo === false && !isAdmin) return false;
       
-      // Filtro de pestaña (gratuito vs social)
+      // Filtro de pestaña (gratuito vs social vs lineas)
       if (psychActiveTab === "gratuito") {
-        return !p.tipo_servicio || p.tipo_servicio === "gratuito";
+        return !p.es_institucion && (!p.tipo_servicio || p.tipo_servicio === "gratuito");
       }
       if (psychActiveTab === "social") {
-        return p.tipo_servicio === "social";
+        return !p.es_institucion && p.tipo_servicio === "social";
+      }
+      if (psychActiveTab === "lineas") {
+        return p.es_institucion === true;
       }
       return true;
     })
@@ -2079,27 +2082,34 @@ export default function HomePage() {
             </div>
 
             {/* Pestañas de Filtro */}
-            <div className="flex gap-2 p-1 bg-slate-950 rounded-2xl border border-slate-850">
+            <div className="flex gap-1.5 p-1 bg-slate-950 rounded-2xl border border-slate-850 flex-wrap sm:flex-nowrap">
               <button
                 type="button"
                 onClick={() => setPsychActiveTab("todos")}
-                className={`flex-1 py-1.5 rounded-xl text-[9px] font-extrabold uppercase tracking-wider transition cursor-pointer ${psychActiveTab === "todos" ? 'bg-slate-900 border border-slate-800 text-white shadow-md' : 'text-slate-500 hover:text-slate-300'}`}
+                className={`flex-1 py-1.5 rounded-xl text-[9px] font-extrabold uppercase tracking-wider transition cursor-pointer min-w-[70px] ${psychActiveTab === "todos" ? 'bg-slate-900 border border-slate-800 text-white shadow-md' : 'text-slate-500 hover:text-slate-300'}`}
               >
                 🌍 Todos
               </button>
               <button
                 type="button"
                 onClick={() => setPsychActiveTab("gratuito")}
-                className={`flex-1 py-1.5 rounded-xl text-[9px] font-extrabold uppercase tracking-wider transition cursor-pointer ${psychActiveTab === "gratuito" ? 'bg-purple-955/40 border border-purple-900/60 text-purple-400 shadow-md' : 'text-slate-500 hover:text-slate-300'}`}
+                className={`flex-1 py-1.5 rounded-xl text-[9px] font-extrabold uppercase tracking-wider transition cursor-pointer min-w-[120px] ${psychActiveTab === "gratuito" ? 'bg-purple-955/40 border border-purple-900/60 text-purple-400 shadow-md' : 'text-slate-500 hover:text-slate-300'}`}
               >
-                💜 Voluntariado 100% Gratuito
+                💜 Profesionales Gratis
               </button>
               <button
                 type="button"
                 onClick={() => setPsychActiveTab("social")}
-                className={`flex-1 py-1.5 rounded-xl text-[9px] font-extrabold uppercase tracking-wider transition cursor-pointer ${psychActiveTab === "social" ? 'bg-blue-950/40 border border-blue-900/60 text-blue-400 shadow-md' : 'text-slate-500 hover:text-slate-300'}`}
+                className={`flex-1 py-1.5 rounded-xl text-[9px] font-extrabold uppercase tracking-wider transition cursor-pointer min-w-[120px] ${psychActiveTab === "social" ? 'bg-blue-950/40 border border-blue-900/60 text-blue-400 shadow-md' : 'text-slate-500 hover:text-slate-300'}`}
               >
-                🤝 Consulta Social / Solidaria
+                🤝 Tarifas Solidarias
+              </button>
+              <button
+                type="button"
+                onClick={() => setPsychActiveTab("lineas")}
+                className={`flex-1 py-1.5 rounded-xl text-[9px] font-extrabold uppercase tracking-wider transition cursor-pointer min-w-[110px] ${psychActiveTab === "lineas" ? 'bg-blue-955/20 border border-blue-900/40 text-blue-400 shadow-md' : 'text-slate-500 hover:text-slate-300'}`}
+              >
+                🏢 Líneas de Ayuda
               </button>
             </div>
 
