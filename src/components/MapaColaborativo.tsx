@@ -147,6 +147,7 @@ export default function MapaColaborativo({
   const [zoomLevel, setZoomLevel] = useState(7);
   const [draggingId, setDraggingId] = useState<string | null>(null);
   const [mapLocked, setMapLocked] = useState(false);
+  const [modoEditor, setModoEditor] = useState(false);
   const [moveToast, setMoveToast] = useState<string | null>(null);
   const toastTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const longPressTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -159,7 +160,7 @@ export default function MapaColaborativo({
   }, []);
 
   const startLongPress = (id: string) => {
-    if (!isOwner) return;
+    if (!isOwner || !modoEditor) return;
     if (longPressTimerRef.current) clearTimeout(longPressTimerRef.current);
 
     longPressTimerRef.current = setTimeout(() => {
@@ -198,9 +199,9 @@ export default function MapaColaborativo({
 
   const lightCircleOpacity = Math.min(0.75, Math.max(0.15, (zoomLevel - 6) * 0.06));
 
-  // Only owner can drag, and they are always draggable to prevent React recreation/unmount bugs
+  // Only owner can drag, and they are draggable only when Modo Editor is toggled ON
   const isDraggablePunto = (p: PuntoReportado) =>
-    isOwner && DRAGGABLE_CATEGORIES.has(p.categoria) && p.categoria !== "sismo";
+    isOwner && modoEditor && DRAGGABLE_CATEGORIES.has(p.categoria) && p.categoria !== "sismo";
 
   const renderMarker = (punto: PuntoReportado) => {
     const hasDetails = !!punto.nombre && !!punto.direccion;
@@ -209,7 +210,7 @@ export default function MapaColaborativo({
 
     return (
       <Marker
-        key={punto.id} // Keep constant key to avoid losing touch gesture on dynamic update
+        key={`${punto.id}-${modoEditor ? "edit" : "safe"}`} // Recreate marker in Leaflet when toggling modes
         position={[punto.lat, punto.lng]}
         icon={createCustomIcon(punto, isDraggingThis)}
         draggable={canDrag}
@@ -501,13 +502,36 @@ export default function MapaColaborativo({
 
   return (
     <div className="w-full h-full min-h-[400px] md:min-h-full relative rounded-2xl overflow-hidden border-4 border-orange-500 shadow-2xl bg-slate-900">
-      {/* Owner drag mode hint banner */}
+      {/* Owner Control Pill (Modo Editor) */}
       {isOwner && (
-        <div className="absolute top-2 left-1/2 -translate-x-1/2 z-[500] pointer-events-none">
-          <div className="flex items-center gap-2 bg-slate-900/90 backdrop-blur-md border border-orange-500/40 text-orange-300 text-[9px] font-extrabold uppercase tracking-wider px-3.5 py-1.5 rounded-full shadow-lg shadow-orange-500/10">
-            <span>🖱️</span>
-            <span>Dueño — Deja presionado un marcador para moverlo · Ctrl+Z deshace</span>
-          </div>
+        <div className="absolute top-3 left-1/2 -translate-x-1/2 z-[500] pointer-events-none">
+          <button
+            onClick={() => {
+              setModoEditor((prev) => !prev);
+              setMapLocked(false);
+              setDraggingId(null);
+              cancelLongPress();
+            }}
+            className={`pointer-events-auto flex items-center gap-2.5 px-4 py-2 rounded-full border shadow-2xl transition-all duration-300 cursor-pointer font-sans select-none ${
+              modoEditor
+                ? "bg-orange-600 border-orange-500 text-white font-extrabold text-[10px] tracking-wider animate-pulse shadow-orange-500/25"
+                : "bg-slate-900/95 border-slate-800 text-slate-400 font-bold text-[9px] tracking-wide hover:border-slate-700 hover:text-slate-200"
+            }`}
+          >
+            <span className="text-xs">{modoEditor ? "🛠️" : "🔒"}</span>
+            <span>{modoEditor ? "Modo Editor: Activo (Mantén presionado)" : "Modo Seguro (Desplazamientos Apagados)"}</span>
+            <div
+              className={`w-7 h-4 rounded-full p-0.5 transition-colors duration-250 ${
+                modoEditor ? "bg-white" : "bg-slate-800"
+              }`}
+            >
+              <div
+                className={`w-3 h-3 rounded-full bg-slate-900 shadow-sm transform transition-transform duration-250 ${
+                  modoEditor ? "translate-x-3" : "translate-x-0"
+                }`}
+              />
+            </div>
+          </button>
         </div>
       )}
 
