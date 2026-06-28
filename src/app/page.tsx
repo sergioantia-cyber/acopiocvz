@@ -1023,7 +1023,9 @@ export default function HomePage() {
       .subscribe();
 
     return () => {
-      supabase.removeChannel(channel);
+      if (supabase) {
+        supabase.removeChannel(channel);
+      }
     };
   }, [isSupabaseConfigured, supabase]);
 
