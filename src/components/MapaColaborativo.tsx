@@ -417,12 +417,10 @@ export default function MapaColaborativo({
             .map((punto) => renderMarker(punto))}
         </MarkerClusterGroup>
 
-        {/* 3. Render sismo markers in their own independent Cluster Group */}
-        <MarkerClusterGroup chunkedLoading maxClusterRadius={40}>
-          {puntos
-            .filter((punto) => punto.categoria === "sismo")
-            .map((punto) => renderMarker(punto))}
-        </MarkerClusterGroup>
+        {/* 3. Render sismo markers directly on the map (no clustering) so they remain visible at any zoom level */}
+        {puntos
+          .filter((punto) => punto.categoria === "sismo")
+          .map((punto) => renderMarker(punto))}
       </MapContainer>
     </div>
   );
