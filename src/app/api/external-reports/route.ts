@@ -162,42 +162,36 @@ export async function GET(request: Request) {
   // Note: help_points Supabase query removed — all 403 centers are now loaded from the public CSV endpoint below.
 
 
-  // Helper function to parse CSV safely respecting quotes
+  // Rock-solid CSV parser: handles quoted fields with embedded commas correctly
+  const parseCSVLine = (line: string): string[] => {
+    const vals: string[] = [];
+    let cur = "";
+    let inQ = false;
+    for (const c of line) {
+      if (c === '"') { inQ = !inQ; }
+      else if (c === ',' && !inQ) { vals.push(cur); cur = ""; }
+      else { cur += c; }
+    }
+    vals.push(cur);
+    return vals;
+  };
+
   const parseCSV = (text: string): any[] => {
     const lines = text.split("\n").filter((l) => l.trim().length > 0);
-    if (lines.length === 0) return [];
-    
-    const headers = lines[0].split(",").map((h) => h.trim().replace(/^["']|["']$/g, ""));
+    if (lines.length < 2) return [];
+    // Parse headers using same parser to handle any quoted headers
+    const headers = parseCSVLine(lines[0]);
     const results: any[] = [];
-    
     for (let i = 1; i < lines.length; i++) {
       const line = lines[i].trim();
       if (!line) continue;
-      
-      const values: string[] = [];
-      let current = "";
-      let inQuotes = false;
-      
-      for (let charIdx = 0; charIdx < line.length; charIdx++) {
-        const c = line[charIdx];
-        if (c === '"') {
-          inQuotes = !inQuotes;
-        } else if (c === ',' && !inQuotes) {
-          values.push(current.trim().replace(/^["']|["']$/g, ""));
-          current = "";
-        } else {
-          current += c;
-        }
-      }
-      values.push(current.trim().replace(/^["']|["']$/g, ""));
-      
-      if (values.length >= headers.length) {
-        const obj: any = {};
-        headers.forEach((header, idx) => {
-          obj[header] = values[idx];
-        });
-        results.push(obj);
-      }
+      const values = parseCSVLine(line);
+      // Always map by index regardless of count — extra cols are ignored
+      const obj: any = {};
+      headers.forEach((header, idx) => {
+        obj[header] = values[idx] ?? "";
+      });
+      results.push(obj);
     }
     return results;
   };
