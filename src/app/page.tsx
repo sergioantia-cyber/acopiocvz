@@ -2109,7 +2109,7 @@ export default function HomePage() {
                         </div>
 
                         {p.descripcion && (
-                          <p className="text-[10px] text-slate-400 line-clamp-2 leading-relaxed bg-slate-900/30 p-2 rounded-xl border border-slate-900">
+                          <p className="text-[10px] text-slate-400 whitespace-pre-line leading-relaxed bg-slate-900/30 p-2 rounded-xl border border-slate-900">
                             {p.descripcion}
                           </p>
                         )}
