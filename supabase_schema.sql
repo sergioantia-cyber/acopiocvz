@@ -1,6 +1,23 @@
--- 1. Agregar columnas de moderación a la tabla de reportes existente
-ALTER TABLE reports ADD COLUMN IF NOT EXISTS aprobado BOOLEAN DEFAULT true;
-ALTER TABLE reports ADD COLUMN IF NOT EXISTS "creadorAnonimo" BOOLEAN DEFAULT false;
+-- 1. Crear la tabla de reportes principal si no existe
+CREATE TABLE IF NOT EXISTS reports (
+  id TEXT PRIMARY KEY,
+  tipo TEXT NOT NULL,
+  categoria TEXT NOT NULL,
+  descripcion TEXT,
+  lat DOUBLE PRECISION NOT NULL,
+  lng DOUBLE PRECISION NOT NULL,
+  confirmations INTEGER DEFAULT 0,
+  "creadoAt" TEXT NOT NULL,
+  "expiresAt" TEXT NOT NULL,
+  nombre TEXT,
+  direccion TEXT,
+  contacto TEXT,
+  aceptan TEXT,
+  region TEXT,
+  whatsapp TEXT,
+  aprobado BOOLEAN DEFAULT true,
+  "creadorAnonimo" BOOLEAN DEFAULT false
+);
 
 -- 2. Crear la tabla de administradores autorizados
 CREATE TABLE IF NOT EXISTS admins (
