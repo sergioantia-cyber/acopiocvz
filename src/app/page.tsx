@@ -57,7 +57,7 @@ const MAIN_FILTERS = [
     id: "acopio",
     name: "Centros de Acopio",
     shortName: "Acopio",
-    emoji: "📦",
+    emoji: "� “ �",
     color: "from-sky-600 to-sky-500",
     border: "border-sky-500/50",
     glow: "shadow-sky-500/25",
@@ -96,7 +96,7 @@ const MAIN_FILTERS = [
     id: "wifi",
     name: "Puntos WiFi",
     shortName: "WiFi",
-    emoji: "📶",
+    emoji: "� “ �",
     color: "from-violet-600 to-violet-500",
     border: "border-violet-500/50",
     glow: "shadow-violet-500/25",
@@ -192,6 +192,8 @@ export default function HomePage() {
   const [editAceptan, setEditAceptan] = useState("");
   const [editDescripcion, setEditDescripcion] = useState("");
   const [editPercentages, setEditPercentages] = useState<Record<string, number>>({});
+  const [editLat, setEditLat] = useState<number>(0);
+  const [editLng, setEditLng] = useState<number>(0);
 
   // Psychological Assistance States
   const [psychologists, setPsychologists] = useState<Psychologist[]>([]);
@@ -271,6 +273,8 @@ export default function HomePage() {
     setEditContacto(punto.contacto || "");
     setEditAceptan(punto.aceptan || "");
     setEditDescripcion(punto.descripcion || "");
+    setEditLat(punto.lat);
+    setEditLng(punto.lng);
     
     // Default percentages based on resource type
     setEditPercentages({
@@ -297,6 +301,8 @@ export default function HomePage() {
       contacto: editContacto || undefined,
       aceptan: editAceptan || undefined,
       descripcion: editDescripcion,
+      lat: editLat,
+      lng: editLng,
     };
 
     // Update in local state array
@@ -321,14 +327,14 @@ export default function HomePage() {
           descripcion: editDescripcion,
           categoria: editingPunto.categoria,
           tipo: editingPunto.tipo,
-          lat: editingPunto.lat,
-          lng: editingPunto.lng,
+          lat: editLat,
+          lng: editLng,
           expiresAt: editingPunto.expiresAt,
           creadoAt: editingPunto.creadoAt,
         });
     }
 
-    // (percentages UI removed — now using main category filters)
+    // (percentages UI removed � —  now using main category filters)
 
     setEditingPunto(null);
     alert("¡Centro actualizado con éxito en tiempo real!");
@@ -1320,7 +1326,7 @@ export default function HomePage() {
                   onClick={handleGoogleLogin}
                   className="flex items-center gap-1 px-2 py-1 bg-slate-950 hover:bg-slate-900 border border-slate-800 text-slate-300 hover:text-white rounded-lg text-[9px] font-bold transition cursor-pointer"
                 >
-                  🔑 Google
+                  � — � Google
                 </button>
               )}
             </div>
@@ -1386,7 +1392,7 @@ export default function HomePage() {
                   onClick={handleGoogleLogin}
                   className="flex items-center gap-1.5 px-3 py-1.5 bg-slate-950 hover:bg-slate-900 border border-slate-800 text-slate-300 hover:text-white rounded-xl text-xs font-bold transition cursor-pointer"
                 >
-                  <span>🔑</span>
+                  <span>� — �</span>
                   <span>Google Login</span>
       {/* 1.1. Banners de Alertas Críticas (Tiempo Real Seismológico/Administrador) */}
       {activeAlertsToShow.length > 0 && (
@@ -1404,7 +1410,7 @@ export default function HomePage() {
             >
               <div className="flex items-center gap-2 text-[10px] font-bold leading-snug">
                 <span className="text-xs shrink-0">
-                  {alert.tipo === 'critico' ? '⚠️' : alert.tipo === 'sismo' ? '💥' : '📢'}
+                  {alert.tipo === 'critico' ? '⚠️' : alert.tipo === 'sismo' ? '💥' : '� “ �'}
                 </span>
                 <span>{alert.mensaje}</span>
               </div>
@@ -1441,8 +1447,8 @@ export default function HomePage() {
               />
             </div>
 
-            {/* 3. Top Filter Pills — premium, horizontal, scrollable */}
-            <div className="absolute top-[80px] sm:top-[96px] left-0 right-0 z-20 pointer-events-none">� premium, horizontal, scrollable */}
+            {/* 3. Top Filter Pills � —  premium, horizontal, scrollable */}
+            <div className="absolute top-[80px] sm:top-[96px] left-0 right-0 z-20 pointer-events-none"> —  premium, horizontal, scrollable */}
             <div className="absolute top-[96px] left-0 right-0 z-20 pointer-events-none">
               <div className="flex items-center gap-2 overflow-x-auto pb-1 pointer-events-auto px-4 scrollbar-none">
                 {/* ALL button */}
@@ -1454,7 +1460,7 @@ export default function HomePage() {
                       : "bg-slate-900/90 border-slate-700/80 text-slate-400 hover:border-slate-500 hover:text-slate-200"
                   }`}
                 >
-                  <span className="text-sm">🗺️</span>
+                  <span className="text-sm">� — �️</span>
                   <span>Todo</span>
                 </button>
 
@@ -1563,7 +1569,7 @@ export default function HomePage() {
                     {/* Stats Comparison Card */}
                     <div className="p-3 bg-slate-950 border border-slate-800/80 rounded-xl flex flex-col gap-2 shadow-inner">
                       <div className="text-[8px] font-black uppercase tracking-widest text-orange-500">
-                        📊 Comparación de Monitoreo Nacional
+                        � “ � Comparación de Monitoreo Nacional
                       </div>
                       
                       <div className="grid grid-cols-3 gap-2 text-center">
@@ -1594,7 +1600,7 @@ export default function HomePage() {
                     {/* Filtro por Categorías */}
                     <div className="flex flex-col gap-2 bg-slate-950 border border-slate-800/80 rounded-xl p-3 shadow-inner">
                       <div className="text-[8px] font-black uppercase tracking-widest text-orange-500">
-                        🔍 Filtrar por Categoría en Mapa
+                        � — � Filtrar por Categoría en Mapa
                       </div>
                       <div className="grid grid-cols-2 gap-1.5">
                         <button
@@ -1628,7 +1634,7 @@ export default function HomePage() {
                               : "bg-slate-900 border border-slate-800 text-slate-400 hover:text-white"
                           }`}
                         >
-                          📦 Centros de Acopio
+                          � “ � Centros de Acopio
                         </button>
                         <button
                           type="button"
@@ -1650,7 +1656,7 @@ export default function HomePage() {
                               : "bg-slate-900 border border-slate-800 text-slate-400 hover:text-white"
                           }`}
                         >
-                          📡 Internet / WiFi
+                          � “ � Internet / WiFi
                         </button>
                         <button
                           type="button"
@@ -1661,7 +1667,7 @@ export default function HomePage() {
                               : "bg-slate-900 border border-slate-800 text-slate-400 hover:text-white"
                           }`}
                         >
-                          🚗 Vehículos / Movilidad
+                          � —  Vehículos / Movilidad
                         </button>
                         <button
                           type="button"
@@ -1726,7 +1732,7 @@ export default function HomePage() {
                 className="w-11 h-11 rounded-full bg-slate-900/90 border border-slate-800 hover:border-slate-700 text-orange-400 hover:text-orange-350 flex items-center justify-center font-bold text-base shadow-2xl transition-all duration-300 transform hover:scale-110 pointer-events-auto cursor-pointer self-end"
                 title="Cifras del Reporte de Impacto ONU"
               >
-                📊
+                � “ �
               </button>
 
               {/* Credits & Help Button (?) */}
@@ -1813,11 +1819,11 @@ export default function HomePage() {
                       className="w-full px-2 py-1.5 bg-slate-950 border border-slate-800 rounded-lg text-slate-300 text-xs focus:outline-none focus:border-orange-500/50 transition"
                     >
                       <option value="energia">⚡ Energía / Electricidad</option>
-                      <option value="senal">📶 Señal / Conectividad</option>
-                      <option value="suministros">📦 Suministros / Agua / Alimentos</option>
+                      <option value="senal">� “ � Señal / Conectividad</option>
+                      <option value="suministros">� “ � Suministros / Agua / Alimentos</option>
                       <option value="salud">🏥 Salud / Primeros Auxilios</option>
                       <option value="peligro">⚠️ Peligro / Zonas Afectadas</option>
-                      <option value="movilidad">🚗 Movilidad / Transporte</option>
+                      <option value="movilidad">� —  Movilidad / Transporte</option>
                     </select>
                   </div>
 
@@ -1969,7 +1975,7 @@ export default function HomePage() {
                               {person.direccion && <div className="text-[10px] text-slate-500 mt-0.5">{person.direccion}</div>}
                               {person.telefono && (
                                 <div className="text-[9px] text-orange-400/80 font-bold mt-1">
-                                  📞 Tel: {person.telefono}
+                                  � “ � Tel: {person.telefono}
                                 </div>
                               )}
                             </td>
@@ -2031,7 +2037,7 @@ export default function HomePage() {
                 onClick={() => setEditingPunto(null)}
                 className="text-slate-400 hover:text-white text-xs font-bold"
               >
-                Cerrar (×)
+                Cerrar (� — )
               </button>
             </div>
 
@@ -2101,6 +2107,38 @@ export default function HomePage() {
                   className="w-full px-3 py-2 bg-slate-950 border border-slate-800 rounded-xl text-slate-200 text-xs focus:outline-none focus:border-orange-500/50 h-16 resize-none"
                 />
               </div>
+
+              {/* Coordenadas de Ubicación (Sólo Dueño/Admin) */}
+              {isOwner && (
+                <div className="grid grid-cols-2 gap-3 bg-slate-950/45 p-3 rounded-xl border border-slate-850">
+                  <div className="flex flex-col gap-1">
+                    <label className="text-[9px] font-bold text-slate-400 uppercase tracking-wider">
+                      Latitud (Coordenada)
+                    </label>
+                    <input
+                      type="number"
+                      step="any"
+                      value={editLat}
+                      onChange={(e) => setEditLat(parseFloat(e.target.value) || 0)}
+                      className="w-full px-3 py-1.5 bg-slate-950 border border-slate-800 rounded-lg text-slate-200 text-xs focus:outline-none focus:border-orange-500/50"
+                      required
+                    />
+                  </div>
+                  <div className="flex flex-col gap-1">
+                    <label className="text-[9px] font-bold text-slate-400 uppercase tracking-wider">
+                      Longitud (Coordenada)
+                    </label>
+                    <input
+                      type="number"
+                      step="any"
+                      value={editLng}
+                      onChange={(e) => setEditLng(parseFloat(e.target.value) || 0)}
+                      className="w-full px-3 py-1.5 bg-slate-950 border border-slate-800 rounded-lg text-slate-200 text-xs focus:outline-none focus:border-orange-500/50"
+                      required
+                    />
+                  </div>
+                </div>
+              )}
             </div>
 
             {/* Resource Details inside popup - no longer shown as sliders here */}
@@ -2160,7 +2198,7 @@ export default function HomePage() {
                 </h4>
                 <ul className="flex flex-col gap-2">
                   <li className="flex items-start gap-2">
-                    <span className="text-orange-500 shrink-0">🔍</span>
+                    <span className="text-orange-500 shrink-0">� — �</span>
                     <div>
                       <strong>Personas Localizadas:</strong> Datos consolidados por{" "}
                       <a href="https://localizadosvenezuela.com/" target="_blank" rel="noreferrer" className="text-sky-400 underline hover:text-sky-300 transition">
@@ -2178,7 +2216,7 @@ export default function HomePage() {
                     </div>
                   </li>
                   <li className="flex items-start gap-2">
-                    <span className="text-orange-500 shrink-0">📦</span>
+                    <span className="text-orange-500 shrink-0">� “ �</span>
                     <div>
                       <strong>Centros de Acopio y Voluntarios:</strong> Información proveída por{" "}
                       <a href="https://ayudaparavenezuela.com/" target="_blank" rel="noreferrer" className="text-sky-400 underline hover:text-sky-300 transition">
@@ -2217,7 +2255,7 @@ export default function HomePage() {
         <div className="fixed inset-0 z-[1000] flex items-center justify-center p-4 bg-slate-950/80 backdrop-blur-md animate-in fade-in duration-200">
           <div className="w-full max-w-sm bg-slate-900 border-2 border-orange-500 rounded-3xl p-6 shadow-2xl flex flex-col gap-4 animate-in scale-in-95 duration-200">
             <div className="flex items-center gap-2 border-b border-slate-800 pb-3">
-              <span className="text-xl">📍</span>
+              <span className="text-xl">� “ �</span>
               <h3 className="text-sm font-black text-white uppercase tracking-wider">
                 Confirmar Posición
               </h3>
@@ -2344,7 +2382,7 @@ export default function HomePage() {
                 </div>
               ) : (
                 <div className="bg-slate-950/40 p-3 rounded-xl border border-slate-850 text-slate-400 text-xs leading-relaxed">
-                  🔒 Iniciaste sesión como <strong>Administrador</strong>. Solo el dueño de la app (sergioantia11@gmail.com) puede agregar o remover otros administradores.
+                  � — � Iniciaste sesión como <strong>Administrador</strong>. Solo el dueño de la app (sergioantia11@gmail.com) puede agregar o remover otros administradores.
                 </div>
               )}
 
@@ -2405,7 +2443,7 @@ export default function HomePage() {
               {/* Sección 2: Gestión de Alertas Críticas (Todos los Admins) */}
               <div className="border-t border-slate-800/80 pt-4 mt-2 flex flex-col gap-3">
                 <span className="text-[10px] font-extrabold text-orange-400 uppercase tracking-widest block">
-                  📢 Gestión de Alertas Críticas
+                  � “ � Gestión de Alertas Críticas
                 </span>
 
                 {/* Form to create alert */}
@@ -2432,8 +2470,8 @@ export default function HomePage() {
                         onChange={(e) => setNewAlertTipo(e.target.value as "critico" | "info")}
                         className="px-2 py-1 bg-slate-900 border border-slate-800 rounded-lg text-slate-350 text-[10px] focus:outline-none focus:border-orange-500/50"
                       >
-                        <option value="critico">🔴 Crítico (Rojo)</option>
-                        <option value="info">🔵 Informativo (Azul)</option>
+                        <option value="critico">� — � Crítico (Rojo)</option>
+                        <option value="info">� — � Informativo (Azul)</option>
                       </select>
                     </div>
                     <button
@@ -2489,7 +2527,7 @@ export default function HomePage() {
           <div className="w-full max-w-md bg-slate-900 border border-slate-800 rounded-3xl p-6 shadow-2xl flex flex-col gap-4 animate-in scale-in-95 duration-200 max-h-[90dvh] overflow-y-auto">
             <div className="flex justify-between items-center border-b border-slate-800 pb-3">
               <div className="flex items-center gap-2">
-                <span className="text-xl">📊</span>
+                <span className="text-xl">� “ �</span>
                 <div>
                   <h3 className="text-sm font-black text-white uppercase tracking-wider">
                     Cifras del Reporte ONU
@@ -2600,7 +2638,7 @@ export default function HomePage() {
                     <span className="text-[8px] text-slate-600 mt-0.5">reportados</span>
                   </div>
                   <div className="bg-slate-950/60 p-3 rounded-2xl border border-slate-800 flex flex-col items-center justify-center text-center shadow-lg">
-                    <span className="text-xl mb-1">🔍</span>
+                    <span className="text-xl mb-1">� — �</span>
                     <span className="text-[9px] font-extrabold text-slate-500 uppercase tracking-wider">Desapar.</span>
                     <span className="text-lg font-black text-sky-500 mt-0.5">{onuDesaparecidos}</span>
                     <span className="text-[8px] text-slate-600 mt-0.5">preliminar</span>
@@ -2630,7 +2668,7 @@ export default function HomePage() {
                 {/* Official Links */}
                 <div className="flex flex-col gap-2">
                   <h4 className="font-extrabold text-slate-400 uppercase tracking-widest text-[9px] px-0.5">
-                    🔗 Fuentes Oficiales de la ONU
+                    � —  —  Fuentes Oficiales de la ONU
                   </h4>
                   <a
                     href="https://reliefweb.int/disaster/eq-2026-000109-ven"
@@ -2641,9 +2679,9 @@ export default function HomePage() {
                     <span className="text-lg">🌐</span>
                     <div className="flex flex-col">
                       <span className="text-[11px] font-bold text-blue-300 group-hover:text-blue-200">ReliefWeb · OCHA</span>
-                      <span className="text-[9px] text-slate-500">Venezuela: Earthquakes (June 2026) – Situación completa</span>
+                      <span className="text-[9px] text-slate-500">Venezuela: Earthquakes (June 2026) � “  Situación completa</span>
                     </div>
-                    <span className="ml-auto text-slate-600 group-hover:text-blue-400 text-xs">↗</span>
+                    <span className="ml-auto text-slate-600 group-hover:text-blue-400 text-xs">� — </span>
                   </a>
                   <a
                     href="https://www.unocha.org/venezuela"
@@ -2656,7 +2694,7 @@ export default function HomePage() {
                       <span className="text-[11px] font-bold text-blue-300 group-hover:text-blue-200">OCHA Venezuela</span>
                       <span className="text-[9px] text-slate-500">unocha.org · Coordinación Humanitaria Oficial</span>
                     </div>
-                    <span className="ml-auto text-slate-600 group-hover:text-blue-400 text-xs">↗</span>
+                    <span className="ml-auto text-slate-600 group-hover:text-blue-400 text-xs">� — </span>
                   </a>
                   <a
                     href="https://www.insarag.org"
@@ -2669,7 +2707,7 @@ export default function HomePage() {
                       <span className="text-[11px] font-bold text-blue-300 group-hover:text-blue-200">INSARAG · ONU</span>
                       <span className="text-[9px] text-slate-500">Equipos internacionales de Búsqueda y Rescate Urbano</span>
                     </div>
-                    <span className="ml-auto text-slate-600 group-hover:text-blue-400 text-xs">↗</span>
+                    <span className="ml-auto text-slate-600 group-hover:text-blue-400 text-xs">� — </span>
                   </a>
                   <a
                     href="https://www.paho.org/es/venezuela"
@@ -2682,7 +2720,7 @@ export default function HomePage() {
                       <span className="text-[11px] font-bold text-blue-300 group-hover:text-blue-200">OPS / OMS Venezuela</span>
                       <span className="text-[9px] text-slate-500">paho.org · Respuesta sanitaria y epidemiológica</span>
                     </div>
-                    <span className="ml-auto text-slate-600 group-hover:text-blue-400 text-xs">↗</span>
+                    <span className="ml-auto text-slate-600 group-hover:text-blue-400 text-xs">� — </span>
                   </a>
                 </div>
 
@@ -2873,7 +2911,7 @@ export default function HomePage() {
 
                         <div className="flex items-center gap-1.5 flex-wrap">
                           <span className="text-[8px] font-bold px-1.5 py-0.5 rounded bg-slate-900 text-slate-500 border border-slate-850">
-                            🗣️ {p.idiomas || "Español"}
+                            � — �️ {p.idiomas || "Español"}
                           </span>
                           {!p.es_institucion && (
                             <span className="text-[8px] font-bold px-1.5 py-0.5 rounded bg-slate-900 text-slate-500 border border-slate-850">
@@ -2899,7 +2937,7 @@ export default function HomePage() {
                               href={`tel:${p.telefono}`}
                               className="px-2.5 py-1.5 text-[9px] font-extrabold text-blue-400 hover:text-white bg-blue-950/20 hover:bg-blue-600/80 border border-blue-900/60 rounded-xl transition flex items-center gap-1"
                             >
-                              📞 {p.es_institucion ? "Línea de Ayuda" : "Llamar"}
+                              � “ � {p.es_institucion ? "Línea de Ayuda" : "Llamar"}
                             </a>
                           )}
                           {p.booking_url && (
@@ -2925,7 +2963,7 @@ export default function HomePage() {
                                   }}
                                   className="px-2.5 py-1.5 text-[9px] font-extrabold hover:text-white border border-purple-900/60 rounded-xl transition flex items-center gap-1 text-purple-400 bg-purple-955/20 hover:bg-purple-600/80 cursor-pointer ml-auto"
                                 >
-                                  📅 Agendar Cita
+                                  � “ � Agendar Cita
                                 </button>
                               )}
                             </>
@@ -2960,7 +2998,7 @@ export default function HomePage() {
                                 className="w-6 h-6 rounded-lg bg-slate-900 border border-slate-800 text-rose-500 hover:text-white hover:bg-rose-650 flex items-center justify-center cursor-pointer transition"
                                 title="Eliminar"
                               >
-                                🗑️
+                                � — �️
                               </button>
                             )}
                           </div>
@@ -3235,7 +3273,7 @@ export default function HomePage() {
           <div className="w-full max-w-4xl h-[85dvh] bg-slate-900 border border-slate-800 rounded-3xl p-6 shadow-2xl flex flex-col gap-4 animate-in scale-in-95 duration-200">
             <div className="flex justify-between items-center border-b border-slate-800 pb-3">
               <div className="flex items-center gap-2">
-                <span className="text-xl">📅</span>
+                <span className="text-xl">� “ �</span>
                 <h3 className="text-sm font-black text-white uppercase tracking-wider">
                   Agenda de Citas y Disponibilidad
                 </h3>
@@ -3264,7 +3302,7 @@ export default function HomePage() {
                 rel="noopener noreferrer"
                 className="text-purple-400 hover:underline font-bold"
               >
-                Abrir en pestaña nueva ↗
+                Abrir en pestaña nueva � — 
               </a>
             </div>
           </div>

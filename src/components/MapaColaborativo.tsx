@@ -36,7 +36,7 @@ const CATEGORY_EMOJIS: Record<string, string> = {
   sismo: "💥",
 };
 
-const createCustomIcon = (punto: PuntoReportado, isDraggingThis = false) => {
+const createCustomIcon = (punto: PuntoReportado) => {
   const emoji = CATEGORY_EMOJIS[punto.categoria] || "📌";
 
   let colorClass = "";
@@ -62,10 +62,7 @@ const createCustomIcon = (punto: PuntoReportado, isDraggingThis = false) => {
   }
 
   const isExt = punto.fuente && !punto.nombre;
-  // Show drag cursor ring when being dragged
-  const dragRing = isDraggingThis
-    ? " ring-4 ring-orange-400 ring-offset-1 ring-offset-slate-900 scale-125"
-    : "";
+
 
   return L.divIcon({
     html: `
@@ -82,26 +79,7 @@ const createCustomIcon = (punto: PuntoReportado, isDraggingThis = false) => {
   });
 };
 
-// ─── Inner component: locks/unlocks map panning during marker drag ───────────
-function MapDragLock({ locked }: { locked: boolean }) {
-  const map = useMap();
-  useEffect(() => {
-    if (locked) {
-      map.dragging.disable();
-      map.scrollWheelZoom.disable();
-      map.touchZoom.disable();
-      map.doubleClickZoom.disable();
-      map.boxZoom.disable();
-    } else {
-      map.dragging.enable();
-      map.scrollWheelZoom.enable();
-      map.touchZoom.enable();
-      map.doubleClickZoom.enable();
-      map.boxZoom.enable();
-    }
-  }, [locked, map]);
-  return null;
-}
+
 
 // ─── Zoom tracker ─────────────────────────────────────────────────────────────
 function ZoomTracker({ onZoomChange }: { onZoomChange: (zoom: number) => void }) {
@@ -145,49 +123,9 @@ export default function MapaColaborativo({
   const defaultCenter: [number, number] = userLocation || [10.4806, -66.9036];
   const [isMounted, setIsMounted] = useState(false);
   const [zoomLevel, setZoomLevel] = useState(7);
-  const [draggingId, setDraggingId] = useState<string | null>(null);
-  const [mapLocked, setMapLocked] = useState(false);
-  const [modoEditor, setModoEditor] = useState(false);
-  const [moveToast, setMoveToast] = useState<string | null>(null);
-  const toastTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
-  const longPressTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
-
   useEffect(() => {
     setIsMounted(true);
-    return () => {
-      if (longPressTimerRef.current) clearTimeout(longPressTimerRef.current);
-    };
   }, []);
-
-  const startLongPress = (id: string) => {
-    if (!isOwner || !modoEditor) return;
-    if (longPressTimerRef.current) clearTimeout(longPressTimerRef.current);
-
-    longPressTimerRef.current = setTimeout(() => {
-      setMapLocked(true);
-      setDraggingId(id);
-      
-      // Haptic vibration feedback for mobile devices (50ms)
-      if (typeof window !== "undefined" && window.navigator && window.navigator.vibrate) {
-        try {
-          window.navigator.vibrate(50);
-        } catch (err) {}
-      }
-    }, 550); // 550ms hold threshold
-  };
-
-  const cancelLongPress = () => {
-    if (longPressTimerRef.current) {
-      clearTimeout(longPressTimerRef.current);
-      longPressTimerRef.current = null;
-    }
-  };
-
-  const showToast = (msg: string) => {
-    setMoveToast(msg);
-    if (toastTimerRef.current) clearTimeout(toastTimerRef.current);
-    toastTimerRef.current = setTimeout(() => setMoveToast(null), 3500);
-  };
 
   if (!isMounted) {
     return (
@@ -210,52 +148,10 @@ export default function MapaColaborativo({
 
     return (
       <Marker
-        key={`${punto.id}-${modoEditor ? "edit" : "safe"}`} // Recreate marker in Leaflet when toggling modes
+        key={punto.id}
         position={[punto.lat, punto.lng]}
-        icon={createCustomIcon(punto, isDraggingThis)}
-        draggable={canDrag}
-        eventHandlers={{
-          add: (e) => {
-            const marker = e.target;
-            const el = marker.getElement();
-            if (el) {
-              el.addEventListener("touchstart", () => startLongPress(punto.id), { passive: true });
-              el.addEventListener("touchend", cancelLongPress, { passive: true });
-              el.addEventListener("touchmove", () => {
-                if (!mapLocked) cancelLongPress();
-              }, { passive: true });
-            }
-          },
-          mousedown: () => {
-            startLongPress(punto.id);
-          },
-          mouseup: () => {
-            cancelLongPress();
-          },
-          mousemove: () => {
-            if (!mapLocked) cancelLongPress();
-          },
-          dragstart: () => {
-            setDraggingId(punto.id);
-            setMapLocked(true);   // ← freeze map so it doesn't pan
-          },
-          dragend: (e) => {
-            setDraggingId(null);
-            setMapLocked(false);  // ← unfreeze map
-            cancelLongPress();
-            const marker = e.target;
-            const newPos = marker.getLatLng();
-            const prevLat = punto.lat;
-            const prevLng = punto.lng;
-            if (
-              Math.abs(newPos.lat - prevLat) > 0.000005 ||
-              Math.abs(newPos.lng - prevLng) > 0.000005
-            ) {
-              onMarkerMove?.(punto.id, newPos.lat, newPos.lng, prevLat, prevLng);
-              showToast(`📍 "${punto.nombre || punto.categoria}" movido · Ctrl+Z para deshacer`);
-            }
-          },
-        }}
+        icon={createCustomIcon(punto)}
+        draggable={false}
       >
         {/* Full popup — shown for every marker */}
         <Popup>
@@ -502,43 +398,7 @@ export default function MapaColaborativo({
 
   return (
     <div className="w-full h-full min-h-[400px] md:min-h-full relative rounded-2xl overflow-hidden border-4 border-orange-500 shadow-2xl bg-slate-900">
-      {/* Owner Control Pill (Modo Editor) */}
-      {isOwner && (
-        <div className="absolute top-3 left-1/2 -translate-x-1/2 z-[500] pointer-events-none">
-          <button
-            onClick={() => {
-              setModoEditor((prev) => !prev);
-              setMapLocked(false);
-              setDraggingId(null);
-              cancelLongPress();
-            }}
-            className={`pointer-events-auto flex items-center gap-2.5 px-4 py-2 rounded-full border shadow-2xl transition-all duration-300 cursor-pointer font-sans select-none ${
-              modoEditor
-                ? "bg-orange-600 border-orange-500 text-white font-extrabold text-[10px] tracking-wider animate-pulse shadow-orange-500/25"
-                : "bg-slate-900/95 border-slate-800 text-slate-400 font-bold text-[9px] tracking-wide hover:border-slate-700 hover:text-slate-200"
-            }`}
-          >
-            <span className="text-xs">{modoEditor ? "🛠️" : "🔒"}</span>
-            <span>{modoEditor ? "Modo Editor: Activo (Mantén presionado)" : "Modo Seguro (Desplazamientos Apagados)"}</span>
-            <div
-              className={`w-7 h-4 rounded-full p-0.5 transition-colors duration-250 ${
-                modoEditor ? "bg-white" : "bg-slate-800"
-              }`}
-            >
-              <div
-                className={`w-3 h-3 rounded-full bg-slate-900 shadow-sm transform transition-transform duration-250 ${
-                  modoEditor ? "translate-x-3" : "translate-x-0"
-                }`}
-              />
-            </div>
-          </button>
-        </div>
-      )}
 
-      {/* Map-locked overlay visual cue */}
-      {mapLocked && (
-        <div className="absolute inset-0 z-[499] pointer-events-none border-4 border-orange-400/60 rounded-2xl" />
-      )}
 
       {/* Move toast notification */}
       {moveToast && (
@@ -557,7 +417,7 @@ export default function MapaColaborativo({
         preferCanvas={true}
       >
         {/* Locks map panning while a marker is being dragged */}
-        <MapDragLock locked={mapLocked} />
+        
 
         <TileLayer
           attribution='&copy; OpenStreetMap contributors'
