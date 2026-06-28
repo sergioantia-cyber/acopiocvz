@@ -127,6 +127,7 @@ export default function HomePage() {
   const [admins, setAdmins] = useState<string[]>([]);
   const [isAdminPanelOpen, setIsAdminPanelOpen] = useState(false);
   const [isCreditsOpen, setIsCreditsOpen] = useState(false);
+  const [isONUReportOpen, setIsONUReportOpen] = useState(false);
   const [newAdminEmail, setNewAdminEmail] = useState("");
 
   const [cercaDeMi, setCercaDeMi] = useState(false);
@@ -963,6 +964,15 @@ export default function HomePage() {
                 </div>
               )}
 
+              {/* ONU Report Button */}
+              <button
+                onClick={() => setIsONUReportOpen(true)}
+                className="w-11 h-11 rounded-full bg-slate-900/90 border border-slate-800 hover:border-slate-700 text-orange-400 hover:text-orange-350 flex items-center justify-center font-bold text-base shadow-2xl transition-all duration-300 transform hover:scale-110 pointer-events-auto cursor-pointer self-end"
+                title="Cifras del Reporte de Impacto ONU"
+              >
+                📊
+              </button>
+
               {/* Credits & Help Button (?) */}
               <button
                 onClick={() => setIsCreditsOpen(true)}
@@ -1520,6 +1530,73 @@ export default function HomePage() {
                   </div>
                 ))
               )}
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* 10. ONU Report Modal */}
+      {isONUReportOpen && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/80 backdrop-blur-sm animate-in fade-in duration-200">
+          <div className="w-full max-w-md bg-slate-900 border border-slate-800 rounded-3xl p-6 shadow-2xl flex flex-col gap-4 animate-in scale-in-95 duration-200 max-h-[90dvh] overflow-y-auto">
+            <div className="flex justify-between items-center border-b border-slate-800 pb-3">
+              <div className="flex items-center gap-2">
+                <span className="text-xl">📊</span>
+                <div>
+                  <h3 className="text-sm font-black text-white uppercase tracking-wider">
+                    Cifras del Reporte ONU
+                  </h3>
+                  <span className="text-[8px] text-slate-500 font-bold uppercase tracking-wider block mt-0.5">
+                    Fuente: ONU OCHA / INSARAG
+                  </span>
+                </div>
+              </div>
+              <button
+                onClick={() => setIsONUReportOpen(false)}
+                className="w-7 h-7 rounded-xl bg-slate-950 border border-slate-850 text-slate-400 hover:text-white flex items-center justify-center cursor-pointer transition"
+              >
+                <X className="w-4 h-4" />
+              </button>
+            </div>
+
+            <div className="flex flex-col gap-4 text-xs leading-relaxed text-slate-350 font-sans">
+              <div className="grid grid-cols-3 gap-3">
+                <div className="bg-slate-950/60 p-3 rounded-2xl border border-slate-850 flex flex-col items-center justify-center text-center shadow-lg">
+                  <span className="text-xl mb-1">💀</span>
+                  <span className="text-[9px] font-extrabold text-slate-500 uppercase tracking-wider">Fallecidos</span>
+                  <span className="text-base font-black text-rose-500 mt-0.5">920</span>
+                </div>
+                <div className="bg-slate-950/60 p-3 rounded-2xl border border-slate-850 flex flex-col items-center justify-center text-center shadow-lg">
+                  <span className="text-xl mb-1">🤕</span>
+                  <span className="text-[9px] font-extrabold text-slate-500 uppercase tracking-wider">Heridos</span>
+                  <span className="text-base font-black text-amber-500 mt-0.5">3,360</span>
+                </div>
+                <div className="bg-slate-950/60 p-3 rounded-2xl border border-slate-850 flex flex-col items-center justify-center text-center shadow-lg">
+                  <span className="text-xl mb-1">🔍</span>
+                  <span className="text-[9px] font-extrabold text-slate-500 uppercase tracking-wider">Desaparecidos</span>
+                  <span className="text-base font-black text-sky-500 mt-0.5">~50k</span>
+                </div>
+              </div>
+
+              <div className="bg-slate-950/40 p-3 rounded-2xl border border-slate-850 flex flex-col gap-2.5">
+                <div>
+                  <h4 className="font-extrabold text-orange-400 uppercase tracking-widest text-[9px] mb-1">
+                    Evaluación de Emergencia (Junio 2026)
+                  </h4>
+                  <p className="text-[11px] text-slate-300">
+                    Las cifras oficiales corresponden al impacto directo del <strong>doblete sísmico (magnitudes 7.2 y 7.5)</strong> en la región centro-norte del país. OCHA reporta una estimación de hasta 50,000 personas desaparecidas preliminares bajo los escombros en proceso de validación.
+                  </p>
+                </div>
+
+                <div className="border-t border-slate-800/60 pt-2.5">
+                  <h4 className="font-extrabold text-orange-400 uppercase tracking-widest text-[9px] mb-1">
+                    Respuesta de Asistencia Internacional
+                  </h4>
+                  <p className="text-[11px] text-slate-300">
+                    Naciones Unidas ha liberado 15 millones de dólares para ayuda de emergencia. Más de 30 equipos internacionales de búsqueda y rescate (USAR) que agrupan a más de 1,600 especialistas de INSARAG cooperan con las autoridades locales.
+                  </p>
+                </div>
+              </div>
             </div>
           </div>
         </div>
