@@ -214,22 +214,24 @@ export default function MapaColaborativo({
         icon={createCustomIcon(punto, isDraggingThis)}
         draggable={canDrag}
         eventHandlers={{
-          mousedown: () => {
-            startLongPress(punto.id);
+          add: (e) => {
+            const marker = e.target;
+            const el = marker.getElement();
+            if (el) {
+              el.addEventListener("touchstart", () => startLongPress(punto.id), { passive: true });
+              el.addEventListener("touchend", cancelLongPress, { passive: true });
+              el.addEventListener("touchmove", () => {
+                if (!mapLocked) cancelLongPress();
+              }, { passive: true });
+            }
           },
-          touchstart: () => {
+          mousedown: () => {
             startLongPress(punto.id);
           },
           mouseup: () => {
             cancelLongPress();
           },
-          touchend: () => {
-            cancelLongPress();
-          },
           mousemove: () => {
-            if (!mapLocked) cancelLongPress();
-          },
-          touchmove: () => {
             if (!mapLocked) cancelLongPress();
           },
           dragstart: () => {
