@@ -882,6 +882,10 @@ export default function HomePage() {
         (error) => console.log("Geolocation error:", error)
       );
     }
+    if (typeof window !== "undefined" && window.innerWidth < 640) {
+      setIsFiltersExpanded(false);
+      setPanelPos({ x: 16, y: 140 });
+    }
   }, []);
 
   useEffect(() => {
@@ -1254,7 +1258,7 @@ export default function HomePage() {
       }
       return true;
     })
-    .filter(p => {
+    .filter((p) => {
       const query = searchPsych.toLowerCase().trim();
       if (!query) return true;
       return (
@@ -1268,35 +1272,69 @@ export default function HomePage() {
   const activeAlertsToShow = [
     ...(alerts.manual || []),
     ...(alerts.seismic || [])
-  ].filter(a => !dismissedAlerts.includes(a.id));
+  ].filter((a) => !dismissedAlerts.includes(a.id));
 
   return (
     <main className="relative w-screen h-screen overflow-hidden bg-slate-950 font-sans flex flex-col">
       {/* 1. Header Fijo Superior (Floating on Map, full screen friendly) */}
-      <header className="absolute top-0 left-0 right-0 z-30 p-4 pointer-events-none">
-        <div className="max-w-5xl mx-auto flex flex-col sm:flex-row sm:items-center justify-between gap-3 p-3 bg-slate-900/90 backdrop-blur-md border border-slate-800/80 rounded-2xl shadow-xl pointer-events-auto">
-          {/* Logo / Title */}
-          <div className="flex items-center gap-2.5">
-            <div className="bg-orange-500 p-2 rounded-xl shadow-lg shadow-orange-500/20">
-              <MapPin className="w-5 h-5 text-white" />
+      <header className="absolute top-0 left-0 right-0 z-30 p-2 sm:p-4 pointer-events-none">
+        <div className="max-w-5xl mx-auto flex flex-col gap-2 p-2 sm:p-3 bg-slate-900/90 backdrop-blur-md border border-slate-800/80 rounded-2xl shadow-xl pointer-events-auto sm:flex-row sm:items-center sm:justify-between sm:gap-3">
+          {/* Row 1: Logo & Title + Mobile Auth Widget */}
+          <div className="flex items-center justify-between w-full sm:w-auto gap-2">
+            <div className="flex items-center gap-2">
+              <div className="bg-orange-500 p-1.5 sm:p-2 rounded-xl shadow-lg shadow-orange-500/20 shrink-0">
+                <MapPin className="w-4 h-4 sm:w-5 sm:h-5 text-white" />
+              </div>
+              <div>
+                <h1 className="text-xs sm:text-base font-black text-white leading-tight">Punto de Apoyo</h1>
+                <span className="text-[7.5px] sm:text-[9px] font-bold text-slate-400 uppercase tracking-widest block leading-none mt-0.5">
+                  Crisis & Apoyo
+                </span>
+              </div>
             </div>
-            <div>
-              <h1 className="text-base font-bold text-white leading-tight">Punto de Apoyo</h1>
-              <span className="text-[9px] font-bold text-slate-400 uppercase tracking-widest block">
-                Crisis & Apoyo Colaborativo
-              </span>
+
+            {/* Mobile-only Authentication Widget */}
+            <div className="flex sm:hidden items-center gap-1.5 border-l border-slate-800/80 pl-2 shrink-0">
+              {user ? (
+                <div className="flex items-center gap-1.5 bg-slate-950/60 p-0.5 pl-1.5 pr-1.5 rounded-lg border border-slate-850">
+                  {user.avatar && (
+                    <img src={user.avatar} alt={user.name} className="w-4 h-4 rounded-full border border-orange-500/80" />
+                  )}
+                  {isAdmin && (
+                    <button
+                      onClick={() => setIsAdminPanelOpen(true)}
+                      className="flex items-center gap-0.5 text-[8px] font-extrabold text-orange-400 hover:text-orange-300 uppercase tracking-wider cursor-pointer"
+                    >
+                      <Settings className="w-2.5 h-2.5" />
+                    </button>
+                  )}
+                  <button
+                    onClick={handleLogout}
+                    className="text-[8px] font-extrabold text-red-400 hover:text-red-300 uppercase tracking-wider cursor-pointer"
+                  >
+                    Cerrar
+                  </button>
+                </div>
+              ) : (
+                <button
+                  onClick={handleGoogleLogin}
+                  className="flex items-center gap-1 px-2 py-1 bg-slate-950 hover:bg-slate-900 border border-slate-800 text-slate-300 hover:text-white rounded-lg text-[9px] font-bold transition cursor-pointer"
+                >
+                  🔑 Google
+                </button>
+              )}
             </div>
           </div>
 
-          {/* Navigation & Auth tabs */}
-          <div className="flex flex-wrap items-center gap-3">
-            <div className="flex bg-slate-950 p-1 rounded-xl border border-slate-800/60 sm:min-w-[280px]">
+          {/* Row 2: Nav Tabs + Desktop Auth Widget */}
+          <div className="flex items-center justify-between sm:justify-end gap-3 w-full sm:w-auto">
+            <div className="flex bg-slate-950 p-0.5 sm:p-1 rounded-xl border border-slate-800/60 w-full sm:w-auto sm:min-w-[280px]">
               <button
                 onClick={() => {
                   setCurrentTab("mapa");
                   setIsReporting(false);
                 }}
-                className={`flex-1 flex items-center justify-center gap-1.5 py-1.5 rounded-lg text-xs font-bold transition-all cursor-pointer ${
+                className={`flex-1 flex items-center justify-center gap-1.5 py-1 sm:py-1.5 rounded-lg text-[10px] sm:text-xs font-bold transition-all cursor-pointer ${
                   currentTab === "mapa" ? "bg-orange-500 text-white shadow-md" : "text-slate-400 hover:text-white"
                 }`}
               >
@@ -1308,7 +1346,7 @@ export default function HomePage() {
                   setCurrentTab("sheets");
                   setIsReporting(false);
                 }}
-                className={`flex-1 flex items-center justify-center gap-1.5 py-1.5 rounded-lg text-xs font-bold transition-all cursor-pointer ${
+                className={`flex-1 flex items-center justify-center gap-1.5 py-1 sm:py-1.5 rounded-lg text-[10px] sm:text-xs font-bold transition-all cursor-pointer ${
                   currentTab === "sheets" ? "bg-orange-500 text-white shadow-md" : "text-slate-400 hover:text-white"
                 }`}
               >
@@ -1317,8 +1355,8 @@ export default function HomePage() {
               </button>
             </div>
 
-            {/* Google Authentication Widget */}
-            <div className="flex items-center gap-2">
+            {/* Desktop-only Authentication Widget */}
+            <div className="hidden sm:flex items-center gap-2">
               {user ? (
                 <div className="flex items-center gap-2 bg-slate-950/60 p-1 pl-2.5 pr-2.5 rounded-xl border border-slate-800/80">
                   {user.avatar ? (
@@ -1326,15 +1364,14 @@ export default function HomePage() {
                   ) : (
                     <span className="text-[10px] text-slate-300">👤</span>
                   )}
-                  <span className="text-[10px] font-bold text-slate-200 hidden md:inline">{user.name.split(" ")[0]}</span>
+                  <span className="text-[10px] font-bold text-slate-200">{user.name.split(" ")[0]}</span>
                   {isAdmin && (
                     <button
                       onClick={() => setIsAdminPanelOpen(true)}
                       className="flex items-center gap-0.5 text-[9px] font-extrabold text-orange-400 hover:text-orange-300 uppercase tracking-wider ml-1 cursor-pointer"
                       title="Panel de Administración (Alertas y Privilegios)"
                     >
-                      <Settings className="w-2.5 h-2.5" />
-                      Panel Admin
+                      <Settings className="w-2.5 h-2.5" /> Panel Admin
                     </button>
                   )}
                   <button
@@ -1351,16 +1388,9 @@ export default function HomePage() {
                 >
                   <span>🔑</span>
                   <span>Google Login</span>
-                </button>
-              )}
-            </div>
-          </div>
-        </div>
-      </header>
-
       {/* 1.1. Banners de Alertas Críticas (Tiempo Real Seismológico/Administrador) */}
       {activeAlertsToShow.length > 0 && (
-        <div className="absolute top-[88px] left-4 right-4 z-40 max-w-5xl mx-auto flex flex-col gap-2 pointer-events-auto">
+        <div className="absolute top-[72px] sm:top-[88px] left-4 right-4 z-40 max-w-5xl mx-auto flex flex-col gap-2 pointer-events-auto">
           {activeAlertsToShow.slice(0, 3).map((alert: any) => (
             <div
               key={alert.id}
@@ -1412,6 +1442,7 @@ export default function HomePage() {
             </div>
 
             {/* 3. Top Filter Pills — premium, horizontal, scrollable */}
+            <div className="absolute top-[80px] sm:top-[96px] left-0 right-0 z-20 pointer-events-none">� premium, horizontal, scrollable */}
             <div className="absolute top-[96px] left-0 right-0 z-20 pointer-events-none">
               <div className="flex items-center gap-2 overflow-x-auto pb-1 pointer-events-auto px-4 scrollbar-none">
                 {/* ALL button */}
@@ -1464,16 +1495,17 @@ export default function HomePage() {
               </div>
             </div>
 
-            {/* 4. Floating Filters Card (Draggable & Collapsible Sidebar Card) */}
+            {/* 4. Floating Filters Card (Draggable on Desktop, Fixed Bottom-Sheet Drawer on Mobile) */}
             <div 
-              style={{ left: `${panelPos.x}px`, top: `${panelPos.y}px` }}
-              className="absolute w-[320px] z-20 pointer-events-auto select-none"
+              style={typeof window !== "undefined" && window.innerWidth >= 640 ? { left: `${panelPos.x}px`, top: `${panelPos.y}px` } : {}}
+              className="fixed bottom-0 left-0 right-0 w-full sm:absolute sm:bottom-auto sm:left-auto sm:right-auto sm:w-[300px] z-20 pointer-events-auto select-none"
             >
-              <div className="w-full bg-slate-900/95 backdrop-blur-md border border-slate-800/90 rounded-2xl shadow-2xl flex flex-col gap-3 max-h-[60dvh] overflow-hidden">
+              <div className="w-full bg-slate-900/95 backdrop-blur-md border-t sm:border border-slate-800/90 rounded-t-3xl sm:rounded-2xl shadow-2xl flex flex-col gap-2 sm:gap-3 max-h-[48dvh] sm:max-h-[60dvh] overflow-hidden transition-all duration-300">
                 
                 {/* Header Drag Handle & Title (Acts as grab handle) */}
                 <div 
                   onMouseDown={(e) => {
+                    if (typeof window !== "undefined" && window.innerWidth < 640) return;
                     if (e.button !== 0) return;
                     const target = e.target as HTMLElement;
                     if (target.closest("button")) return;
@@ -1484,6 +1516,7 @@ export default function HomePage() {
                     });
                   }}
                   onTouchStart={(e) => {
+                    if (typeof window !== "undefined" && window.innerWidth < 640) return;
                     const target = e.target as HTMLElement;
                     if (target.closest("button")) return;
                     const touch = e.touches[0];
@@ -1493,8 +1526,8 @@ export default function HomePage() {
                       y: touch.clientY - panelPos.y
                     });
                   }}
-                  style={{ cursor: isDragging ? "grabbing" : "grab" }}
-                  className="px-4 pt-2.5 pb-2.5 bg-slate-950/60 border-b border-slate-800/80 flex flex-col gap-1 select-none"
+                  style={{ cursor: typeof window !== "undefined" && window.innerWidth >= 640 ? (isDragging ? "grabbing" : "grab") : "default" }}
+                  className="px-4 pt-2 pb-2 bg-slate-950/60 border-b border-slate-800/80 flex flex-col gap-1 select-none"
                 >
                   {/* Visual Pill Drag Indicator */}
                   <div className="w-10 h-1 bg-slate-700/60 rounded-full mx-auto" />
@@ -1502,17 +1535,16 @@ export default function HomePage() {
                   <div className="flex items-center justify-between">
                     <button
                       onClick={() => setIsFiltersExpanded(!isFiltersExpanded)}
-                      className="flex items-center gap-1.5 text-xs font-black uppercase tracking-wider text-slate-300 hover:text-white cursor-pointer select-none"
+                      className="flex items-center gap-1.5 text-[10px] sm:text-xs font-black uppercase tracking-wider text-slate-300 hover:text-white cursor-pointer select-none"
                     >
                       <ListFilter className="w-3.5 h-3.5 text-orange-500" />
                       Filtros Rápidos
                       {isFiltersExpanded ? <ChevronUp className="w-3 h-3 text-orange-500" /> : <ChevronDown className="w-3 h-3 text-orange-500" />}
                     </button>
-
                     {userLocation && (
                       <button
                         onClick={() => setCercaDeMi(!cercaDeMi)}
-                        className={`text-[9px] font-bold px-2 py-0.5 rounded-full transition-all border cursor-pointer ${
+                        className={`text-[8px] sm:text-[9px] font-bold px-2 py-0.5 rounded-full transition-all border cursor-pointer ${
                           cercaDeMi
                             ? "bg-orange-500/15 border-orange-500 text-orange-400"
                             : "bg-slate-950 border-slate-800 text-slate-400 hover:text-white"
