@@ -555,12 +555,17 @@ export default function MapaColaborativo({
             />
           ))}
 
-        {/* 2. Normal markers with clustering */}
+        {/* 2. Normal markers with clustering (only when not being dragged) */}
         <MarkerClusterGroup chunkedLoading maxClusterRadius={50}>
           {puntos
-            .filter((p) => p.categoria !== "sismo")
+            .filter((p) => p.categoria !== "sismo" && !isDraggablePunto(p))
             .map((p) => renderMarker(p))}
         </MarkerClusterGroup>
+
+        {/* 2.5. Render active draggable markers outside of the cluster group for native dragging support */}
+        {puntos
+          .filter((p) => p.categoria !== "sismo" && isDraggablePunto(p))
+          .map((p) => renderMarker(p))}
 
         {/* 3. Sismo markers — unclustered, always visible */}
         {puntos
