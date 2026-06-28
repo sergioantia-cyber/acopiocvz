@@ -46,3 +46,24 @@ ON CONFLICT (id) DO NOTHING;
 
 -- Deshabilitar RLS para onu_report para permitir lecturas y modificaciones
 ALTER TABLE onu_report DISABLE ROW LEVEL SECURITY;
+
+-- 5. Crear la tabla de alertas críticas
+CREATE TABLE IF NOT EXISTS critical_alerts (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  mensaje TEXT NOT NULL,
+  tipo TEXT NOT NULL DEFAULT 'critico', -- 'critico' | 'info' | 'sismo'
+  activo BOOLEAN DEFAULT true,
+  creado_at TIMESTAMP WITH TIME ZONE DEFAULT timezone('utc'::text, now()) NOT NULL
+);
+
+-- Deshabilitar RLS para critical_alerts para permitir lecturas y escrituras
+ALTER TABLE critical_alerts DISABLE ROW LEVEL SECURITY;
+
+-- Insertar alerta inicial de prueba
+INSERT INTO critical_alerts (mensaje, tipo, activo)
+VALUES (
+  '⚠️ ALERTA DE SEGURIDAD: Réplicas menores registradas en la costa central. Mantenga la calma y ubique las salidas de emergencia.',
+  'critico',
+  true
+) ON CONFLICT DO NOTHING;
+

@@ -200,6 +200,12 @@ export default function HomePage() {
   const [psychActiveTab, setPsychActiveTab] = useState<"todos" | "gratuito" | "social" | "lineas">("todos");
   const [activeBookingUrl, setActiveBookingUrl] = useState<string | null>(null);
 
+  // Critical Alerts States
+  const [alerts, setAlerts] = useState<{ manual: any[], seismic: any[] }>({ manual: [], seismic: [] });
+  const [dismissedAlerts, setDismissedAlerts] = useState<string[]>([]);
+  const [newAlertText, setNewAlertText] = useState("");
+  const [newAlertTipo, setNewAlertTipo] = useState<"critico" | "info">("critico");
+
   // Form State
   const [formTipo, setFormTipo] = useState<"ofrece" | "necesita">("ofrece");
   const [formCategoria, setFormCategoria] = useState<PuntoReportado["categoria"]>("suministros");
@@ -499,6 +505,67 @@ export default function HomePage() {
     }
   };
 
+  const handleDismissAlert = (id: string) => {
+    const updated = [...dismissedAlerts, id];
+    setDismissedAlerts(updated);
+    if (typeof window !== "undefined") {
+      localStorage.setItem("punto_de_apoyo_dismissed_alerts", JSON.stringify(updated));
+    }
+  };
+
+  const handleCreateAlert = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!newAlertText.trim()) return;
+    const payload = {
+      mensaje: newAlertText,
+      tipo: newAlertTipo,
+      activo: true
+    };
+    if (isSupabaseConfigured && supabase) {
+      const { data, error } = await supabase
+        .from("critical_alerts")
+        .insert([payload])
+        .select();
+      if (error) {
+        console.error("Error creating alert:", error);
+        alert("Error al crear alerta: " + error.message);
+        return;
+      }
+      if (data && data[0]) {
+        setAlerts(prev => ({
+          ...prev,
+          manual: [data[0], ...prev.manual]
+        }));
+      }
+    } else {
+      const mockAlert = { id: typeof crypto !== 'undefined' && crypto.randomUUID ? crypto.randomUUID() : Math.random().toString(), ...payload, creado_at: new Date().toISOString() };
+      setAlerts(prev => ({
+        ...prev,
+        manual: [mockAlert, ...prev.manual]
+      }));
+    }
+    setNewAlertText("");
+    alert("¡Alerta crítica creada con éxito!");
+  };
+
+  const handleToggleDeactivateAlert = async (id: string) => {
+    if (isSupabaseConfigured && supabase) {
+      const { error } = await supabase
+        .from("critical_alerts")
+        .update({ activo: false })
+        .eq("id", id);
+      if (error) {
+        console.error("Error deactivating alert:", error);
+        alert("Error al desactivar alerta: " + error.message);
+        return;
+      }
+    }
+    setAlerts(prev => ({
+      ...prev,
+      manual: prev.manual.filter((a: any) => a.id !== id)
+    }));
+  };
+
   const handleStartEditPsych = (p: Psychologist) => {
     setEditingPsych(p);
     setPsychNombre(p.nombre || "");
@@ -738,6 +805,28 @@ export default function HomePage() {
         console.error("Error loading external reports:", err);
         setPuntos(dbPuntos);
       }
+
+      // Fetch alerts
+      try {
+        const resAlerts = await fetch("/api/alerts");
+        const alertsData = await resAlerts.json();
+        if (alertsData) {
+          setAlerts({
+            manual: Array.isArray(alertsData.manual) ? alertsData.manual : [],
+            seismic: Array.isArray(alertsData.seismic) ? alertsData.seismic : []
+          });
+        }
+      } catch (err) {
+        console.error("Error loading alerts:", err);
+      }
+
+      // Load dismissed alerts from localStorage
+      if (typeof window !== "undefined") {
+        const dismissed = localStorage.getItem("punto_de_apoyo_dismissed_alerts");
+        if (dismissed) {
+          setDismissedAlerts(JSON.parse(dismissed));
+        }
+      }
     };
     loadData();
   }, []);
@@ -961,6 +1050,11 @@ export default function HomePage() {
       );
     });
 
+  const activeAlertsToShow = [
+    ...(alerts.manual || []),
+    ...(alerts.seismic || [])
+  ].filter(a => !dismissedAlerts.includes(a.id));
+
   return (
     <main className="relative w-screen h-screen overflow-hidden bg-slate-950 font-sans flex flex-col">
       {/* 1. Header Fijo Superior (Floating on Map, full screen friendly) */}
@@ -1018,14 +1112,14 @@ export default function HomePage() {
                     <span className="text-[10px] text-slate-300">👤</span>
                   )}
                   <span className="text-[10px] font-bold text-slate-200 hidden md:inline">{user.name.split(" ")[0]}</span>
-                  {isOwner && (
+                  {isAdmin && (
                     <button
                       onClick={() => setIsAdminPanelOpen(true)}
                       className="flex items-center gap-0.5 text-[9px] font-extrabold text-orange-400 hover:text-orange-300 uppercase tracking-wider ml-1 cursor-pointer"
-                      title="Administrar privilegios de administrador"
+                      title="Panel de Administración (Alertas y Privilegios)"
                     >
                       <Settings className="w-2.5 h-2.5" />
-                      Admins
+                      Panel Admin
                     </button>
                   )}
                   <button
@@ -1048,6 +1142,38 @@ export default function HomePage() {
           </div>
         </div>
       </header>
+
+      {/* 1.1. Banners de Alertas Críticas (Tiempo Real Seismológico/Administrador) */}
+      {activeAlertsToShow.length > 0 && (
+        <div className="absolute top-[88px] left-4 right-4 z-40 max-w-5xl mx-auto flex flex-col gap-2 pointer-events-auto">
+          {activeAlertsToShow.slice(0, 3).map((alert: any) => (
+            <div
+              key={alert.id}
+              className={`relative px-4 py-2.5 rounded-xl border flex items-center justify-between gap-3 shadow-lg backdrop-blur-md ${
+                alert.tipo === 'critico'
+                  ? 'bg-rose-950/90 border-rose-500/40 text-rose-200'
+                  : alert.tipo === 'sismo'
+                  ? 'bg-amber-950/90 border-amber-500/40 text-amber-250 border-amber-550/30'
+                  : 'bg-blue-950/90 border-blue-500/40 text-blue-200'
+              }`}
+            >
+              <div className="flex items-center gap-2 text-[10px] font-bold leading-snug">
+                <span className="text-xs shrink-0">
+                  {alert.tipo === 'critico' ? '⚠️' : alert.tipo === 'sismo' ? '💥' : '📢'}
+                </span>
+                <span>{alert.mensaje}</span>
+              </div>
+              <button
+                onClick={() => handleDismissAlert(alert.id)}
+                className="text-[10px] font-extrabold hover:text-white text-slate-400 p-1 cursor-pointer transition shrink-0"
+                title="Descartar alerta"
+              >
+                ✕
+              </button>
+            </div>
+          ))}
+        </div>
+      )}
 
       {/* 2. Content Area */}
       <div className="flex-1 w-full h-full relative">
@@ -1214,6 +1340,92 @@ export default function HomePage() {
                       <p className="text-[8px] text-slate-400 leading-normal">
                         Nuestra app filtra y agrupa reportes del terremoto 2026. Mostramos <strong className="text-sky-400">{puntos.filter(p => p.fuente !== "Localizados VE").length} centros funcionales</strong> mapeados, de los <strong className="text-amber-500">403 centros oficiales</strong> reportados en <a href="https://ayudaparavenezuela.com/#centros" target="_blank" rel="noreferrer" className="text-amber-400 underline hover:text-amber-300">ayudaparavenezuela.com</a>.
                       </p>
+                    </div>
+
+                    {/* Filtro por Categorías */}
+                    <div className="flex flex-col gap-2 bg-slate-950 border border-slate-800/80 rounded-xl p-3 shadow-inner">
+                      <div className="text-[8px] font-black uppercase tracking-widest text-orange-500">
+                        🔍 Filtrar por Categoría en Mapa
+                      </div>
+                      <div className="grid grid-cols-2 gap-1.5">
+                        <button
+                          type="button"
+                          onClick={() => setCategoriaFilter("todos")}
+                          className={`py-1.5 px-2 rounded-lg text-[9px] font-extrabold transition cursor-pointer text-left flex items-center gap-1 ${
+                            categoriaFilter === "todos"
+                              ? "bg-orange-500 text-white shadow-md border border-orange-400"
+                              : "bg-slate-900 border border-slate-800 text-slate-400 hover:text-white"
+                          }`}
+                        >
+                          🌍 Mostrar Todos
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => setCategoriaFilter("energia")}
+                          className={`py-1.5 px-2 rounded-lg text-[9px] font-extrabold transition cursor-pointer text-left flex items-center gap-1 ${
+                            categoriaFilter === "energia"
+                              ? "bg-amber-500 text-white shadow-md border border-amber-400"
+                              : "bg-slate-900 border border-slate-800 text-slate-400 hover:text-white"
+                          }`}
+                        >
+                          ⚡ Energía / Carga
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => setCategoriaFilter("suministros")}
+                          className={`py-1.5 px-2 rounded-lg text-[9px] font-extrabold transition cursor-pointer text-left flex items-center gap-1 ${
+                            categoriaFilter === "suministros"
+                              ? "bg-sky-500 text-white shadow-md border border-sky-400"
+                              : "bg-slate-900 border border-slate-800 text-slate-400 hover:text-white"
+                          }`}
+                        >
+                          📦 Centros de Acopio
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => setCategoriaFilter("salud")}
+                          className={`py-1.5 px-2 rounded-lg text-[9px] font-extrabold transition cursor-pointer text-left flex items-center gap-1 ${
+                            categoriaFilter === "salud"
+                              ? "bg-emerald-500 text-white shadow-md border border-emerald-400"
+                              : "bg-slate-900 border border-slate-800 text-slate-400 hover:text-white"
+                          }`}
+                        >
+                          🏥 Salud y Hospitales
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => setCategoriaFilter("senal")}
+                          className={`py-1.5 px-2 rounded-lg text-[9px] font-extrabold transition cursor-pointer text-left flex items-center gap-1 ${
+                            categoriaFilter === "senal"
+                              ? "bg-indigo-500 text-white shadow-md border border-indigo-400"
+                              : "bg-slate-900 border border-slate-800 text-slate-400 hover:text-white"
+                          }`}
+                        >
+                          📡 Internet / WiFi
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => setCategoriaFilter("movilidad")}
+                          className={`py-1.5 px-2 rounded-lg text-[9px] font-extrabold transition cursor-pointer text-left flex items-center gap-1 ${
+                            categoriaFilter === "movilidad"
+                              ? "bg-purple-500 text-white shadow-md border border-purple-400"
+                              : "bg-slate-900 border border-slate-800 text-slate-400 hover:text-white"
+                          }`}
+                        >
+                          🚗 Vehículos / Movilidad
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => setCategoriaFilter("peligro")}
+                          className={`py-1.5 px-2 rounded-lg text-[9px] font-extrabold transition cursor-pointer text-left flex items-center gap-1 col-span-2 ${
+                            categoriaFilter === "peligro"
+                              ? "bg-rose-500 text-white shadow-md border border-rose-400"
+                              : "bg-slate-900 border border-slate-800 text-slate-400 hover:text-white hover:bg-rose-950/20"
+                          }`}
+                        >
+                          ⚠️ Zonas de Peligro / Emergencia Civil
+                        </button>
+                      </div>
                     </div>
                   </div>
                 )}
@@ -1741,14 +1953,15 @@ export default function HomePage() {
       )}
 
       {/* 9. Admin Panel Modal (Grant/revoke permissions) */}
-      {isAdminPanelOpen && isOwner && (
+      {/* 9. Admin Panel Modal (Grant/revoke permissions & manage alerts) */}
+      {isAdminPanelOpen && isAdmin && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/80 backdrop-blur-sm animate-in fade-in duration-200">
           <div className="w-full max-w-md bg-slate-900 border border-slate-800 rounded-3xl p-6 shadow-2xl flex flex-col gap-4 animate-in scale-in-95 duration-200 max-h-[85dvh]">
             <div className="flex justify-between items-center border-b border-slate-800 pb-3">
               <div className="flex items-center gap-2">
                 <Settings className="w-5 h-5 text-orange-500" />
                 <h3 className="text-sm font-black text-white uppercase tracking-wider">
-                  Administradores de la App
+                  Panel de Administración
                 </h3>
               </div>
               <button
@@ -1759,61 +1972,149 @@ export default function HomePage() {
               </button>
             </div>
 
-            {/* Grant Permission Form */}
-            <form onSubmit={handleAddAdmin} className="flex flex-col gap-1.5 border-b border-slate-800/60 pb-4">
-              <label className="text-[9px] font-bold text-slate-400 uppercase tracking-wider">
-                Agregar nuevo administrador
-              </label>
-              <div className="flex gap-2">
-                <input
-                  type="email"
-                  required
-                  value={newAdminEmail}
-                  onChange={(e) => setNewAdminEmail(e.target.value)}
-                  placeholder="ejemplo@correo.com"
-                  className="flex-1 px-3 py-2 bg-slate-950 border border-slate-800 rounded-xl text-slate-250 text-xs focus:outline-none focus:border-orange-500/50"
-                />
-                <button
-                  type="submit"
-                  className="px-4 py-2 bg-orange-600 hover:bg-orange-500 text-white rounded-xl text-xs font-bold transition shadow-lg"
-                >
-                  Agregar
-                </button>
-              </div>
-            </form>
+            <div className="flex-1 overflow-y-auto flex flex-col gap-4 pr-1 scrollbar-none">
+              {/* Sección 1: Administradores (Sólo Dueño de la App) */}
+              {isOwner ? (
+                <div className="flex flex-col gap-3">
+                  <span className="text-[10px] font-extrabold text-orange-400 uppercase tracking-widest block">
+                    👥 Gestionar Administradores
+                  </span>
+                  
+                  {/* Grant Permission Form */}
+                  <form onSubmit={handleAddAdmin} className="flex flex-col gap-1.5 bg-slate-950/40 p-3 rounded-xl border border-slate-850">
+                    <label className="text-[9px] font-bold text-slate-400 uppercase tracking-wider">
+                      Agregar nuevo administrador
+                    </label>
+                    <div className="flex gap-2">
+                      <input
+                        type="email"
+                        required
+                        value={newAdminEmail}
+                        onChange={(e) => setNewAdminEmail(e.target.value)}
+                        placeholder="ejemplo@correo.com"
+                        className="flex-1 px-3 py-1.5 bg-slate-950 border border-slate-800 rounded-xl text-slate-200 text-xs focus:outline-none focus:border-orange-500/50"
+                      />
+                      <button
+                        type="submit"
+                        className="px-3 py-1.5 bg-orange-600 hover:bg-orange-500 text-white rounded-xl text-xs font-bold transition shadow-lg cursor-pointer"
+                      >
+                        Agregar
+                      </button>
+                    </div>
+                  </form>
 
-            {/* Admin List */}
-            <div className="flex-1 overflow-y-auto flex flex-col gap-2 pr-1">
-              <span className="text-[9px] font-extrabold text-orange-400 uppercase tracking-widest mb-1 block">
-                Lista de Administradores
-              </span>
-              
-              {/* Owner card */}
-              <div className="flex justify-between items-center bg-slate-950/60 p-2.5 rounded-xl border border-slate-800/30">
-                <div className="flex flex-col">
-                  <span className="text-xs font-bold text-white">sergioantia11@gmail.com</span>
-                  <span className="text-[8px] text-orange-400 uppercase font-black tracking-wider mt-0.5">Dueño de la App</span>
-                </div>
-              </div>
+                  {/* Admin List */}
+                  <div className="flex flex-col gap-2">
+                    {/* Owner card */}
+                    <div className="flex justify-between items-center bg-slate-950/60 p-2.5 rounded-xl border border-slate-800/30">
+                      <div className="flex flex-col">
+                        <span className="text-xs font-bold text-white">sergioantia11@gmail.com</span>
+                        <span className="text-[8px] text-orange-400 uppercase font-black tracking-wider mt-0.5">Dueño de la App</span>
+                      </div>
+                    </div>
 
-              {/* Extra admins */}
-              {admins.length === 0 ? (
-                <div className="text-center py-6 text-slate-500 text-xs italic">
-                  No hay otros administradores registrados.
+                    {/* Extra admins */}
+                    {admins.length === 0 ? (
+                      <div className="text-center py-3 text-slate-500 text-xs italic">
+                        No hay otros administradores registrados.
+                      </div>
+                    ) : (
+                      admins.map((email) => (
+                        <div key={email} className="flex justify-between items-center bg-slate-950/40 p-2.5 rounded-xl border border-slate-850 hover:border-slate-800 transition">
+                          <span className="text-xs text-slate-300 font-medium">{email}</span>
+                          <button
+                            onClick={() => handleRemoveAdmin(email)}
+                            className="px-2 py-1 text-[9px] font-extrabold text-rose-400 hover:text-white hover:bg-rose-950/45 border border-rose-900/30 rounded-lg transition"
+                          >
+                            Remover
+                          </button>
+                        </div>
+                      ))
+                    )}
+                  </div>
                 </div>
               ) : (
-                admins.map((email) => (
-                  <div key={email} className="flex justify-between items-center bg-slate-950/40 p-2.5 rounded-xl border border-slate-850 hover:border-slate-800 transition">
-                    <span className="text-xs text-slate-300 font-medium">{email}</span>
+                <div className="bg-slate-950/40 p-3 rounded-xl border border-slate-850 text-slate-400 text-xs leading-relaxed">
+                  🔒 Iniciaste sesión como <strong>Administrador</strong>. Solo el dueño de la app (sergioantia11@gmail.com) puede agregar o remover otros administradores.
+                </div>
+              )}
+
+              {/* Sección 2: Gestión de Alertas Críticas (Todos los Admins) */}
+              <div className="border-t border-slate-800/80 pt-4 mt-2 flex flex-col gap-3">
+                <span className="text-[10px] font-extrabold text-orange-400 uppercase tracking-widest block">
+                  📢 Gestión de Alertas Críticas
+                </span>
+
+                {/* Form to create alert */}
+                <form onSubmit={handleCreateAlert} className="flex flex-col gap-2 bg-slate-950/40 p-3 rounded-xl border border-slate-850">
+                  <div className="flex flex-col gap-1">
+                    <label className="text-[9px] font-bold text-slate-400 uppercase tracking-wider">
+                      Mensaje de la Alerta
+                    </label>
+                    <textarea
+                      required
+                      value={newAlertText}
+                      onChange={(e) => setNewAlertText(e.target.value)}
+                      placeholder="Ej. Corte de luz programado de 4 horas en Lechería..."
+                      rows={2}
+                      className="w-full px-3 py-1.5 bg-slate-950 border border-slate-800 rounded-xl text-slate-200 text-xs focus:outline-none focus:border-orange-500/50 resize-none"
+                    />
+                  </div>
+
+                  <div className="flex items-center justify-between gap-3">
+                    <div className="flex items-center gap-1.5">
+                      <label className="text-[9px] font-bold text-slate-400 uppercase tracking-wider">Tipo:</label>
+                      <select
+                        value={newAlertTipo}
+                        onChange={(e) => setNewAlertTipo(e.target.value as "critico" | "info")}
+                        className="px-2 py-1 bg-slate-900 border border-slate-800 rounded-lg text-slate-350 text-[10px] focus:outline-none focus:border-orange-500/50"
+                      >
+                        <option value="critico">🔴 Crítico (Rojo)</option>
+                        <option value="info">🔵 Informativo (Azul)</option>
+                      </select>
+                    </div>
                     <button
-                      onClick={() => handleRemoveAdmin(email)}
-                      className="px-2 py-1 text-[9px] font-extrabold text-rose-400 hover:text-white hover:bg-rose-950/45 border border-rose-900/30 rounded-lg transition"
+                      type="submit"
+                      className="px-3 py-1.5 bg-orange-600 hover:bg-orange-500 text-white rounded-lg text-[10px] font-bold transition shadow-md cursor-pointer"
                     >
-                      Remover
+                      Crear Alerta
                     </button>
                   </div>
-                ))
-              )}
+                </form>
+
+                {/* Alerts List */}
+                <div className="flex flex-col gap-2">
+                  <span className="text-[9px] font-bold text-slate-450 uppercase tracking-wider block">
+                    Alertas Manuales Activas
+                  </span>
+                  {(!alerts.manual || alerts.manual.length === 0) ? (
+                    <div className="text-center py-4 text-slate-500 text-[10px] italic">
+                      No hay alertas manuales activas.
+                    </div>
+                  ) : (
+                    alerts.manual.map((a: any) => (
+                      <div key={a.id} className="flex justify-between items-start gap-3 bg-slate-950/45 p-2.5 rounded-xl border border-slate-850 hover:border-slate-800 transition">
+                        <div className="flex flex-col gap-0.5 flex-1">
+                          <span className="text-[10px] text-slate-200 leading-normal">{a.mensaje}</span>
+                          <div className="flex items-center gap-2 text-[8px] text-slate-500 font-bold uppercase mt-0.5">
+                            <span className={a.tipo === 'critico' ? 'text-rose-450' : 'text-blue-450'}>
+                              {a.tipo === 'critico' ? 'Crítico' : 'Informativo'}
+                            </span>
+                            <span>•</span>
+                            <span>{new Date(a.creado_at).toLocaleDateString()}</span>
+                          </div>
+                        </div>
+                        <button
+                          onClick={() => handleToggleDeactivateAlert(a.id)}
+                          className="px-2 py-0.5 text-[8px] font-extrabold text-rose-450 hover:text-white hover:bg-rose-950 border border-rose-900/30 rounded transition shrink-0 mt-0.5 cursor-pointer"
+                        >
+                          Desactivar
+                        </button>
+                      </div>
+                    ))
+                  )}
+                </div>
+              </div>
             </div>
           </div>
         </div>
