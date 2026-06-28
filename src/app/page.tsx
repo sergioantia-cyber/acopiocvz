@@ -31,47 +31,9 @@ const MapaColaborativo = dynamic(() => import("../components/MapaColaborativo"),
   ),
 });
 
-const MOCK_PUNTOS: PuntoReportado[] = [
-  {
-    id: "1",
-    tipo: "ofrece",
-    categoria: "energia",
-    descripcion: "Tengo planta eléctrica de 5kW encendida para cargar teléfonos en el porche.",
-    lat: 10.4806,
-    lng: -66.9036,
-    confirmations: 12,
-    creadoAt: new Date(Date.now() - 2 * 3600000).toISOString(),
-    expiresAt: new Date(Date.now() + 70 * 3600000).toISOString(),
-  },
-  {
-    id: "2",
-    tipo: "necesita",
-    categoria: "salud",
-    descripcion: "Se necesita insulina urgente para adulto mayor en condiciones críticas.",
-    lat: 10.4856,
-    lng: -66.8986,
-    confirmations: 24,
-    creadoAt: new Date().toISOString(),
-    expiresAt: new Date(Date.now() + 24 * 3600000).toISOString(),
-  },
-  {
-    id: "3",
-    tipo: "ofrece",
-    categoria: "suministros",
-    descripcion: "Distribución de agua potable gratuita.",
-    lat: 10.4786,
-    lng: -66.9086,
-    confirmations: 8,
-    creadoAt: new Date(Date.now() - 4 * 3600000).toISOString(),
-    expiresAt: new Date(Date.now() + 68 * 3600000).toISOString(),
-  },
-];
+const MOCK_PUNTOS: PuntoReportado[] = [];
 
-const MOCK_PERSONS = [
-  { id: "1", nombre: "Carlos Mendoza", edad: 45, estado: "Encontrado - Estable", ubicacion: "Clínica Caracas", contacto: "0412-5551234" },
-  { id: "2", nombre: "María Gabriela Silva", edad: 28, estado: "Buscando", ubicacion: "Chacao, Av. Francisco de Miranda", contacto: "0424-9998877" },
-  { id: "3", nombre: "José Gregorio Rivas", edad: 62, estado: "Herido Leve", ubicacion: "Hospital Domingo Luciani", contacto: "0416-2223344" },
-];
+const MOCK_PERSONS: any[] = [];
 
 // Main filter categories - clear, user-friendly, pill-style
 const MAIN_FILTERS = [
@@ -385,10 +347,10 @@ export default function HomePage() {
       } else {
         const local = localStorage.getItem("punto_de_apoyo_puntos");
         if (local) {
-          dbPuntos = JSON.parse(local);
+          dbPuntos = JSON.parse(local).filter((p: any) => p.id !== "1" && p.id !== "2" && p.id !== "3");
+          localStorage.setItem("punto_de_apoyo_puntos", JSON.stringify(dbPuntos));
         } else {
-          dbPuntos = MOCK_PUNTOS;
-          localStorage.setItem("punto_de_apoyo_puntos", JSON.stringify(MOCK_PUNTOS));
+          dbPuntos = [];
         }
       }
 
