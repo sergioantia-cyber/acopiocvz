@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useRef, useState, Fragment } from "react";
 import { MapContainer, TileLayer, Marker, Popup, useMapEvents, useMap, Circle } from "react-leaflet";
 import MarkerClusterGroup from "react-leaflet-cluster";
 import L from "leaflet";
@@ -456,6 +456,40 @@ export default function MapaColaborativo({
         {puntos
           .filter((p) => p.categoria === "sismo" && p.tipo !== "noticia")
           .map((p) => renderMarker(p))}
+
+        {/* 4. Seismic shockwave/pulsing blurred circle overlays */}
+        {puntos
+          .filter((p) => p.categoria === "sismo" && p.tipo !== "noticia")
+          .map((p) => (
+            <Fragment key={`sismo-pulse-${p.id}`}>
+              {/* Outer pulsing ring (blurred, wide) */}
+              <Circle
+                center={[p.lat, p.lng]}
+                radius={2200}
+                pathOptions={{
+                  fillColor: "#f87171",
+                  fillOpacity: 0.15,
+                  color: "#f87171",
+                  weight: 1.5,
+                  opacity: 0.5,
+                  className: "seismic-pulse-slow",
+                }}
+              />
+              {/* Inner core (steady red glow) */}
+              <Circle
+                center={[p.lat, p.lng]}
+                radius={750}
+                pathOptions={{
+                  fillColor: "#ef4444",
+                  fillOpacity: 0.35,
+                  color: "#dc2626",
+                  weight: 2,
+                  opacity: 0.7,
+                  className: "seismic-pulse-fast",
+                }}
+              />
+            </Fragment>
+          ))}
       </MapContainer>
     </div>
   );

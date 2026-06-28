@@ -1080,6 +1080,31 @@ export default function HomePage() {
     loadData();
   }, []);
 
+  // Auto-dismiss seismic/sismo alert notifications after 8 seconds
+  useEffect(() => {
+    const allAlerts = [
+      ...(alerts.manual || []),
+      ...(alerts.seismic || [])
+    ];
+    const timers: NodeJS.Timeout[] = [];
+
+    allAlerts.forEach((alert) => {
+      if (alert.tipo === 'sismo' && !dismissedAlerts.includes(alert.id)) {
+        const t = setTimeout(() => {
+          setDismissedAlerts((prev) => {
+            if (prev.includes(alert.id)) return prev;
+            const updated = [...prev, alert.id];
+            localStorage.setItem("punto_de_apoyo_dismissed_alerts", JSON.stringify(updated));
+            return updated;
+          });
+        }, 8000); // 8 seconds
+        timers.push(t);
+      }
+    });
+
+    return () => timers.forEach(clearTimeout);
+  }, [alerts, dismissedAlerts]);
+
   // Supabase Real-time updates subscription for points
   useEffect(() => {
     if (!isSupabaseConfigured || !supabase) return;
