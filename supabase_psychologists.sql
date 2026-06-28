@@ -21,8 +21,18 @@ CREATE TABLE IF NOT EXISTS psychologists (
   created_at TIMESTAMP WITH TIME ZONE DEFAULT timezone('utc'::text, now())
 );
 
--- Deshabilitar Row Level Security (RLS) para permitir que la app inserte y modifique
-ALTER TABLE psychologists DISABLE ROW LEVEL SECURITY;
+-- Habilitar Row Level Security (RLS) para la tabla psychologists
+ALTER TABLE psychologists ENABLE ROW LEVEL SECURITY;
+
+-- Políticas de seguridad para psychologists
+CREATE POLICY "Allow public read of psychologists" ON psychologists 
+  FOR SELECT USING (true);
+
+CREATE POLICY "Allow write for self or admins" ON psychologists 
+  FOR ALL USING (
+    (auth.jwt() ->> 'email') IN (SELECT email FROM admins)
+    OR email = auth.jwt() ->> 'email'
+  );
 
 -- Agregar columnas a una tabla existente (por si ya existe la tabla)
 ALTER TABLE psychologists ADD COLUMN IF NOT EXISTS tipo_servicio TEXT DEFAULT 'gratuito';
@@ -36,5 +46,12 @@ CREATE TABLE IF NOT EXISTS psychologist_permissions (
   creado_at TIMESTAMP WITH TIME ZONE DEFAULT timezone('utc'::text, now()) NOT NULL
 );
 
--- Deshabilitar RLS
-ALTER TABLE psychologist_permissions DISABLE ROW LEVEL SECURITY;
+-- Habilitar Row Level Security (RLS) para la tabla psychologist_permissions
+ALTER TABLE psychologist_permissions ENABLE ROW LEVEL SECURITY;
+
+-- Políticas de seguridad para psychologist_permissions
+CREATE POLICY "Allow public read of psychologist_permissions" ON psychologist_permissions 
+  FOR SELECT USING (true);
+
+CREATE POLICY "Allow admins write psychologist_permissions" ON psychologist_permissions 
+  FOR ALL USING ((auth.jwt() ->> 'email') IN (SELECT email FROM admins));
