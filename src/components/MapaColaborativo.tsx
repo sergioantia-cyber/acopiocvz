@@ -170,7 +170,7 @@ export default function MapaColaborativo({
 
   // Only owner can drag; only specific categories; no external/sismo points
   const isDraggablePunto = (p: PuntoReportado) =>
-    isOwner && !p.fuente && DRAGGABLE_CATEGORIES.has(p.categoria);
+    isOwner && !p.fuente && DRAGGABLE_CATEGORIES.has(p.categoria) && p.categoria !== "sismo";
 
   const renderMarker = (punto: PuntoReportado) => {
     const hasDetails = !!punto.nombre && !!punto.direccion;
@@ -179,7 +179,7 @@ export default function MapaColaborativo({
 
     return (
       <Marker
-        key={punto.id}
+        key={`${punto.id}-${canDrag ? "draggable" : "static"}`}
         position={[punto.lat, punto.lng]}
         icon={createCustomIcon(punto, isDraggingThis)}
         draggable={canDrag}
