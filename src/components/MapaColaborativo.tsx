@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
-import { MapContainer, TileLayer, Marker, Popup, useMapEvents, Circle } from "react-leaflet";
+import { MapContainer, TileLayer, Marker, Popup, useMap, useMapEvents, Circle } from "react-leaflet";
 import MarkerClusterGroup from "react-leaflet-cluster";
 import L from "leaflet";
 
@@ -104,6 +104,46 @@ function MapClickEvents({
   return null;
 }
 
+/**
+ * DraggableMarker — wraps a Leaflet Marker with map.dragging.disable/enable
+ * so the map doesn't pan while the admin is dragging the marker.
+ */
+function DraggableMarker({
+  punto,
+  icon,
+  onDragStart,
+  onDragEnd,
+  children,
+}: {
+  punto: PuntoReportado;
+  icon: L.DivIcon;
+  onDragStart: () => void;
+  onDragEnd: (e: L.DragEndEvent) => void;
+  children?: React.ReactNode;
+}) {
+  const map = useMap();
+  return (
+    <Marker
+      key={punto.id}
+      position={[punto.lat, punto.lng]}
+      icon={icon}
+      draggable
+      eventHandlers={{
+        dragstart: () => {
+          map.dragging.disable();
+          onDragStart();
+        },
+        dragend: (e) => {
+          map.dragging.enable();
+          onDragEnd(e as unknown as L.DragEndEvent);
+        },
+      }}
+    >
+      {children}
+    </Marker>
+  );
+}
+
 export default function MapaColaborativo({
   puntos,
   isReportingMode,
@@ -157,45 +197,52 @@ export default function MapaColaborativo({
     const hasDetails = !!punto.nombre && !!punto.direccion;
     const canDrag = isDraggablePunto(punto);
     const isDraggingThis = draggingId === punto.id;
-    
-    return (
-      <Marker
-        key={punto.id}
-        position={[punto.lat, punto.lng]}
-        icon={createCustomIcon(punto, isDraggingThis)}
-        draggable={canDrag}
-        eventHandlers={canDrag ? {
-          dragstart: () => {
-            setDraggingId(punto.id);
-          },
-          dragend: (e) => {
-            setDraggingId(null);
-            const marker = e.target;
-            const newPos = marker.getLatLng();
-            const prevLat = punto.lat;
-            const prevLng = punto.lng;
-            if (
-              Math.abs(newPos.lat - prevLat) > 0.00001 ||
-              Math.abs(newPos.lng - prevLng) > 0.00001
-            ) {
-              onMarkerMove?.(punto.id, newPos.lat, newPos.lng, prevLat, prevLng);
-              showToast(`📍 "${punto.nombre || punto.categoria}" movido · Ctrl+Z para deshacer`);
-            }
-          },
-        } : undefined}
-      >
-        {/* Show drag hint for admin on hover */}
-        {canDrag && (
+    const icon = createCustomIcon(punto, isDraggingThis);
+
+    const handleDragStart = () => setDraggingId(punto.id);
+    const handleDragEnd = (e: L.DragEndEvent) => {
+      setDraggingId(null);
+      const marker = e.target as L.Marker;
+      const newPos = marker.getLatLng();
+      const prevLat = punto.lat;
+      const prevLng = punto.lng;
+      if (
+        Math.abs(newPos.lat - prevLat) > 0.00001 ||
+        Math.abs(newPos.lng - prevLng) > 0.00001
+      ) {
+        onMarkerMove?.(punto.id, newPos.lat, newPos.lng, prevLat, prevLng);
+        showToast(`📍 "${punto.nombre || punto.categoria}" movido · Ctrl+Z para deshacer`);
+      }
+    };
+
+    if (canDrag) {
+      return (
+        <DraggableMarker
+          key={punto.id}
+          punto={punto}
+          icon={icon}
+          onDragStart={handleDragStart}
+          onDragEnd={handleDragEnd}
+        >
           <Popup>
             <div className="p-2 bg-[#111113] rounded-xl text-slate-300 text-[10px] font-medium min-w-[180px]">
               <span className="text-orange-400 font-extrabold text-xs block mb-1">🖱️ Modo Admin</span>
               <span>Arrastra este marcador para moverlo.<br/>Usa <kbd className="bg-slate-800 px-1 rounded text-[9px]">Ctrl+Z</kbd> para deshacer.</span>
             </div>
           </Popup>
-        )}
-        {!canDrag && (
-          <Popup>
-            {hasDetails ? (
+        </DraggableMarker>
+      );
+    }
+
+    // Non-draggable marker (regular users or non-moveable types)
+    return (
+      <Marker
+        key={punto.id}
+        position={[punto.lat, punto.lng]}
+        icon={icon}
+      >
+        <Popup>
+          {hasDetails ? (
               /* Premium detailed popup layout (matches MRW screenshot exactly) */
               <div className="p-4 text-slate-100 flex flex-col gap-2.5 font-sans min-w-[290px] bg-[#111113] rounded-2xl shadow-2xl border border-slate-800/50">
                 {/* Header Pill depending on source & needs & approval */}
@@ -426,7 +473,6 @@ export default function MapaColaborativo({
               </div>
             )}
           </Popup>
-        )}
       </Marker>
     );
   };
