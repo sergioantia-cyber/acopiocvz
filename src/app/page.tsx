@@ -2560,7 +2560,14 @@ export default function HomePage() {
                               {!p.es_institucion && (
                                 <button
                                   type="button"
-                                  onClick={() => setActiveBookingUrl(p.booking_url!)}
+                                  onClick={() => {
+                                    const isGoogleCal = p.booking_url?.includes("google.com") || p.booking_url?.includes("calendar.google");
+                                    if (isGoogleCal) {
+                                      window.open(p.booking_url, "_blank", "noopener,noreferrer");
+                                    } else {
+                                      setActiveBookingUrl(p.booking_url!);
+                                    }
+                                  }}
                                   className="px-2.5 py-1.5 text-[9px] font-extrabold hover:text-white border border-purple-900/60 rounded-xl transition flex items-center gap-1 text-purple-400 bg-purple-955/20 hover:bg-purple-600/80 cursor-pointer ml-auto"
                                 >
                                   📅 Agendar Cita
@@ -2790,14 +2797,14 @@ export default function HomePage() {
 
               <div className="flex flex-col gap-1">
                 <label className="text-[9px] font-extrabold text-slate-500 uppercase tracking-wider">
-                  {psychEsInstitucion ? "Enlace al Portal Oficial (Web) / Portal de Citas" : "Enlace de Reservas (Cal.com / Calendly)"}
+                  {psychEsInstitucion ? "Enlace al Portal Oficial (Web) / Portal de Citas" : "Enlace de Reservas (Google Calendar / Cal.com / Calendly)"}
                 </label>
                 <input
                   type="url"
                   value={psychBookingUrl}
                   onChange={(e) => setPsychBookingUrl(e.target.value)}
                   className="w-full px-3 py-2 bg-slate-950 border border-slate-850 rounded-xl text-slate-200 focus:outline-none focus:border-purple-500 transition-colors"
-                  placeholder={psychEsInstitucion ? "https://cruzroja.org.ve/ayuda" : "https://cal.com/maria-rod/consulta"}
+                  placeholder={psychEsInstitucion ? "https://cruzroja.org.ve/ayuda" : "https://calendar.google.com/calendar/appointments/schedules/... o Cal.com"}
                 />
               </div>
 
