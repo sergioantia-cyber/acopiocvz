@@ -193,6 +193,11 @@ export default function HomePage() {
   const [psychModalidad, setPsychModalidad] = useState("online");
   const [psychBookingUrl, setPsychBookingUrl] = useState("");
   const [psychEsInstitucion, setPsychEsInstitucion] = useState(false);
+  const [psychTipoServicio, setPsychTipoServicio] = useState<"gratuito" | "social">("gratuito");
+  const [psychMontoTarifa, setPsychMontoTarifa] = useState<number>(0);
+  const [psychMonedaTarifa, setPsychMonedaTarifa] = useState<string>("USD");
+  const [psychVerificado, setPsychVerificado] = useState<boolean>(true);
+  const [psychActiveTab, setPsychActiveTab] = useState<"todos" | "gratuito" | "social">("todos");
 
   // Form State
   const [formTipo, setFormTipo] = useState<"ofrece" | "necesita">("ofrece");
@@ -383,6 +388,13 @@ export default function HomePage() {
       return;
     }
 
+    const isSocialExceeded = psychTipoServicio === "social" && psychMontoTarifa > 15;
+    const isApproved = isSocialExceeded ? false : true;
+
+    if (isSocialExceeded) {
+      alert("⚠️ Validación de Moderador: El costo ingresado excede el límite máximo permitido para ser considerado 'Tarifa Social' ($15 USD). El perfil ha sido creado/editado pero quedará inactivo y pendiente de aprobación por el administrador antes de ser visible públicamente.");
+    }
+
     const payload: Omit<Psychologist, "id"> & { id?: string } = {
       nombre: psychNombre,
       titulo: psychEsInstitucion ? (psychTitulo || "Línea de Ayuda / Institución") : psychTitulo,
@@ -396,7 +408,11 @@ export default function HomePage() {
       modalidad: psychModalidad,
       booking_url: psychBookingUrl,
       es_institucion: psychEsInstitucion,
-      activo: true,
+      activo: isApproved,
+      tipo_servicio: psychTipoServicio,
+      monto_tarifa: psychTipoServicio === "social" ? Number(psychMontoTarifa) : 0,
+      moneda_tarifa: psychMonedaTarifa,
+      verificado: psychVerificado,
     };
 
     if (editingPsych) {
@@ -444,6 +460,25 @@ export default function HomePage() {
     handleClosePsychForm();
   };
 
+  const handleToggleApprovePsych = async (p: Psychologist) => {
+    const payload = { activo: true };
+    if (isSupabaseConfigured && supabase) {
+      const { error } = await supabase
+        .from("psychologists")
+        .update(payload)
+        .eq("id", p.id);
+      if (error) {
+        console.error("Error approving psychologist:", error);
+        alert("Error al aprobar profesional: " + error.message);
+        return;
+      }
+    }
+    setPsychologists(prev =>
+      prev.map(item => (item.id === p.id ? { ...item, activo: true } : item))
+    );
+    alert(`¡El perfil de ${p.nombre} ha sido aprobado y ya es público!`);
+  };
+
   const handleDeletePsychologist = async (id: string) => {
     if (!window.confirm("¿Seguro que deseas eliminar este psicólogo/a o institución de la base de datos?")) return;
 
@@ -477,6 +512,10 @@ export default function HomePage() {
     setPsychModalidad(p.modalidad || "online");
     setPsychBookingUrl(p.booking_url || "");
     setPsychEsInstitucion(!!p.es_institucion);
+    setPsychTipoServicio(p.tipo_servicio || "gratuito");
+    setPsychMontoTarifa(p.monto_tarifa || 0);
+    setPsychMonedaTarifa(p.moneda_tarifa || "USD");
+    setPsychVerificado(p.verificado !== false);
     setIsPsychFormOpen(true);
   };
 
@@ -494,6 +533,10 @@ export default function HomePage() {
     setPsychModalidad("online");
     setPsychBookingUrl("");
     setPsychEsInstitucion(false);
+    setPsychTipoServicio("gratuito");
+    setPsychMontoTarifa(0);
+    setPsychMonedaTarifa("USD");
+    setPsychVerificado(true);
     setIsPsychFormOpen(false);
   };
 
@@ -887,6 +930,32 @@ export default function HomePage() {
     }
     return true;
   });
+
+  // Filter psychologists based on active tab and search query
+  const filteredPsychs = psychologists
+    .filter(p => {
+      // Ocultar psicólogos inactivos a menos que sea administrador
+      if (p.activo === false && !isAdmin) return false;
+      
+      // Filtro de pestaña (gratuito vs social)
+      if (psychActiveTab === "gratuito") {
+        return !p.tipo_servicio || p.tipo_servicio === "gratuito";
+      }
+      if (psychActiveTab === "social") {
+        return p.tipo_servicio === "social";
+      }
+      return true;
+    })
+    .filter(p => {
+      const query = searchPsych.toLowerCase().trim();
+      if (!query) return true;
+      return (
+        p.nombre.toLowerCase().includes(query) ||
+        p.especialidad.toLowerCase().includes(query) ||
+        (p.titulo && p.titulo.toLowerCase().includes(query)) ||
+        (p.descripcion && p.descripcion.toLowerCase().includes(query))
+      );
+    });
 
   return (
     <main className="relative w-screen h-screen overflow-hidden bg-slate-950 font-sans flex flex-col">
@@ -2001,10 +2070,10 @@ export default function HomePage() {
                 <span className="text-xl">🧠</span>
                 <div>
                   <h3 className="text-sm font-black text-white uppercase tracking-wider">
-                    Asistencia Psicológica Gratuita
+                    Apoyo Psicológico Comunitario
                   </h3>
                   <span className="text-[8px] text-slate-500 font-bold uppercase tracking-wider block mt-0.5">
-                    Directorio de profesionales e instituciones voluntarias
+                    Directorio de profesionales, voluntariado y consulta social accesible
                   </span>
                 </div>
               </div>
@@ -2030,6 +2099,41 @@ export default function HomePage() {
               </div>
             </div>
 
+            {/* Pestañas de Filtro */}
+            <div className="flex gap-2 p-1 bg-slate-950 rounded-2xl border border-slate-850">
+              <button
+                type="button"
+                onClick={() => setPsychActiveTab("todos")}
+                className={`flex-1 py-1.5 rounded-xl text-[9px] font-extrabold uppercase tracking-wider transition cursor-pointer ${psychActiveTab === "todos" ? 'bg-slate-900 border border-slate-800 text-white shadow-md' : 'text-slate-500 hover:text-slate-300'}`}
+              >
+                🌍 Todos
+              </button>
+              <button
+                type="button"
+                onClick={() => setPsychActiveTab("gratuito")}
+                className={`flex-1 py-1.5 rounded-xl text-[9px] font-extrabold uppercase tracking-wider transition cursor-pointer ${psychActiveTab === "gratuito" ? 'bg-purple-955/40 border border-purple-900/60 text-purple-400 shadow-md' : 'text-slate-500 hover:text-slate-300'}`}
+              >
+                💜 Voluntariado 100% Gratuito
+              </button>
+              <button
+                type="button"
+                onClick={() => setPsychActiveTab("social")}
+                className={`flex-1 py-1.5 rounded-xl text-[9px] font-extrabold uppercase tracking-wider transition cursor-pointer ${psychActiveTab === "social" ? 'bg-blue-950/40 border border-blue-900/60 text-blue-400 shadow-md' : 'text-slate-500 hover:text-slate-300'}`}
+              >
+                🤝 Consulta Social / Solidaria
+              </button>
+            </div>
+
+            {/* Aclaratoria de Transparencia Obligatoria */}
+            {psychActiveTab === "social" && (
+              <div className="p-3 bg-blue-955/10 border border-blue-900/40 rounded-2xl flex items-start gap-2.5 animate-in fade-in duration-200">
+                <span className="text-sm">ℹ️</span>
+                <p className="text-[10px] text-blue-300 leading-normal">
+                  Los profesionales en esta sección ofrecen <strong>Tarifas Sociales Reducidas</strong> de forma solidaria para hacer la salud mental accesible a la comunidad. Nuestra plataforma no percibe comisiones por estos servicios.
+                </p>
+              </div>
+            )}
+
             {/* Buscador */}
             <div className="relative">
               <input
@@ -2044,69 +2148,66 @@ export default function HomePage() {
 
             {/* Listado */}
             <div className="flex-1 overflow-y-auto pr-1 flex flex-col gap-3 min-h-0">
-              {psychologists.filter(p => {
-                const query = searchPsych.toLowerCase().trim();
-                if (!query) return true;
-                return (
-                  p.nombre.toLowerCase().includes(query) ||
-                  p.especialidad.toLowerCase().includes(query) ||
-                  (p.titulo && p.titulo.toLowerCase().includes(query)) ||
-                  (p.descripcion && p.descripcion.toLowerCase().includes(query))
-                );
-              }).length === 0 ? (
+              {filteredPsychs.length === 0 ? (
                 <div className="py-12 text-center text-xs text-slate-500">
-                  No se encontraron profesionales o instituciones registradas que coincidan con la búsqueda.
+                  No se encontraron profesionales o instituciones en esta categoría que coincidan con la búsqueda.
                 </div>
               ) : (
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-                  {psychologists
-                    .filter(p => {
-                      const query = searchPsych.toLowerCase().trim();
-                      if (!query) return true;
-                      return (
-                        p.nombre.toLowerCase().includes(query) ||
-                        p.especialidad.toLowerCase().includes(query) ||
-                        (p.titulo && p.titulo.toLowerCase().includes(query)) ||
-                        (p.descripcion && p.descripcion.toLowerCase().includes(query))
-                      );
-                    })
-                    .map((p) => (
-                      <div
-                        key={p.id}
-                        className={`p-4 rounded-2xl border flex flex-col justify-between gap-3 shadow-lg relative group overflow-hidden hover:border-slate-800 transition-colors bg-slate-950/60 border-slate-850`}
-                      >
-                        <div className="flex gap-3">
-                          {/* Foto de perfil o ícono de institución */}
-                          <div className={`w-12 h-12 rounded-2xl border flex-shrink-0 overflow-hidden flex items-center justify-center ${p.es_institucion ? 'bg-blue-950/40 border-blue-900/40' : 'bg-purple-955/40 border-purple-900/40'}`}>
-                            {p.foto_url ? (
-                              <img src={p.foto_url} alt={p.nombre} className="w-full h-full object-cover" />
-                            ) : p.es_institucion ? (
-                              <span className="text-lg font-bold text-blue-400">🏢</span>
-                            ) : (
-                              <span className="text-base font-bold text-purple-400">
-                                {p.nombre.charAt(0).toUpperCase()}
+                  {filteredPsychs.map((p) => (
+                    <div
+                      key={p.id}
+                      className={`p-4 rounded-2xl border flex flex-col justify-between gap-3 shadow-lg relative group overflow-hidden hover:border-slate-800 transition-colors bg-slate-950/60 border-slate-850`}
+                    >
+                      <div className="flex gap-3">
+                        {/* Foto de perfil o ícono de institución */}
+                        <div className={`w-12 h-12 rounded-2xl border flex-shrink-0 overflow-hidden flex items-center justify-center ${p.es_institucion ? 'bg-blue-955/40 border-blue-900/40' : 'bg-purple-955/40 border-purple-900/40'}`}>
+                          {p.foto_url ? (
+                            <img src={p.foto_url} alt={p.nombre} className="w-full h-full object-cover" />
+                          ) : p.es_institucion ? (
+                            <span className="text-lg font-bold text-blue-400">🏢</span>
+                          ) : (
+                            <span className="text-base font-bold text-purple-400">
+                              {p.nombre.charAt(0).toUpperCase()}
+                            </span>
+                          )}
+                        </div>
+
+                        {/* Info principal */}
+                        <div className="flex-1 min-w-0">
+                          <div className="flex items-center gap-1.5 flex-wrap">
+                            <h4 className="text-xs font-black text-white truncate max-w-[70%]">{p.nombre}</h4>
+                            {p.es_institucion && (
+                              <span className="px-1.5 py-0.5 rounded bg-blue-955/80 border border-blue-900/50 text-[7px] font-extrabold text-blue-400 uppercase tracking-wider flex-shrink-0">
+                                Línea de Ayuda
+                              </span>
+                            )}
+                            {p.activo === false && (
+                              <span className="px-1.5 py-0.5 rounded bg-amber-950/80 border border-amber-900/50 text-[7px] font-extrabold text-amber-400 uppercase tracking-wider flex-shrink-0 animate-pulse">
+                                Pendiente Aprobación
                               </span>
                             )}
                           </div>
-
-                          {/* Info principal */}
-                          <div className="flex-1 min-w-0">
-                            <div className="flex items-center gap-1.5 flex-wrap">
-                              <h4 className="text-xs font-black text-white truncate max-w-[70%]">{p.nombre}</h4>
-                              {p.es_institucion && (
-                                <span className="px-1.5 py-0.5 rounded bg-blue-950/80 border border-blue-900/50 text-[7px] font-extrabold text-blue-400 uppercase tracking-wider flex-shrink-0">
-                                  Línea de Ayuda
-                                </span>
-                              )}
-                            </div>
-                            <span className={`text-[9px] font-extrabold block truncate ${p.es_institucion ? 'text-blue-400' : 'text-purple-400'}`}>
-                              {p.titulo}
-                            </span>
-                            <span className="inline-block mt-1 px-2 py-0.5 rounded-lg bg-slate-900 text-[8px] font-bold text-slate-400 border border-slate-800/80">
+                          <span className={`text-[9px] font-extrabold block truncate ${p.es_institucion ? 'text-blue-400' : 'text-purple-400'}`}>
+                            {p.titulo}
+                          </span>
+                          
+                          <div className="flex items-center gap-1.5 flex-wrap mt-1">
+                            <span className="inline-block px-1.5 py-0.5 rounded bg-slate-900 text-[8px] font-bold text-slate-400 border border-slate-800/80">
                               🎯 {p.especialidad}
                             </span>
+                            {p.tipo_servicio === "social" ? (
+                              <span className="inline-block px-1.5 py-0.5 rounded bg-blue-955/20 text-[8px] font-extrabold text-blue-400 border border-blue-900/30 animate-pulse">
+                                🤝 Tarifa Social: {p.monto_tarifa} {p.moneda_tarifa || "USD"}
+                              </span>
+                            ) : (
+                              <span className="inline-block px-1.5 py-0.5 rounded bg-purple-955/20 text-[8px] font-extrabold text-purple-400 border border-purple-900/30">
+                                💜 100% Gratuito
+                              </span>
+                            )}
                           </div>
                         </div>
+                      </div>
 
                         {p.descripcion && (
                           <p className="text-[10px] text-slate-400 whitespace-pre-line leading-relaxed bg-slate-900/30 p-2 rounded-xl border border-slate-900">
@@ -2160,6 +2261,16 @@ export default function HomePage() {
                         {/* Botones de Moderación */}
                         {isAdmin && (
                           <div className="absolute top-2 right-2 flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+                            {p.activo === false && (
+                              <button
+                                type="button"
+                                onClick={() => handleToggleApprovePsych(p)}
+                                className="w-6 h-6 rounded-lg bg-slate-900 border border-slate-800 text-emerald-500 hover:text-white hover:bg-emerald-650 flex items-center justify-center cursor-pointer transition"
+                                title="Aprobar y Activar Perfil"
+                              >
+                                ✅
+                              </button>
+                            )}
                             <button
                               type="button"
                               onClick={() => handleStartEditPsych(p)}
@@ -2359,6 +2470,48 @@ export default function HomePage() {
                   className="w-full px-3 py-2 bg-slate-950 border border-slate-850 rounded-xl text-slate-200 focus:outline-none focus:border-purple-500 transition-colors"
                   placeholder={psychEsInstitucion ? "https://cruzroja.org.ve/ayuda" : "https://cal.com/maria-rod/consulta"}
                 />
+              </div>
+
+              {/* Tipo de Servicio & Costos */}
+              <div className="flex flex-col gap-2.5 p-3 bg-slate-950/60 rounded-2xl border border-slate-850">
+                <div className="flex flex-col gap-1">
+                  <label className="text-[9px] font-extrabold text-slate-500 uppercase tracking-wider">Tipo de Servicio *</label>
+                  <select
+                    value={psychTipoServicio}
+                    onChange={(e) => setPsychTipoServicio(e.target.value as "gratuito" | "social")}
+                    className="w-full px-3 py-1.5 bg-slate-900 border border-slate-800 rounded-xl text-slate-200 focus:outline-none focus:border-purple-500 transition-colors text-xs font-semibold"
+                  >
+                    <option value="gratuito">💜 Voluntariado 100% Gratuito</option>
+                    <option value="social">🤝 Consulta Social / Tarifa Solidaria</option>
+                  </select>
+                </div>
+
+                {psychTipoServicio === "social" && (
+                  <div className="grid grid-cols-2 gap-2 animate-in fade-in duration-200">
+                    <div className="flex flex-col gap-1">
+                      <label className="text-[9px] font-extrabold text-slate-500 uppercase tracking-wider">Monto de la Consulta</label>
+                      <input
+                        type="number"
+                        min="0"
+                        value={psychMontoTarifa}
+                        onChange={(e) => setPsychMontoTarifa(Number(e.target.value))}
+                        className="w-full px-3 py-1.5 bg-slate-900 border border-slate-800 rounded-xl text-slate-200 focus:outline-none focus:border-blue-500 transition-colors text-xs font-bold"
+                        placeholder="Ej: 10"
+                      />
+                    </div>
+                    <div className="flex flex-col gap-1">
+                      <label className="text-[9px] font-extrabold text-slate-500 uppercase tracking-wider">Moneda</label>
+                      <select
+                        value={psychMonedaTarifa}
+                        onChange={(e) => setPsychMonedaTarifa(e.target.value)}
+                        className="w-full px-3 py-1.5 bg-slate-900 border border-slate-800 rounded-xl text-slate-200 focus:outline-none focus:border-blue-500 transition-colors text-xs font-semibold"
+                      >
+                        <option value="USD">USD</option>
+                        <option value="BS">Bs.</option>
+                      </select>
+                    </div>
+                  </div>
+                )}
               </div>
 
               <div className="flex flex-col gap-1">

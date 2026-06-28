@@ -39,4 +39,9 @@ export interface Psychologist {
   es_institucion?: boolean;
   activo?: boolean;
   created_at?: string;
+  tipo_servicio?: "gratuito" | "social";
+  monto_tarifa?: number;
+  moneda_tarifa?: string;
+  verificado?: boolean;
 }
+
