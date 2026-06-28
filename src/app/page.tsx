@@ -201,6 +201,7 @@ export default function HomePage() {
   const [reconectaSites, setReconectaSites] = useState<PuntoReportado[]>([]);
   const [isNewsOpen, setIsNewsOpen] = useState(false);
   const [isNewsFormOpen, setIsNewsFormOpen] = useState(false);
+  const [editingNews, setEditingNews] = useState<PuntoReportado | null>(null);
   const [isPsychFormOpen, setIsPsychFormOpen] = useState(false);
   const [editingPsych, setEditingPsych] = useState<Psychologist | null>(null);
   const [searchPsych, setSearchPsych] = useState("");
@@ -265,6 +266,33 @@ export default function HomePage() {
   };
 
   // Start Editing Point
+  const handleRepublishNews = async (noticia: PuntoReportado) => {
+    const now = new Date().toISOString();
+    const expiresAt = new Date(Date.now() + 30 * 24 * 3600000).toISOString();
+    const updatedNoticia = {
+      ...noticia,
+      creadoAt: now,
+      expiresAt,
+    };
+    
+    // Update local state
+    const updated = puntos.map((p) => (p.id === noticia.id ? updatedNoticia : p));
+    setPuntos(updated);
+    localStorage.setItem("punto_de_apoyo_puntos", JSON.stringify(updated));
+
+    // Force updates to other clients by editing on Supabase
+    if (isSupabaseConfigured && supabase) {
+      const { error } = await supabase
+        .from("reports")
+        .update({ creadoAt: now, expiresAt })
+        .eq("id", noticia.id);
+      if (error) {
+        console.error("Error republishing news in Supabase:", error);
+      }
+    }
+    alert("¡Noticia republicada con éxito! Se ha movido al inicio y notificado a los usuarios.");
+  };
+
   const handleStartEdit = (punto: PuntoReportado) => {
     if (!user) {
       alert("Por favor inicia sesión con Google en la barra superior para actualizar la información de este punto.");
@@ -3471,15 +3499,6 @@ export default function HomePage() {
                           <span className="text-[9px] text-slate-500 font-bold">
                             {new Date(noticia.creadoAt).toLocaleString()}
                           </span>
-                          {canDelete && (
-                            <button
-                              onClick={() => handleDeletePunto(noticia.id)}
-                              className="ml-auto text-[9px] text-rose-500 hover:text-rose-400 font-bold cursor-pointer transition opacity-0 group-hover:opacity-100 focus:opacity-100 px-2 py-0.5 bg-rose-955/20 border border-rose-900/50 rounded-lg"
-                              title="Eliminar esta noticia"
-                            >
-                              Eliminar
-                            </button>
-                          )}
                         </div>
 
                         <h4 className="text-xs font-black text-white leading-tight mt-1">
@@ -3507,6 +3526,33 @@ export default function HomePage() {
                             )}
                           </div>
                         )}
+
+                        {/* Options button bar */}
+                        {canDelete && (
+                          <div className="mt-2.5 pt-2 border-t border-slate-900/40 flex gap-2">
+                            <button
+                              onClick={() => {
+                                setEditingNews(noticia);
+                                setIsNewsFormOpen(true);
+                              }}
+                              className="px-2 py-1 bg-slate-900 hover:bg-slate-850 border border-slate-800 text-slate-300 hover:text-white rounded-lg text-[9px] font-bold cursor-pointer transition flex items-center gap-1"
+                            >
+                              ✏️ Editar
+                            </button>
+                            <button
+                              onClick={() => handleRepublishNews(noticia)}
+                              className="px-2 py-1 bg-sky-955/20 hover:bg-sky-600/80 border border-sky-900/45 text-sky-400 hover:text-white rounded-lg text-[9px] font-bold cursor-pointer transition flex items-center gap-1"
+                            >
+                              🔁 Republicar
+                            </button>
+                            <button
+                              onClick={() => handleDeletePunto(noticia.id)}
+                              className="px-2 py-1 bg-rose-955/20 hover:bg-rose-600/80 border border-rose-900/45 text-rose-500 hover:text-white rounded-lg text-[9px] font-bold cursor-pointer transition flex items-center gap-1 ml-auto"
+                            >
+                              ❌ Eliminar
+                            </button>
+                          </div>
+                        )}
                       </div>
                     );
                   })
@@ -3522,10 +3568,14 @@ export default function HomePage() {
           <div className="w-full max-w-md bg-slate-900 border border-slate-800 rounded-3xl p-6 shadow-2xl flex flex-col gap-4 animate-in scale-in-95 duration-200">
             <div className="flex justify-between items-center border-b border-slate-800 pb-3">
               <h3 className="text-sm font-black text-white uppercase tracking-wider flex items-center gap-1.5">
-                <Plus className="w-4 h-4 text-sky-500" /> Publicar Nueva Noticia
+                {editingNews ? <Plus className="w-4 h-4 text-orange-500" /> : <Plus className="w-4 h-4 text-sky-500" />}
+                {editingNews ? "Editar Noticia" : "Publicar Nueva Noticia"}
               </h3>
               <button
-                onClick={() => setIsNewsFormOpen(false)}
+                onClick={() => {
+                  setEditingNews(null);
+                  setIsNewsFormOpen(false);
+                }}
                 className="w-7 h-7 rounded-xl bg-slate-950 border border-slate-700 text-slate-400 hover:text-white flex items-center justify-center cursor-pointer transition"
               >
                 <X className="w-4 h-4" />
@@ -3541,39 +3591,72 @@ export default function HomePage() {
 
                 if (!titulo || !contenido) return;
 
-                const creadoAt = new Date().toISOString();
-                const randomId = Math.random().toString(36).substr(2, 9);
-                const creatorSuffix = user ? `-creator-${user.email.toLowerCase()}` : "-creator-anonymous";
+                if (editingNews) {
+                  // Edit existing news
+                  const updatedNoticia: PuntoReportado = {
+                    ...editingNews,
+                    nombre: titulo,
+                    descripcion: contenido,
+                    fuente: fuente || undefined,
+                  };
 
-                const nuevaNoticia: PuntoReportado = {
-                  id: `news-${randomId}${creatorSuffix}`,
-                  tipo: "noticia",
-                  categoria: "senal",
-                  nombre: titulo,
-                  descripcion: contenido,
-                  fuente: fuente || undefined,
-                  lat: 0,
-                  lng: 0,
-                  confirmations: 0,
-                  creadoAt,
-                  expiresAt: new Date(Date.now() + 30 * 24 * 3600000).toISOString(),
-                  aprobado: true,
-                  creadorAnonimo: user === null,
-                };
+                  const updated = puntos.map((p) => p.id === editingNews.id ? updatedNoticia : p);
+                  setPuntos(updated);
+                  localStorage.setItem("punto_de_apoyo_puntos", JSON.stringify(updated));
 
-                const updated = [nuevaNoticia, ...puntos];
-                setPuntos(updated);
-                localStorage.setItem("punto_de_apoyo_puntos", JSON.stringify(updated));
-
-                if (isSupabaseConfigured && supabase) {
-                  const { error } = await supabase.from("reports").insert([nuevaNoticia]);
-                  if (error) {
-                    console.error("Error inserting news in Supabase:", error);
+                  if (isSupabaseConfigured && supabase) {
+                    const { error } = await supabase
+                      .from("reports")
+                      .update({
+                        nombre: titulo,
+                        descripcion: contenido,
+                        fuente: fuente || null,
+                      })
+                      .eq("id", editingNews.id);
+                    if (error) {
+                      console.error("Error updating news in Supabase:", error);
+                    }
                   }
-                }
 
-                setIsNewsFormOpen(false);
-                alert("¡Noticia publicada con éxito!");
+                  setEditingNews(null);
+                  setIsNewsFormOpen(false);
+                  alert("¡Noticia actualizada con éxito!");
+                } else {
+                  // Create new news
+                  const creadoAt = new Date().toISOString();
+                  const randomId = Math.random().toString(36).substr(2, 9);
+                  const creatorSuffix = user ? `-creator-${user.email.toLowerCase()}` : "-creator-anonymous";
+
+                  const nuevaNoticia: PuntoReportado = {
+                    id: `news-${randomId}${creatorSuffix}`,
+                    tipo: "noticia",
+                    categoria: "senal",
+                    nombre: titulo,
+                    descripcion: contenido,
+                    fuente: fuente || undefined,
+                    lat: 0,
+                    lng: 0,
+                    confirmations: 0,
+                    creadoAt,
+                    expiresAt: new Date(Date.now() + 30 * 24 * 3600000).toISOString(),
+                    aprobado: true,
+                    creadorAnonimo: user === null,
+                  };
+
+                  const updated = [nuevaNoticia, ...puntos];
+                  setPuntos(updated);
+                  localStorage.setItem("punto_de_apoyo_puntos", JSON.stringify(updated));
+
+                  if (isSupabaseConfigured && supabase) {
+                    const { error } = await supabase.from("reports").insert([nuevaNoticia]);
+                    if (error) {
+                      console.error("Error inserting news in Supabase:", error);
+                    }
+                  }
+
+                  setIsNewsFormOpen(false);
+                  alert("¡Noticia publicada con éxito!");
+                }
               }}
               className="flex flex-col gap-4"
             >
@@ -3585,6 +3668,8 @@ export default function HomePage() {
                   name="titulo"
                   type="text"
                   required
+                  key={editingNews ? `edit-title-${editingNews.id}` : 'new-title'}
+                  defaultValue={editingNews ? editingNews.nombre : ""}
                   placeholder="Ej. Decretan Estado de Emergencia en Yaracuy"
                   className="w-full px-3 py-2 bg-slate-950 border border-slate-800 rounded-lg text-slate-300 text-xs focus:outline-none focus:border-sky-500/50 transition"
                 />
@@ -3597,6 +3682,8 @@ export default function HomePage() {
                 <textarea
                   name="contenido"
                   required
+                  key={editingNews ? `edit-content-${editingNews.id}` : 'new-content'}
+                  defaultValue={editingNews ? editingNews.descripcion : ""}
                   placeholder="Detalles sobre el anuncio o acontecimiento..."
                   className="w-full px-3 py-2 bg-slate-950 border border-slate-800 rounded-lg text-slate-300 text-xs focus:outline-none focus:border-sky-500/50 transition h-28 resize-none"
                 />
@@ -3609,6 +3696,8 @@ export default function HomePage() {
                 <input
                   name="fuente"
                   type="text"
+                  key={editingNews ? `edit-src-${editingNews.id}` : 'new-src'}
+                  defaultValue={editingNews ? editingNews.fuente : ""}
                   placeholder="Ej. https://www.ve.onu.org o OCHA Venezuela"
                   className="w-full px-3 py-2 bg-slate-950 border border-slate-800 rounded-lg text-slate-300 text-xs focus:outline-none focus:border-sky-500/50 transition"
                 />
@@ -3617,7 +3706,10 @@ export default function HomePage() {
               <div className="flex gap-3 mt-2">
                 <button
                   type="button"
-                  onClick={() => setIsNewsFormOpen(false)}
+                  onClick={() => {
+                    setEditingNews(null);
+                    setIsNewsFormOpen(false);
+                  }}
                   className="flex-1 py-2 bg-slate-800 hover:bg-slate-700 text-slate-300 rounded-xl text-xs font-bold transition cursor-pointer"
                 >
                   Cancelar
@@ -3626,7 +3718,7 @@ export default function HomePage() {
                   type="submit"
                   className="flex-1 py-2 bg-sky-600 hover:bg-sky-500 text-white rounded-xl text-xs font-bold transition cursor-pointer"
                 >
-                  Publicar Noticia
+                  {editingNews ? "Guardar Cambios" : "Publicar Noticia"}
                 </button>
               </div>
             </form>
