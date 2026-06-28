@@ -16,11 +16,10 @@ import {
   ChevronDown,
   ChevronUp,
   X,
-  ShieldAlert,
   Settings,
   HelpCircle,
 } from "lucide-react";
-import { PuntoReportado } from "../types";
+import { PuntoReportado, Psychologist } from "../types";
 import { supabase, isSupabaseConfigured } from "../lib/supabase";
 
 const MapaColaborativo = dynamic(() => import("../components/MapaColaborativo"), {
@@ -159,6 +158,26 @@ export default function HomePage() {
   const [editAceptan, setEditAceptan] = useState("");
   const [editDescripcion, setEditDescripcion] = useState("");
   const [editPercentages, setEditPercentages] = useState<Record<string, number>>({});
+
+  // Psychological Assistance States
+  const [psychologists, setPsychologists] = useState<Psychologist[]>([]);
+  const [isPsychOpen, setIsPsychOpen] = useState(false);
+  const [isPsychFormOpen, setIsPsychFormOpen] = useState(false);
+  const [editingPsych, setEditingPsych] = useState<Psychologist | null>(null);
+  const [searchPsych, setSearchPsych] = useState("");
+
+  // Psychologist Form State
+  const [psychNombre, setPsychNombre] = useState("");
+  const [psychTitulo, setPsychTitulo] = useState("");
+  const [psychEspecialidad, setPsychEspecialidad] = useState("");
+  const [psychDescripcion, setPsychDescripcion] = useState("");
+  const [psychTelefono, setPsychTelefono] = useState("");
+  const [psychWhatsapp, setPsychWhatsapp] = useState("");
+  const [psychEmail, setPsychEmail] = useState("");
+  const [psychFotoUrl, setPsychFotoUrl] = useState("");
+  const [psychIdiomas, setPsychIdiomas] = useState("Español");
+  const [psychModalidad, setPsychModalidad] = useState("online");
+  const [psychBookingUrl, setPsychBookingUrl] = useState("");
 
   // Form State
   const [formTipo, setFormTipo] = useState<"ofrece" | "necesita">("ofrece");
@@ -342,6 +361,124 @@ export default function HomePage() {
     alert("Administrador removido.");
   };
 
+  const handleSavePsychologist = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!psychNombre || !psychTitulo || !psychEspecialidad) {
+      alert("Nombre, título y especialidad son obligatorios");
+      return;
+    }
+
+    const payload: Omit<Psychologist, "id"> & { id?: string } = {
+      nombre: psychNombre,
+      titulo: psychTitulo,
+      especialidad: psychEspecialidad,
+      descripcion: psychDescripcion,
+      telefono: psychTelefono,
+      whatsapp: psychWhatsapp,
+      email: psychEmail,
+      foto_url: psychFotoUrl,
+      idiomas: psychIdiomas,
+      modalidad: psychModalidad,
+      booking_url: psychBookingUrl,
+      activo: true,
+    };
+
+    if (editingPsych) {
+      // Update
+      if (isSupabaseConfigured && supabase) {
+        const { error } = await supabase
+          .from("psychologists")
+          .update(payload)
+          .eq("id", editingPsych.id);
+        if (error) {
+          console.error("Error updating psychologist:", error);
+          alert("Error al actualizar psicólogo: " + error.message);
+          return;
+        }
+      }
+      // Update local state
+      setPsychologists(prev =>
+        prev.map(p => (p.id === editingPsych.id ? { ...p, ...payload } : p))
+      );
+    } else {
+      // Create
+      const newId = isSupabaseConfigured && supabase ? undefined : crypto.randomUUID();
+      if (isSupabaseConfigured && supabase) {
+        const { data, error } = await supabase
+          .from("psychologists")
+          .insert([payload])
+          .select();
+        if (error) {
+          console.error("Error inserting psychologist:", error);
+          alert("Error al guardar psicólogo: " + error.message);
+          return;
+        }
+        if (data && data[0]) {
+          setPsychologists(prev => [...prev, data[0]].sort((a, b) => a.nombre.localeCompare(b.nombre)));
+        }
+      } else {
+        const newPsych: Psychologist = { id: newId!, ...payload };
+        const updatedList = [...psychologists, newPsych].sort((a, b) => a.nombre.localeCompare(b.nombre));
+        setPsychologists(updatedList);
+        localStorage.setItem("punto_de_apoyo_psychologists", JSON.stringify(updatedList));
+      }
+    }
+
+    // Reset Form & Close
+    handleClosePsychForm();
+  };
+
+  const handleDeletePsychologist = async (id: string) => {
+    if (!window.confirm("¿Seguro que deseas eliminar este psicólogo/a de la base de datos?")) return;
+
+    if (isSupabaseConfigured && supabase) {
+      const { error } = await supabase.from("psychologists").delete().eq("id", id);
+      if (error) {
+        console.error("Error deleting psychologist:", error);
+        alert("Error al eliminar psicólogo: " + error.message);
+        return;
+      }
+    }
+
+    const updatedList = psychologists.filter(p => p.id !== id);
+    setPsychologists(updatedList);
+    if (!isSupabaseConfigured || !supabase) {
+      localStorage.setItem("punto_de_apoyo_psychologists", JSON.stringify(updatedList));
+    }
+  };
+
+  const handleStartEditPsych = (p: Psychologist) => {
+    setEditingPsych(p);
+    setPsychNombre(p.nombre || "");
+    setPsychTitulo(p.titulo || "");
+    setPsychEspecialidad(p.especialidad || "");
+    setPsychDescripcion(p.descripcion || "");
+    setPsychTelefono(p.telefono || "");
+    setPsychWhatsapp(p.whatsapp || "");
+    setPsychEmail(p.email || "");
+    setPsychFotoUrl(p.foto_url || "");
+    setPsychIdiomas(p.idiomas || "Español");
+    setPsychModalidad(p.modalidad || "online");
+    setPsychBookingUrl(p.booking_url || "");
+    setIsPsychFormOpen(true);
+  };
+
+  const handleClosePsychForm = () => {
+    setEditingPsych(null);
+    setPsychNombre("");
+    setPsychTitulo("");
+    setPsychEspecialidad("");
+    setPsychDescripcion("");
+    setPsychTelefono("");
+    setPsychWhatsapp("");
+    setPsychEmail("");
+    setPsychFotoUrl("");
+    setPsychIdiomas("Español");
+    setPsychModalidad("online");
+    setPsychBookingUrl("");
+    setIsPsychFormOpen(false);
+  };
+
   const getDistance = (lat1: number, lon1: number, lat2: number, lon2: number) => {
     const R = 6371;
     const dLat = ((lat2 - lat1) * Math.PI) / 180;
@@ -443,6 +580,15 @@ export default function HomePage() {
         if (adminsData) {
           setAdmins(adminsData.map((a: any) => a.email.toLowerCase()));
         }
+
+        // Fetch psychologists list
+        const { data: psychs, error: psychErr } = await supabase
+          .from("psychologists")
+          .select("*")
+          .order("nombre");
+        if (psychs && !psychErr) {
+          setPsychologists(psychs);
+        }
       } else {
         const local = localStorage.getItem("punto_de_apoyo_puntos");
         if (local) {
@@ -450,6 +596,11 @@ export default function HomePage() {
           localStorage.setItem("punto_de_apoyo_puntos", JSON.stringify(dbPuntos));
         } else {
           dbPuntos = [];
+        }
+
+        const localPsychs = localStorage.getItem("punto_de_apoyo_psychologists");
+        if (localPsychs) {
+          setPsychologists(JSON.parse(localPsychs));
         }
       }
 
@@ -963,6 +1114,15 @@ export default function HomePage() {
                   </div>
                 </div>
               )}
+
+              {/* Psychological Support Button */}
+              <button
+                onClick={() => setIsPsychOpen(true)}
+                className="w-11 h-11 rounded-full bg-slate-900/90 border border-slate-800 hover:border-slate-700 text-purple-400 hover:text-purple-350 flex items-center justify-center font-bold text-base shadow-2xl transition-all duration-300 transform hover:scale-110 pointer-events-auto cursor-pointer self-end"
+                title="Directorio de Apoyo Psicológico"
+              >
+                🧠
+              </button>
 
               {/* ONU Report Button */}
               <button
@@ -1666,6 +1826,362 @@ export default function HomePage() {
               </p>
             </div>
           </div>
+        </div>
+      )}
+
+      {/* 11. Directorio de Asistencia Psicológica Modal */}
+      {isPsychOpen && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/80 backdrop-blur-sm animate-in fade-in duration-200">
+          <div className="w-full max-w-2xl bg-slate-900 border border-slate-800 rounded-3xl p-6 shadow-2xl flex flex-col gap-4 animate-in scale-in-95 duration-200 max-h-[90dvh]">
+            <div className="flex justify-between items-center border-b border-slate-800 pb-3">
+              <div className="flex items-center gap-2">
+                <span className="text-xl">🧠</span>
+                <div>
+                  <h3 className="text-sm font-black text-white uppercase tracking-wider">
+                    Asistencia Psicológica Gratuita
+                  </h3>
+                  <span className="text-[8px] text-slate-500 font-bold uppercase tracking-wider block mt-0.5">
+                    Directorio de profesionales voluntarios
+                  </span>
+                </div>
+              </div>
+              <div className="flex items-center gap-2">
+                {isAdmin && (
+                  <button
+                    onClick={() => {
+                      setEditingPsych(null);
+                      setIsPsychFormOpen(true);
+                    }}
+                    className="flex items-center gap-1.5 px-3 py-1.5 text-[10px] font-bold text-purple-400 bg-purple-955/40 border border-purple-900/60 rounded-xl hover:bg-purple-950 hover:border-purple-700 transition cursor-pointer"
+                  >
+                    <Plus className="w-3.5 h-3.5" /> Registrar Profesional
+                  </button>
+                )}
+                <button
+                  onClick={() => setIsPsychOpen(false)}
+                  className="w-7 h-7 rounded-xl bg-slate-950 border border-slate-700 text-slate-400 hover:text-white flex items-center justify-center cursor-pointer transition"
+                >
+                  <X className="w-4 h-4" />
+                </button>
+              </div>
+            </div>
+
+            {/* Buscador */}
+            <div className="relative">
+              <input
+                type="text"
+                placeholder="Buscar por nombre, especialidad o palabra clave..."
+                value={searchPsych}
+                onChange={(e) => setSearchPsych(e.target.value)}
+                className="w-full pl-9 pr-4 py-2 text-xs bg-slate-950/80 border border-slate-850 rounded-2xl text-slate-200 placeholder-slate-500 focus:outline-none focus:border-purple-500/50 transition-colors"
+              />
+              <Search className="absolute left-3 top-2.5 w-4 h-4 text-slate-500" />
+            </div>
+
+            {/* Listado */}
+            <div className="flex-1 overflow-y-auto pr-1 flex flex-col gap-3 min-h-0">
+              {psychologists.filter(p => {
+                const query = searchPsych.toLowerCase().trim();
+                if (!query) return true;
+                return (
+                  p.nombre.toLowerCase().includes(query) ||
+                  p.especialidad.toLowerCase().includes(query) ||
+                  (p.titulo && p.titulo.toLowerCase().includes(query)) ||
+                  (p.descripcion && p.descripcion.toLowerCase().includes(query))
+                );
+              }).length === 0 ? (
+                <div className="py-12 text-center text-xs text-slate-500">
+                  No se encontraron profesionales registrados que coincidan con la búsqueda.
+                </div>
+              ) : (
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                  {psychologists
+                    .filter(p => {
+                      const query = searchPsych.toLowerCase().trim();
+                      if (!query) return true;
+                      return (
+                        p.nombre.toLowerCase().includes(query) ||
+                        p.especialidad.toLowerCase().includes(query) ||
+                        (p.titulo && p.titulo.toLowerCase().includes(query)) ||
+                        (p.descripcion && p.descripcion.toLowerCase().includes(query))
+                      );
+                    })
+                    .map((p) => (
+                      <div
+                        key={p.id}
+                        className="bg-slate-950/60 p-4 rounded-2xl border border-slate-850 flex flex-col justify-between gap-3 shadow-lg relative group overflow-hidden hover:border-slate-800 transition-colors"
+                      >
+                        <div className="flex gap-3">
+                          {/* Foto de perfil */}
+                          <div className="w-12 h-12 rounded-2xl bg-purple-950/40 border border-purple-900/40 flex-shrink-0 overflow-hidden flex items-center justify-center">
+                            {p.foto_url ? (
+                              <img src={p.foto_url} alt={p.nombre} className="w-full h-full object-cover" />
+                            ) : (
+                              <span className="text-base font-bold text-purple-400">
+                                {p.nombre.charAt(0).toUpperCase()}
+                              </span>
+                            )}
+                          </div>
+
+                          {/* Info principal */}
+                          <div className="flex-1 min-w-0">
+                            <h4 className="text-xs font-black text-white truncate">{p.nombre}</h4>
+                            <span className="text-[9px] text-purple-400 font-extrabold block truncate">
+                              {p.titulo}
+                            </span>
+                            <span className="inline-block mt-1 px-2 py-0.5 rounded-lg bg-slate-900 text-[8px] font-bold text-slate-400 border border-slate-800/80">
+                              🎯 {p.especialidad}
+                            </span>
+                          </div>
+                        </div>
+
+                        {p.descripcion && (
+                          <p className="text-[10px] text-slate-400 line-clamp-2 leading-relaxed bg-slate-900/30 p-2 rounded-xl border border-slate-900">
+                            {p.descripcion}
+                          </p>
+                        )}
+
+                        <div className="flex items-center gap-1.5 flex-wrap">
+                          <span className="text-[8px] font-bold px-1.5 py-0.5 rounded bg-slate-900 text-slate-500 border border-slate-850">
+                            🗣️ {p.idiomas || "Español"}
+                          </span>
+                          <span className="text-[8px] font-bold px-1.5 py-0.5 rounded bg-slate-900 text-slate-500 border border-slate-850">
+                            💻 {p.modalidad === "online" ? "Online" : p.modalidad === "presencial" ? "Presencial" : "Ambas"}
+                          </span>
+                        </div>
+
+                        {/* Botones de acción */}
+                        <div className="flex items-center gap-2 border-t border-slate-900 pt-3">
+                          {p.whatsapp && (
+                            <a
+                              href={`https://wa.me/${p.whatsapp.replace(/\+/g, "").replace(/\s/g, "")}?text=Hola,%20vi%20tu%20contacto%20en%20Punto%20de%20Apoyo%20VZ%20y%20requiero%20asistencia%20psicológica`}
+                              target="_blank"
+                              rel="noopener noreferrer"
+                              className="px-2.5 py-1.5 text-[9px] font-extrabold text-emerald-400 hover:text-white bg-emerald-950/20 hover:bg-emerald-600/80 border border-emerald-900/60 rounded-xl transition flex items-center gap-1"
+                            >
+                              💬 WhatsApp
+                            </a>
+                          )}
+                          {p.telefono && (
+                            <a
+                              href={`tel:${p.telefono}`}
+                              className="px-2.5 py-1.5 text-[9px] font-extrabold text-blue-400 hover:text-white bg-blue-950/20 hover:bg-blue-600/80 border border-blue-900/60 rounded-xl transition flex items-center gap-1"
+                            >
+                              📞 Llamar
+                            </a>
+                          )}
+                          {p.booking_url && (
+                            <a
+                              href={p.booking_url}
+                              target="_blank"
+                              rel="noopener noreferrer"
+                              className="px-2.5 py-1.5 text-[9px] font-extrabold text-purple-400 hover:text-white bg-purple-950/20 hover:bg-purple-600/80 border border-purple-900/60 rounded-xl transition flex items-center gap-1 ml-auto"
+                            >
+                              📅 Agendar Cita
+                            </a>
+                          )}
+                        </div>
+
+                        {/* Botones de Moderación */}
+                        {isAdmin && (
+                          <div className="absolute top-2 right-2 flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+                            <button
+                              type="button"
+                              onClick={() => handleStartEditPsych(p)}
+                              className="w-6 h-6 rounded-lg bg-slate-900 border border-slate-800 text-slate-400 hover:text-white flex items-center justify-center cursor-pointer transition"
+                              title="Editar Psicólogo"
+                            >
+                              ✏️
+                            </button>
+                            <button
+                              type="button"
+                              onClick={() => handleDeletePsychologist(p.id)}
+                              className="w-6 h-6 rounded-lg bg-slate-900 border border-slate-800 text-rose-500 hover:text-white hover:bg-rose-650 flex items-center justify-center cursor-pointer transition"
+                              title="Eliminar Psicólogo"
+                            >
+                              🗑️
+                            </button>
+                          </div>
+                        )}
+                      </div>
+                    ))}
+                </div>
+              )}
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* 12. Formulario de Registro/Edición de Psicólogo Modal */}
+      {isPsychFormOpen && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/80 backdrop-blur-sm animate-in fade-in duration-200">
+          <form
+            onSubmit={handleSavePsychologist}
+            className="w-full max-w-md bg-slate-900 border border-slate-800 rounded-3xl p-6 shadow-2xl flex flex-col gap-4 animate-in scale-in-95 duration-200 max-h-[90dvh] overflow-y-auto"
+          >
+            <div className="flex justify-between items-center border-b border-slate-800 pb-3">
+              <div className="flex items-center gap-2">
+                <span className="text-xl">🧑‍⚕️</span>
+                <h3 className="text-sm font-black text-white uppercase tracking-wider">
+                  {editingPsych ? "Editar Psicólogo" : "Registrar Psicólogo"}
+                </h3>
+              </div>
+              <button
+                type="button"
+                onClick={handleClosePsychForm}
+                className="w-7 h-7 rounded-xl bg-slate-950 border border-slate-850 text-slate-400 hover:text-white flex items-center justify-center cursor-pointer transition"
+              >
+                <X className="w-4 h-4" />
+              </button>
+            </div>
+
+            <div className="flex flex-col gap-3 text-xs">
+              <div className="flex flex-col gap-1">
+                <label className="text-[9px] font-extrabold text-slate-500 uppercase tracking-wider">Nombre Completo *</label>
+                <input
+                  type="text"
+                  required
+                  value={psychNombre}
+                  onChange={(e) => setPsychNombre(e.target.value)}
+                  className="w-full px-3 py-2 bg-slate-950 border border-slate-850 rounded-xl text-slate-200 focus:outline-none focus:border-purple-500 transition-colors"
+                  placeholder="Ej: Dra. María Rodríguez"
+                />
+              </div>
+
+              <div className="flex flex-col gap-1">
+                <label className="text-[9px] font-extrabold text-slate-500 uppercase tracking-wider">Título Académico *</label>
+                <input
+                  type="text"
+                  required
+                  value={psychTitulo}
+                  onChange={(e) => setPsychTitulo(e.target.value)}
+                  className="w-full px-3 py-2 bg-slate-950 border border-slate-850 rounded-xl text-slate-200 focus:outline-none focus:border-purple-500 transition-colors"
+                  placeholder="Ej: Psicólogo Clínico (UCV)"
+                />
+              </div>
+
+              <div className="flex flex-col gap-1">
+                <label className="text-[9px] font-extrabold text-slate-500 uppercase tracking-wider">Especialidad *</label>
+                <input
+                  type="text"
+                  required
+                  value={psychEspecialidad}
+                  onChange={(e) => setPsychEspecialidad(e.target.value)}
+                  className="w-full px-3 py-2 bg-slate-950 border border-slate-850 rounded-xl text-slate-200 focus:outline-none focus:border-purple-500 transition-colors"
+                  placeholder="Ej: Trauma, duelo, ansiedad en crisis"
+                />
+              </div>
+
+              <div className="grid grid-cols-2 gap-3">
+                <div className="flex flex-col gap-1">
+                  <label className="text-[9px] font-extrabold text-slate-500 uppercase tracking-wider">Teléfono</label>
+                  <input
+                    type="text"
+                    value={psychTelefono}
+                    onChange={(e) => setPsychTelefono(e.target.value)}
+                    className="w-full px-3 py-2 bg-slate-950 border border-slate-850 rounded-xl text-slate-200 focus:outline-none focus:border-purple-500 transition-colors"
+                    placeholder="Ej: +584121234567"
+                  />
+                </div>
+                <div className="flex flex-col gap-1">
+                  <label className="text-[9px] font-extrabold text-slate-500 uppercase tracking-wider">WhatsApp</label>
+                  <input
+                    type="text"
+                    value={psychWhatsapp}
+                    onChange={(e) => setPsychWhatsapp(e.target.value)}
+                    className="w-full px-3 py-2 bg-slate-950 border border-slate-850 rounded-xl text-slate-200 focus:outline-none focus:border-purple-500 transition-colors"
+                    placeholder="Ej: +584121234567"
+                  />
+                </div>
+              </div>
+
+              <div className="grid grid-cols-2 gap-3">
+                <div className="flex flex-col gap-1">
+                  <label className="text-[9px] font-extrabold text-slate-500 uppercase tracking-wider">Correo Electrónico</label>
+                  <input
+                    type="email"
+                    value={psychEmail}
+                    onChange={(e) => setPsychEmail(e.target.value)}
+                    className="w-full px-3 py-2 bg-slate-950 border border-slate-850 rounded-xl text-slate-200 focus:outline-none focus:border-purple-500 transition-colors"
+                    placeholder="Ej: maria@correo.com"
+                  />
+                </div>
+                <div className="flex flex-col gap-1">
+                  <label className="text-[9px] font-extrabold text-slate-500 uppercase tracking-wider">Idiomas</label>
+                  <input
+                    type="text"
+                    value={psychIdiomas}
+                    onChange={(e) => setPsychIdiomas(e.target.value)}
+                    className="w-full px-3 py-2 bg-slate-950 border border-slate-850 rounded-xl text-slate-200 focus:outline-none focus:border-purple-500 transition-colors"
+                    placeholder="Ej: Español, Inglés"
+                  />
+                </div>
+              </div>
+
+              <div className="grid grid-cols-2 gap-3">
+                <div className="flex flex-col gap-1">
+                  <label className="text-[9px] font-extrabold text-slate-500 uppercase tracking-wider">Modalidad</label>
+                  <select
+                    value={psychModalidad}
+                    onChange={(e) => setPsychModalidad(e.target.value)}
+                    className="w-full px-3 py-2 bg-slate-950 border border-slate-850 rounded-xl text-slate-200 focus:outline-none focus:border-purple-500 transition-colors"
+                  >
+                    <option value="online">Online</option>
+                    <option value="presencial">Presencial</option>
+                    <option value="ambas">Ambas</option>
+                  </select>
+                </div>
+                <div className="flex flex-col gap-1">
+                  <label className="text-[9px] font-extrabold text-slate-500 uppercase tracking-wider">URL de Foto</label>
+                  <input
+                    type="url"
+                    value={psychFotoUrl}
+                    onChange={(e) => setPsychFotoUrl(e.target.value)}
+                    className="w-full px-3 py-2 bg-slate-950 border border-slate-850 rounded-xl text-slate-200 focus:outline-none focus:border-purple-500 transition-colors"
+                    placeholder="https://ejemplo.com/foto.jpg"
+                  />
+                </div>
+              </div>
+
+              <div className="flex flex-col gap-1">
+                <label className="text-[9px] font-extrabold text-slate-500 uppercase tracking-wider">Enlace de Reservas (Cal.com / Calendly)</label>
+                <input
+                  type="url"
+                  value={psychBookingUrl}
+                  onChange={(e) => setPsychBookingUrl(e.target.value)}
+                  className="w-full px-3 py-2 bg-slate-950 border border-slate-850 rounded-xl text-slate-200 focus:outline-none focus:border-purple-500 transition-colors"
+                  placeholder="https://cal.com/maria-rod/consulta"
+                />
+              </div>
+
+              <div className="flex flex-col gap-1">
+                <label className="text-[9px] font-extrabold text-slate-500 uppercase tracking-wider">Descripción / Bio Corta</label>
+                <textarea
+                  rows={2}
+                  value={psychDescripcion}
+                  onChange={(e) => setPsychDescripcion(e.target.value)}
+                  className="w-full px-3 py-2 bg-slate-950 border border-slate-850 rounded-xl text-slate-200 focus:outline-none focus:border-purple-500 transition-colors resize-none"
+                  placeholder="Breve reseña sobre la trayectoria profesional o modalidad de atención..."
+                />
+              </div>
+            </div>
+
+            <div className="flex items-center gap-3 border-t border-slate-800 pt-4">
+              <button
+                type="button"
+                onClick={handleClosePsychForm}
+                className="flex-1 py-2 bg-slate-950 hover:bg-slate-850 border border-slate-850 hover:border-slate-700 text-slate-400 hover:text-white rounded-xl transition cursor-pointer text-[10px] font-bold"
+              >
+                Cancelar
+              </button>
+              <button
+                type="submit"
+                className="flex-1 py-2 bg-purple-650 hover:bg-purple-600 text-white rounded-xl transition cursor-pointer text-[10px] font-bold shadow-lg shadow-purple-950/20"
+              >
+                Guardar Profesional
+              </button>
+            </div>
+          </form>
         </div>
       )}
     </main>

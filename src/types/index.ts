@@ -22,3 +22,20 @@ export interface PuntoReportado {
   aprobado?: boolean;
   creadorAnonimo?: boolean;
 }
+
+export interface Psychologist {
+  id: string;
+  nombre: string;
+  titulo: string;
+  especialidad: string;
+  descripcion?: string;
+  telefono?: string;
+  whatsapp?: string;
+  email?: string;
+  foto_url?: string;
+  idiomas?: string;
+  modalidad?: string;
+  booking_url?: string;
+  activo?: boolean;
+  created_at?: string;
+}
