@@ -51,14 +51,19 @@ export async function GET() {
           const place = props.place || "Lugar Desconocido";
           const time = new Date(props.time).toLocaleString("es-VE", { timeZone: "America/Caracas" });
           
+          const coords = f.geometry?.coordinates || [];
           seismicAlerts.push({
             id: f.id,
-            mensaje: `🚨 SISMO DETECTADO (Monitoreo FUNVISIS / USGS): Magnitud ${mag} Mws - Ocurrido en ${place} a las ${time}.`,
+            mensaje: `🚨 SISMO: Magnitud ${mag} Mws – ${place} a las ${time}.`,
             tipo: "sismo",
             activo: true,
             creado_at: new Date(props.time).toISOString(),
             mag,
-            place
+            depth: coords[2] ?? null,
+            lat: coords[1] ?? null,
+            lng: coords[0] ?? null,
+            place,
+            url: props.url || null,
           });
         });
       }

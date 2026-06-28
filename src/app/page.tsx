@@ -202,6 +202,7 @@ export default function HomePage() {
   const [isNewsOpen, setIsNewsOpen] = useState(false);
   const [isNewsFormOpen, setIsNewsFormOpen] = useState(false);
   const [editingNews, setEditingNews] = useState<PuntoReportado | null>(null);
+  const [isSeismicOpen, setIsSeismicOpen] = useState(false);
   const [isPsychFormOpen, setIsPsychFormOpen] = useState(false);
   const [editingPsych, setEditingPsych] = useState<Psychologist | null>(null);
   const [searchPsych, setSearchPsych] = useState("");
@@ -1895,6 +1896,20 @@ export default function HomePage() {
                 )}
               </button>
 
+              {/* Seismic Bulletin Button */}
+              <button
+                onClick={() => setIsSeismicOpen(true)}
+                className="relative w-11 h-11 rounded-full bg-slate-900/90 border border-slate-800 hover:border-rose-700/60 text-rose-400 hover:text-rose-300 flex items-center justify-center font-bold text-base shadow-2xl transition-all duration-300 transform hover:scale-110 pointer-events-auto cursor-pointer self-end"
+                title="Boletín Sísmico (FUNVISIS / USGS)"
+              >
+                💥
+                {alerts.seismic && alerts.seismic.length > 0 && (
+                  <span className="absolute -top-1 -right-1 bg-rose-500 text-white text-[9px] font-black w-4 h-4 rounded-full flex items-center justify-center border border-slate-900 shadow-lg shadow-rose-500/30 animate-pulse">
+                    {alerts.seismic.length}
+                  </span>
+                )}
+              </button>
+
               {/* Credits & Help Button (?) */}
               <button
                 onClick={() => setIsCreditsOpen(true)}
@@ -2303,6 +2318,124 @@ export default function HomePage() {
               </button>
             </div>
           </form>
+        </div>
+      )}
+
+      {/* 11. Seismic Bulletin Modal */}
+      {isSeismicOpen && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/80 backdrop-blur-sm animate-in fade-in duration-200">
+          <div className="w-full max-w-md bg-slate-900 border border-slate-800 rounded-3xl p-6 shadow-2xl flex flex-col gap-4 animate-in scale-in-95 duration-200 max-h-[90dvh] overflow-y-auto">
+            <div className="flex justify-between items-center border-b border-slate-800 pb-3">
+              <div className="flex items-center gap-2">
+                <span className="text-lg">💥</span>
+                <h3 className="text-sm font-black text-white uppercase tracking-wider">
+                  Boletín Sísmico Reciente
+                </h3>
+              </div>
+              <button
+                onClick={() => setIsSeismicOpen(false)}
+                className="w-7 h-7 rounded-xl bg-slate-950 border border-slate-850 text-slate-400 hover:text-white flex items-center justify-center cursor-pointer transition"
+              >
+                <X className="w-4 h-4" />
+              </button>
+            </div>
+
+            <p className="text-[10px] text-slate-500 font-semibold leading-relaxed">
+              Fuente: <strong className="text-slate-400">USGS Earthquake Hazards Program</strong> • Últimas 48 horas • Zona Venezuela (Magnitud ≥ 3.5)
+            </p>
+
+            {(!alerts.seismic || alerts.seismic.length === 0) ? (
+              <div className="flex flex-col items-center justify-center gap-2 py-8 text-slate-500">
+                <span className="text-4xl">🟢</span>
+                <p className="text-xs font-bold text-slate-400">Sin sismos detectados en las últimas 48 horas</p>
+                <p className="text-[10px] text-center text-slate-500 leading-relaxed">La zona de Venezuela presenta actividad sísmica dentro de parámetros normales para este periodo.</p>
+              </div>
+            ) : (
+              <div className="flex flex-col gap-3">
+                {[...(alerts.seismic || [])].sort((a: any, b: any) =>
+                  new Date(b.creado_at).getTime() - new Date(a.creado_at).getTime()
+                ).map((s: any) => {
+                  const mag = parseFloat(s.mag ?? 0);
+                  const magBg =
+                    mag >= 6.0 ? "bg-rose-950/50 border-rose-700/50" :
+                    mag >= 5.0 ? "bg-orange-950/50 border-orange-700/50" :
+                    mag >= 4.0 ? "bg-amber-950/50 border-amber-700/50" :
+                                 "bg-slate-950/50 border-slate-700/50";
+                  const magNumColor =
+                    mag >= 6.0 ? "text-rose-400" :
+                    mag >= 5.0 ? "text-orange-400" :
+                    mag >= 4.0 ? "text-amber-400" :
+                                 "text-slate-300";
+                  const magLabel =
+                    mag >= 6.0 ? "FUERTE" :
+                    mag >= 5.0 ? "MODERADO" :
+                    mag >= 4.0 ? "LEVE" : "MICRO";
+                  const depthLabel =
+                    s.depth != null && parseFloat(s.depth) <= 20 ? "Superficial ⚠️" :
+                    s.depth != null && parseFloat(s.depth) <= 70 ? "Intermedio" :
+                    s.depth != null ? "Profundo" : "—";
+                  const fecha = s.creado_at ? new Date(s.creado_at).toLocaleString("es-VE", {
+                    timeZone: "America/Caracas",
+                    day: "2-digit", month: "short", year: "numeric",
+                    hour: "2-digit", minute: "2-digit"
+                  }) : "—";
+                  return (
+                    <div key={s.id} className={`rounded-2xl border ${magBg} p-3 flex flex-col gap-2.5`}>
+                      {/* Top row: magnitude + date */}
+                      <div className="flex items-start justify-between gap-2">
+                        <div className="flex items-baseline gap-1.5">
+                          <span className={`text-3xl font-black ${magNumColor}`}>{mag.toFixed(1)}</span>
+                          <div className="flex flex-col leading-none">
+                            <span className={`text-[9px] font-extrabold uppercase tracking-widest ${magNumColor}`}>{magLabel}</span>
+                            <span className="text-[8px] font-bold text-slate-500">Magnitud Mw</span>
+                          </div>
+                        </div>
+                        <div className="flex flex-col items-end gap-1">
+                          <span className="text-[9px] font-bold text-slate-400">📅 {fecha}</span>
+                          {s.url && (
+                            <a href={s.url} target="_blank" rel="noreferrer"
+                              className="text-[9px] text-sky-400 hover:text-sky-300 font-bold underline">
+                              Ver en USGS ↗
+                            </a>
+                          )}
+                        </div>
+                      </div>
+                      {/* Detail grid */}
+                      <div className="grid grid-cols-2 gap-1.5">
+                        <div className="flex flex-col gap-0.5 bg-slate-950/40 rounded-xl p-2">
+                          <span className="text-[8px] uppercase tracking-widest font-extrabold text-slate-500">📍 Ubicación</span>
+                          <span className="text-[10px] font-semibold text-slate-200 leading-snug">{s.place || "Desconocido"}</span>
+                        </div>
+                        <div className="flex flex-col gap-0.5 bg-slate-950/40 rounded-xl p-2">
+                          <span className="text-[8px] uppercase tracking-widest font-extrabold text-slate-500">🕳️ Profundidad</span>
+                          <span className="text-[10px] font-bold text-slate-200">
+                            {s.depth != null ? `${parseFloat(s.depth).toFixed(1)} km` : "—"}
+                          </span>
+                          <span className="text-[8px] text-slate-400 font-semibold">{depthLabel}</span>
+                        </div>
+                        {s.lat && s.lng && (
+                          <div className="flex flex-col gap-0.5 bg-slate-950/40 rounded-xl p-2 col-span-2">
+                            <span className="text-[8px] uppercase tracking-widest font-extrabold text-slate-500">🌐 Coordenadas (clic = Google Maps)</span>
+                            <a
+                              href={`https://www.google.com/maps/search/?api=1&query=${s.lat},${s.lng}`}
+                              target="_blank" rel="noreferrer"
+                              className="text-[10px] font-semibold text-sky-400 hover:text-sky-300 underline"
+                            >
+                              {parseFloat(s.lat).toFixed(4)}°, {parseFloat(s.lng).toFixed(4)}°
+                            </a>
+                          </div>
+                        )}
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            )}
+
+            <p className="text-[9px] text-slate-600 text-center leading-relaxed border-t border-slate-800/60 pt-3">
+              Para reportes locales venezolanos, consultar <strong className="text-slate-500">FUNVISIS</strong> (funvisis.gob.ve).
+            </p>
+          </div>
         </div>
       )}
 
