@@ -21,6 +21,7 @@ interface MapaColaborativoProps {
   userLocation: [number, number] | null;
   isAdmin?: boolean;
   isOwner?: boolean;
+  user?: { email: string; name: string; avatar?: string } | null;
   onApprove?: (id: string) => void;
   onDelete?: (id: string) => void;
   onMarkerMove?: (id: string, lat: number, lng: number, prevLat: number, prevLng: number) => void;
@@ -116,6 +117,7 @@ export default function MapaColaborativo({
   userLocation,
   isAdmin = false,
   isOwner = false,
+  user = null,
   onApprove,
   onDelete,
   onMarkerMove,
@@ -136,6 +138,11 @@ export default function MapaColaborativo({
   }
 
   const lightCircleOpacity = Math.min(0.75, Math.max(0.15, (zoomLevel - 6) * 0.06));
+
+  const isCreator = (punto: PuntoReportado) => {
+    if (!user) return false;
+    return punto.id.includes(`-creator-${user.email.toLowerCase()}`);
+  };
 
   const renderMarker = (punto: PuntoReportado) => {
     const hasDetails = !!punto.nombre && !!punto.direccion;
@@ -266,9 +273,9 @@ export default function MapaColaborativo({
                   </button>
                 )}
 
-                {isAdmin && punto.aprobado === false && (
+                {(isAdmin || isOwner || isCreator(punto)) && (
                   <div className="w-full flex gap-2 mt-1.5">
-                    {onApprove && (
+                    {isAdmin && punto.aprobado === false && onApprove && (
                       <button
                         onClick={() => onApprove(punto.id)}
                         className="flex-1 py-2 bg-emerald-600 hover:bg-emerald-500 text-white rounded-xl text-[9px] font-extrabold transition shadow-lg cursor-pointer flex items-center justify-center gap-1"
@@ -281,7 +288,7 @@ export default function MapaColaborativo({
                         onClick={() => onDelete(punto.id)}
                         className="flex-1 py-2 bg-rose-600 hover:bg-rose-500 text-white rounded-xl text-[9px] font-extrabold transition shadow-lg cursor-pointer flex items-center justify-center gap-1"
                       >
-                        ❌ Rechazar
+                        ❌ Eliminar
                       </button>
                     )}
                   </div>
@@ -359,9 +366,9 @@ export default function MapaColaborativo({
                     ✏️ Editar
                   </button>
                 )}
-                {isAdmin && punto.aprobado === false && (
+                {(isAdmin || isOwner || isCreator(punto)) && (
                   <div className="w-full flex gap-2 mt-1.5">
-                    {onApprove && (
+                    {isAdmin && punto.aprobado === false && onApprove && (
                       <button
                         onClick={() => onApprove(punto.id)}
                         className="flex-1 py-1.5 bg-emerald-600 hover:bg-emerald-500 text-white rounded-lg text-[9px] font-bold transition shadow-lg cursor-pointer"
@@ -374,7 +381,7 @@ export default function MapaColaborativo({
                         onClick={() => onDelete(punto.id)}
                         className="flex-1 py-1.5 bg-rose-600 hover:bg-rose-500 text-white rounded-lg text-[9px] font-bold transition shadow-lg cursor-pointer"
                       >
-                        Rechazar
+                        Eliminar
                       </button>
                     )}
                   </div>
@@ -413,7 +420,7 @@ export default function MapaColaborativo({
 
         {/* 1. Electricity coverage circles */}
         {puntos
-          .filter((p) => p.categoria === "energia")
+          .filter((p) => p.categoria === "energia" && p.tipo !== "noticia")
           .map((p) => (
             <Circle
               key={`light-circle-${p.id}`}
@@ -432,13 +439,13 @@ export default function MapaColaborativo({
         {/* 2. Normal markers with clustering */}
         <MarkerClusterGroup chunkedLoading maxClusterRadius={50}>
           {puntos
-            .filter((p) => p.categoria !== "sismo")
+            .filter((p) => p.categoria !== "sismo" && p.tipo !== "noticia")
             .map((p) => renderMarker(p))}
         </MarkerClusterGroup>
 
         {/* 3. Sismo markers — unclustered, always visible */}
         {puntos
-          .filter((p) => p.categoria === "sismo")
+          .filter((p) => p.categoria === "sismo" && p.tipo !== "noticia")
           .map((p) => renderMarker(p))}
       </MapContainer>
     </div>

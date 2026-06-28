@@ -198,6 +198,8 @@ export default function HomePage() {
   // Psychological Assistance States
   const [psychologists, setPsychologists] = useState<Psychologist[]>([]);
   const [isPsychOpen, setIsPsychOpen] = useState(false);
+  const [isNewsOpen, setIsNewsOpen] = useState(false);
+  const [isNewsFormOpen, setIsNewsFormOpen] = useState(false);
   const [isPsychFormOpen, setIsPsychFormOpen] = useState(false);
   const [editingPsych, setEditingPsych] = useState<Psychologist | null>(null);
   const [searchPsych, setSearchPsych] = useState("");
@@ -356,16 +358,30 @@ export default function HomePage() {
   };
 
   const handleDeletePunto = async (id: string) => {
-    if (!isAdmin) return;
+    const targetPunto = puntos.find((p) => p.id === id);
+    const isCreator = !!(
+      targetPunto &&
+      user &&
+      targetPunto.id.includes(`-creator-${user.email.toLowerCase()}`)
+    );
+
+    if (!isAdmin && !isCreator && !isOwner) {
+      alert("No tienes permisos para eliminar este punto. Solo el creador, los administradores o el dueño de la app pueden hacerlo.");
+      return;
+    }
+
     if (!confirm("¿Estás seguro de que deseas eliminar/rechazar este punto?")) return;
     const updated = puntos.filter((p) => p.id !== id);
     setPuntos(updated);
     
     if (isSupabaseConfigured && supabase) {
-      await supabase
+      const { error } = await supabase
         .from("reports")
         .delete()
         .eq("id", id);
+      if (error) {
+        console.error("Error deleting report in Supabase:", error);
+      }
     }
     alert("Reporte eliminado.");
   };
@@ -1128,11 +1144,14 @@ export default function HomePage() {
     const creadoAt = new Date().toISOString();
     const expiresAt = new Date(Date.now() + ttlHours * 3600000).toISOString();
 
+    const randomId = Math.random().toString(36).substr(2, 9);
+    const creatorSuffix = user ? `-creator-${user.email.toLowerCase()}` : "-creator-anonymous";
     const nuevoPunto: PuntoReportado = {
-      id: Math.random().toString(36).substr(2, 9),
+      id: `${randomId}${creatorSuffix}`,
       tipo: formTipo,
       categoria: formCategoria,
       descripcion: formDescripcion || `Reporte de ${formCategoria}`,
+      direccion: formDireccion || undefined,
       lat: selectedCoords.lat,
       lng: selectedCoords.lng,
       confirmations: 0,
@@ -1148,7 +1167,10 @@ export default function HomePage() {
     localStorage.setItem("punto_de_apoyo_puntos", JSON.stringify(updated));
 
     if (isSupabaseConfigured && supabase) {
-      await supabase.from("reports").insert([nuevoPunto]);
+      const { error } = await supabase.from("reports").insert([nuevoPunto]);
+      if (error) {
+        console.error("Error inserting report in Supabase:", error);
+      }
     }
 
     // Trigger immediate Discord Notification for anonymous review
@@ -1187,6 +1209,9 @@ export default function HomePage() {
   };
 
   const filteredPuntos = puntos.filter((punto) => {
+    // Exclude news/noticias from map rendering
+    if (punto.tipo === "noticia") return false;
+
     // Hide unapproved points from regular users (only admins can see them)
     if (punto.aprobado === false && !isAdmin) {
       return false;
@@ -1764,6 +1789,15 @@ export default function HomePage() {
                 title="Cifras del Reporte de Impacto ONU"
               >
                 🇺🇳
+              </button>
+
+              {/* Últimas Noticias Button */}
+              <button
+                onClick={() => setIsNewsOpen(true)}
+                className="w-11 h-11 rounded-full bg-slate-900/90 border border-slate-800 hover:border-slate-700 text-sky-400 hover:text-sky-350 flex items-center justify-center font-bold text-base shadow-2xl transition-all duration-300 transform hover:scale-110 pointer-events-auto cursor-pointer self-end"
+                title="Últimas Noticias Oficiales"
+              >
+                📢
               </button>
 
               {/* Credits & Help Button (?) */}
@@ -3319,6 +3353,232 @@ export default function HomePage() {
                 Abrir en pestaña nueva ↗️
               </a>
             </div>
+          </div>
+        </div>
+      )}
+
+      {/* 14. Últimas Noticias Modal */}
+      {isNewsOpen && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/80 backdrop-blur-sm animate-in fade-in duration-200">
+          <div className="w-full max-w-2xl bg-slate-900 border border-slate-800 rounded-3xl p-6 shadow-2xl flex flex-col gap-4 animate-in scale-in-95 duration-200 max-h-[90dvh]">
+            <div className="flex justify-between items-center border-b border-slate-800 pb-3">
+              <div className="flex items-center gap-2">
+                <span className="text-xl">📢</span>
+                <div>
+                  <h3 className="text-sm font-black text-white uppercase tracking-wider">
+                    Últimas Noticias Oficiales
+                  </h3>
+                  <span className="text-[8px] text-slate-500 font-bold uppercase tracking-wider block mt-0.5">
+                    Boletín de novedades, avisos gubernamentales y reportes verificados
+                  </span>
+                </div>
+              </div>
+              <div className="flex items-center gap-2">
+                {(isOwner || isAdmin) && (
+                  <button
+                    onClick={() => setIsNewsFormOpen(true)}
+                    className="flex items-center gap-1.5 px-3 py-1.5 text-[10px] font-bold text-sky-400 bg-sky-955/40 border border-sky-900/60 rounded-xl hover:bg-sky-950 hover:border-sky-700 transition cursor-pointer"
+                  >
+                    <Plus className="w-3.5 h-3.5" /> Agregar Noticia
+                  </button>
+                )}
+                <button
+                  onClick={() => setIsNewsOpen(false)}
+                  className="w-7 h-7 rounded-xl bg-slate-950 border border-slate-700 text-slate-400 hover:text-white flex items-center justify-center cursor-pointer transition"
+                >
+                  <X className="w-4 h-4" />
+                </button>
+              </div>
+            </div>
+
+            {/* List of News */}
+            <div className="flex-1 overflow-y-auto flex flex-col gap-3 pr-1 scrollbar-thin scrollbar-thumb-slate-800 scrollbar-track-transparent">
+              {puntos.filter((p) => p.tipo === "noticia").length === 0 ? (
+                <div className="py-12 text-center text-slate-500 text-xs font-semibold">
+                  No hay noticias registradas por el momento.
+                </div>
+              ) : (
+                puntos
+                  .filter((p) => p.tipo === "noticia")
+                  .sort((a, b) => new Date(b.creadoAt).getTime() - new Date(a.creadoAt).getTime())
+                  .map((noticia) => {
+                    const isNewsCreator = !!(
+                      user &&
+                      noticia.id.includes(`-creator-${user.email.toLowerCase()}`)
+                    );
+                    const canDelete = isAdmin || isOwner || isNewsCreator;
+
+                    return (
+                      <div
+                        key={noticia.id}
+                        className="p-4 bg-slate-950/60 border border-slate-850 hover:border-slate-800 transition-all duration-200 rounded-2xl flex flex-col gap-2 relative group"
+                      >
+                        <div className="flex items-center gap-2 flex-wrap">
+                          <span className="text-[8px] font-extrabold uppercase bg-sky-955/20 text-sky-400 border border-sky-900/40 px-2 py-0.5 rounded-full">
+                            📰 Noticia Oficial
+                          </span>
+                          <span className="text-[9px] text-slate-500 font-bold">
+                            {new Date(noticia.creadoAt).toLocaleString()}
+                          </span>
+                          {canDelete && (
+                            <button
+                              onClick={() => handleDeletePunto(noticia.id)}
+                              className="ml-auto text-[9px] text-rose-500 hover:text-rose-400 font-bold cursor-pointer transition opacity-0 group-hover:opacity-100 focus:opacity-100 px-2 py-0.5 bg-rose-955/20 border border-rose-900/50 rounded-lg"
+                              title="Eliminar esta noticia"
+                            >
+                              Eliminar
+                            </button>
+                          )}
+                        </div>
+
+                        <h4 className="text-xs font-black text-white leading-tight mt-1">
+                          {noticia.nombre}
+                        </h4>
+                        
+                        <p className="text-[11px] text-slate-300 leading-relaxed font-sans whitespace-pre-wrap">
+                          {noticia.descripcion}
+                        </p>
+
+                        {noticia.fuente && (
+                          <div className="mt-2 pt-2 border-t border-slate-900/60 flex items-center gap-1.5 text-[10px] text-slate-400">
+                            <span className="font-bold text-slate-500">Fuente:</span>
+                            {noticia.fuente.startsWith("http") ? (
+                              <a
+                                href={noticia.fuente}
+                                target="_blank"
+                                rel="noreferrer"
+                                className="text-sky-400 hover:underline flex items-center gap-0.5 font-semibold"
+                              >
+                                {noticia.fuente} ↗️
+                              </a>
+                            ) : (
+                              <span className="font-semibold text-slate-300">{noticia.fuente}</span>
+                            )}
+                          </div>
+                        )}
+                      </div>
+                    );
+                  })
+              )}
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* 15. Formulario de Nueva Noticia Modal */}
+      {isNewsFormOpen && (
+        <div className="fixed inset-0 z-55 flex items-center justify-center p-4 bg-slate-950/90 backdrop-blur-sm animate-in fade-in duration-200">
+          <div className="w-full max-w-md bg-slate-900 border border-slate-800 rounded-3xl p-6 shadow-2xl flex flex-col gap-4 animate-in scale-in-95 duration-200">
+            <div className="flex justify-between items-center border-b border-slate-800 pb-3">
+              <h3 className="text-sm font-black text-white uppercase tracking-wider flex items-center gap-1.5">
+                <Plus className="w-4 h-4 text-sky-500" /> Publicar Nueva Noticia
+              </h3>
+              <button
+                onClick={() => setIsNewsFormOpen(false)}
+                className="w-7 h-7 rounded-xl bg-slate-950 border border-slate-700 text-slate-400 hover:text-white flex items-center justify-center cursor-pointer transition"
+              >
+                <X className="w-4 h-4" />
+              </button>
+            </div>
+
+            <form
+              onSubmit={async (e) => {
+                e.preventDefault();
+                const titulo = (e.target as any).titulo.value.trim();
+                const contenido = (e.target as any).contenido.value.trim();
+                const fuente = (e.target as any).fuente.value.trim();
+
+                if (!titulo || !contenido) return;
+
+                const creadoAt = new Date().toISOString();
+                const randomId = Math.random().toString(36).substr(2, 9);
+                const creatorSuffix = user ? `-creator-${user.email.toLowerCase()}` : "-creator-anonymous";
+
+                const nuevaNoticia: PuntoReportado = {
+                  id: `news-${randomId}${creatorSuffix}`,
+                  tipo: "noticia",
+                  categoria: "senal",
+                  nombre: titulo,
+                  descripcion: contenido,
+                  fuente: fuente || undefined,
+                  lat: 0,
+                  lng: 0,
+                  confirmations: 0,
+                  creadoAt,
+                  expiresAt: new Date(Date.now() + 30 * 24 * 3600000).toISOString(),
+                  aprobado: true,
+                  creadorAnonimo: user === null,
+                };
+
+                const updated = [nuevaNoticia, ...puntos];
+                setPuntos(updated);
+                localStorage.setItem("punto_de_apoyo_puntos", JSON.stringify(updated));
+
+                if (isSupabaseConfigured && supabase) {
+                  const { error } = await supabase.from("reports").insert([nuevaNoticia]);
+                  if (error) {
+                    console.error("Error inserting news in Supabase:", error);
+                  }
+                }
+
+                setIsNewsFormOpen(false);
+                alert("¡Noticia publicada con éxito!");
+              }}
+              className="flex flex-col gap-4"
+            >
+              <div>
+                <label className="text-[9px] font-bold text-slate-400 uppercase tracking-wider block mb-1">
+                  Título de la Noticia
+                </label>
+                <input
+                  name="titulo"
+                  type="text"
+                  required
+                  placeholder="Ej. Decretan Estado de Emergencia en Yaracuy"
+                  className="w-full px-3 py-2 bg-slate-950 border border-slate-800 rounded-lg text-slate-300 text-xs focus:outline-none focus:border-sky-500/50 transition"
+                />
+              </div>
+
+              <div>
+                <label className="text-[9px] font-bold text-slate-400 uppercase tracking-wider block mb-1">
+                  Contenido / Descripción
+                </label>
+                <textarea
+                  name="contenido"
+                  required
+                  placeholder="Detalles sobre el anuncio o acontecimiento..."
+                  className="w-full px-3 py-2 bg-slate-950 border border-slate-800 rounded-lg text-slate-300 text-xs focus:outline-none focus:border-sky-500/50 transition h-28 resize-none"
+                />
+              </div>
+
+              <div>
+                <label className="text-[9px] font-bold text-slate-400 uppercase tracking-wider block mb-1">
+                  Fuente Oficial / Enlace (Opcional)
+                </label>
+                <input
+                  name="fuente"
+                  type="text"
+                  placeholder="Ej. https://www.ve.onu.org o OCHA Venezuela"
+                  className="w-full px-3 py-2 bg-slate-950 border border-slate-800 rounded-lg text-slate-300 text-xs focus:outline-none focus:border-sky-500/50 transition"
+                />
+              </div>
+
+              <div className="flex gap-3 mt-2">
+                <button
+                  type="button"
+                  onClick={() => setIsNewsFormOpen(false)}
+                  className="flex-1 py-2 bg-slate-800 hover:bg-slate-700 text-slate-300 rounded-xl text-xs font-bold transition cursor-pointer"
+                >
+                  Cancelar
+                </button>
+                <button
+                  type="submit"
+                  className="flex-1 py-2 bg-sky-600 hover:bg-sky-500 text-white rounded-xl text-xs font-bold transition cursor-pointer"
+                >
+                  Publicar Noticia
+                </button>
+              </div>
+            </form>
           </div>
         </div>
       )}

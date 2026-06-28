@@ -1,6 +1,6 @@
 export interface PuntoReportado {
   id: string;
-  tipo: "ofrece" | "necesita";
+  tipo: "ofrece" | "necesita" | "noticia";
   categoria: "energia" | "senal" | "suministros" | "salud" | "peligro" | "movilidad" | "sismo";
   descripcion: string;
   lat: number;
