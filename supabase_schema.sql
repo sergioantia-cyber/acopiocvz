@@ -19,11 +19,17 @@ CREATE TABLE IF NOT EXISTS reports (
   "creadorAnonimo" BOOLEAN DEFAULT false
 );
 
+-- Deshabilitar RLS para reports para permitir lecturas y escrituras públicas
+ALTER TABLE reports DISABLE ROW LEVEL SECURITY;
+
 -- 2. Crear la tabla de administradores autorizados
 CREATE TABLE IF NOT EXISTS admins (
   email TEXT PRIMARY KEY,
   created_at TIMESTAMP WITH TIME ZONE DEFAULT timezone('utc'::text, now())
 );
+
+-- Deshabilitar RLS para admins para permitir lecturas y modificaciones del listado de administradores
+ALTER TABLE admins DISABLE ROW LEVEL SECURITY;
 
 -- 3. Insertar al dueño de la app como administrador por defecto
 INSERT INTO admins (email) VALUES ('sergioantia11@gmail.com')
