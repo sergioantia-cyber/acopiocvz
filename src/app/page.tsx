@@ -15,6 +15,10 @@ import {
   Search,
   ChevronDown,
   ChevronUp,
+  X,
+  ShieldAlert,
+  Settings,
+  HelpCircle,
 } from "lucide-react";
 import { PuntoReportado } from "../types";
 import { supabase, isSupabaseConfigured } from "../lib/supabase";
@@ -118,10 +122,17 @@ export default function HomePage() {
   const [selectedElement, setSelectedElement] = useState<string | null>(null);
   const [activeElementMenu, setActiveElementMenu] = useState<string | null>(null);
   const [activeMainFilter, setActiveMainFilter] = useState<string | null>(null);
+
+  // Admin & Moderation states
+  const [admins, setAdmins] = useState<string[]>([]);
+  const [isAdminPanelOpen, setIsAdminPanelOpen] = useState(false);
+  const [isCreditsOpen, setIsCreditsOpen] = useState(false);
+  const [newAdminEmail, setNewAdminEmail] = useState("");
+
   const [cercaDeMi, setCercaDeMi] = useState(false);
   const [userLocation, setUserLocation] = useState<[number, number] | null>(null);
   const [searchQuery, setSearchQuery] = useState("");
-  const [isFiltersExpanded, setIsFiltersExpanded] = useState(true); // Default expanded to show the table of elements!
+  const [isFiltersExpanded, setIsFiltersExpanded] = useState(true);
 
   // Dragging States for Left Sidebar / Floating Panel
   const [panelPos, setPanelPos] = useState({ x: 16, y: 174 });
@@ -130,6 +141,14 @@ export default function HomePage() {
 
   // Auth State
   const [user, setUser] = useState<{ email: string; name: string; avatar: string } | null>(null);
+
+  const isAdmin = !!(user && (
+    user.email.toLowerCase() === "sergioantia11@gmail.com" ||
+    user.email.toLowerCase() === "colaborador@ayudaparavenezuela.com" ||
+    admins.includes(user.email.toLowerCase())
+  ));
+  
+  const isOwner = !!(user && user.email.toLowerCase() === "sergioantia11@gmail.com");
 
   // Edit Point States
   const [editingPunto, setEditingPunto] = useState<PuntoReportado | null>(null);
@@ -248,6 +267,80 @@ export default function HomePage() {
     alert("¡Centro actualizado con éxito en tiempo real!");
   };
 
+  // Admin moderation callbacks
+  const handleApprovePunto = async (id: string) => {
+    if (!isAdmin) return;
+    const updated = puntos.map((p) => (p.id === id ? { ...p, aprobado: true } : p));
+    setPuntos(updated);
+    
+    if (isSupabaseConfigured && supabase) {
+      await supabase
+        .from("reports")
+        .update({ aprobado: true })
+        .eq("id", id);
+    }
+    alert("¡Reporte aprobado con éxito!");
+  };
+
+  const handleDeletePunto = async (id: string) => {
+    if (!isAdmin) return;
+    if (!confirm("¿Estás seguro de que deseas eliminar/rechazar este punto?")) return;
+    const updated = puntos.filter((p) => p.id !== id);
+    setPuntos(updated);
+    
+    if (isSupabaseConfigured && supabase) {
+      await supabase
+        .from("reports")
+        .delete()
+        .eq("id", id);
+    }
+    alert("Reporte eliminado.");
+  };
+
+  const handleAddAdmin = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!isOwner || !newAdminEmail.trim()) return;
+    
+    const emailToInsert = newAdminEmail.trim().toLowerCase();
+    
+    if (admins.includes(emailToInsert) || emailToInsert === "sergioantia11@gmail.com") {
+      alert("Este correo ya tiene permisos de administrador.");
+      return;
+    }
+    
+    if (isSupabaseConfigured && supabase) {
+      const { error } = await supabase.from("admins").insert([{ email: emailToInsert }]);
+      if (error) {
+        alert("Error al agregar administrador: " + error.message);
+        return;
+      }
+    }
+    
+    setAdmins([...admins, emailToInsert]);
+    setNewAdminEmail("");
+    alert(`¡Se han otorgado permisos de administrador a ${emailToInsert}!`);
+  };
+
+  const handleRemoveAdmin = async (email: string) => {
+    if (!isOwner) return;
+    if (email === "sergioantia11@gmail.com") {
+      alert("No puedes quitarle permisos al dueño de la aplicación.");
+      return;
+    }
+    if (!confirm(`¿Estás seguro de que deseas remover a ${email} como administrador?`)) return;
+    
+    if (isSupabaseConfigured && supabase) {
+      const { error } = await supabase.from("admins").delete().eq("email", email);
+      if (error) {
+        alert("Error al eliminar administrador: " + error.message);
+        return;
+      }
+    }
+    
+    setAdmins(admins.filter((a) => a !== email));
+    alert("Administrador removido.");
+  };
+
   const getDistance = (lat1: number, lon1: number, lat2: number, lon2: number) => {
     const R = 6371;
     const dLat = ((lat2 - lat1) * Math.PI) / 180;
@@ -343,6 +436,11 @@ export default function HomePage() {
         const { data, error } = await supabase.from("reports").select("*");
         if (data && !error) {
           dbPuntos = data;
+        }
+        // Load administrator list
+        const { data: adminsData } = await supabase.from("admins").select("email");
+        if (adminsData) {
+          setAdmins(adminsData.map((a: any) => a.email.toLowerCase()));
         }
       } else {
         const local = localStorage.getItem("punto_de_apoyo_puntos");
@@ -456,6 +554,9 @@ export default function HomePage() {
       confirmations: 0,
       creadoAt,
       expiresAt,
+      // Pending review if anonymous, auto-approved if logged in admin/user
+      aprobado: user !== null,
+      creadorAnonimo: user === null,
     };
 
     const updated = [nuevoPunto, ...puntos];
@@ -466,6 +567,35 @@ export default function HomePage() {
       await supabase.from("reports").insert([nuevoPunto]);
     }
 
+    // Trigger immediate Discord Notification for anonymous review
+    const discordWebhookUrl = process.env.NEXT_PUBLIC_DISCORD_WEBHOOK_URL;
+    if (discordWebhookUrl && user === null) {
+      const mapsUrl = `https://www.google.com/maps/search/?api=1&query=${selectedCoords.lat},${selectedCoords.lng}`;
+      fetch(discordWebhookUrl, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          embeds: [{
+            title: "🚨 Nuevo Reporte Anónimo Pendiente de Revisión",
+            description: `Un usuario anónimo ha reportado un nuevo punto. Requiere aprobación del administrador para ser visible públicamente.`,
+            color: 16753920, // Orange
+            fields: [
+              { name: "Categoría", value: formCategoria.toUpperCase(), inline: true },
+              { name: "Tipo", value: formTipo === "ofrece" ? "Ofrece ayuda" : "Necesita ayuda", inline: true },
+              { name: "Dirección", value: formDireccion || "No geolocalizada" },
+              { name: "Descripción", value: formDescripcion || "Sin notas adicionales" },
+              { name: "Mapa", value: `[Ver Ubicación en Google Maps](${mapsUrl})` }
+            ],
+            timestamp: new Date().toISOString()
+          }]
+        })
+      }).catch(err => console.error("Error sending Discord webhook alert:", err));
+    }
+
+    if (user === null) {
+      alert("Tu reporte ha sido enviado. Solo el administrador podrá verlo para revisión antes de publicarlo en el mapa.");
+    }
+
     setIsReporting(false);
     setSelectedCoords(null);
     setFormDescripcion("");
@@ -473,6 +603,11 @@ export default function HomePage() {
   };
 
   const filteredPuntos = puntos.filter((punto) => {
+    // Hide unapproved points from regular users (only admins can see them)
+    if (punto.aprobado === false && !isAdmin) {
+      return false;
+    }
+
     // Main category filter (pill buttons)
     if (activeMainFilter) {
       const desc = (punto.descripcion || "").toLowerCase() + " " + (punto.nombre || "").toLowerCase() + " " + (punto.aceptan || "").toLowerCase() + " " + (punto.categoria || "").toLowerCase();
@@ -585,6 +720,16 @@ export default function HomePage() {
                     <span className="text-[10px] text-slate-300">👤</span>
                   )}
                   <span className="text-[10px] font-bold text-slate-200 hidden md:inline">{user.name.split(" ")[0]}</span>
+                  {isOwner && (
+                    <button
+                      onClick={() => setIsAdminPanelOpen(true)}
+                      className="flex items-center gap-0.5 text-[9px] font-extrabold text-orange-400 hover:text-orange-300 uppercase tracking-wider ml-1 cursor-pointer"
+                      title="Administrar privilegios de administrador"
+                    >
+                      <Settings className="w-2.5 h-2.5" />
+                      Admins
+                    </button>
+                  )}
                   <button
                     onClick={handleLogout}
                     className="text-[9px] font-extrabold text-red-400 hover:text-red-300 uppercase tracking-wider ml-1 cursor-pointer"
@@ -619,6 +764,9 @@ export default function HomePage() {
                 onConfirm={handleConfirm}
                 onEdit={handleStartEdit}
                 userLocation={userLocation}
+                isAdmin={isAdmin}
+                onApprove={handleApprovePunto}
+                onDelete={handleDeletePunto}
               />
             </div>
 
@@ -814,6 +962,15 @@ export default function HomePage() {
                   </div>
                 </div>
               )}
+
+              {/* Credits & Help Button (?) */}
+              <button
+                onClick={() => setIsCreditsOpen(true)}
+                className="w-11 h-11 rounded-full bg-slate-900/90 border border-slate-800 hover:border-slate-700 text-slate-300 hover:text-white flex items-center justify-center font-bold text-base shadow-2xl transition-all duration-300 transform hover:scale-110 pointer-events-auto cursor-pointer self-end"
+                title="Créditos e Información de Fuentes"
+              >
+                <HelpCircle className="w-5 h-5" />
+              </button>
 
               {/* Main Floating Report Button */}
               <button
@@ -1199,6 +1356,172 @@ export default function HomePage() {
               </button>
             </div>
           </form>
+        </div>
+      )}
+
+      {/* 8. Help / Credits Modal */}
+      {isCreditsOpen && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/80 backdrop-blur-sm animate-in fade-in duration-200">
+          <div className="w-full max-w-md bg-slate-900 border border-slate-800 rounded-3xl p-6 shadow-2xl flex flex-col gap-4 animate-in scale-in-95 duration-200 max-h-[90dvh] overflow-y-auto">
+            <div className="flex justify-between items-center border-b border-slate-800 pb-3">
+              <div className="flex items-center gap-2">
+                <HelpCircle className="w-5 h-5 text-orange-500" />
+                <h3 className="text-sm font-black text-white uppercase tracking-wider">
+                  Ayuda e Información
+                </h3>
+              </div>
+              <button
+                onClick={() => setIsCreditsOpen(false)}
+                className="w-7 h-7 rounded-xl bg-slate-950 border border-slate-850 text-slate-400 hover:text-white flex items-center justify-center cursor-pointer transition"
+              >
+                <X className="w-4 h-4" />
+              </button>
+            </div>
+
+            <div className="flex flex-col gap-4 text-xs leading-relaxed text-slate-300">
+              <div>
+                <h4 className="font-extrabold text-orange-400 uppercase tracking-widest text-[9px] mb-1">
+                  ¿Cómo funciona la app?
+                </h4>
+                <p>
+                  Esta plataforma recopila centros de acopio, hospitales operativos, emergencias civiles, redes de WiFi libres y vehículos de suministro en tiempo real para coordinar la respuesta humanitaria.
+                </p>
+              </div>
+
+              <div className="border-t border-slate-800/60 pt-3">
+                <h4 className="font-extrabold text-orange-400 uppercase tracking-widest text-[9px] mb-2">
+                  Créditos de Información (Fuentes)
+                </h4>
+                <ul className="flex flex-col gap-2">
+                  <li className="flex items-start gap-2">
+                    <span className="text-orange-500 shrink-0">🔍</span>
+                    <div>
+                      <strong>Personas Localizadas:</strong> Datos consolidados por{" "}
+                      <a href="https://localizadosvenezuela.com/" target="_blank" rel="noreferrer" className="text-sky-400 underline hover:text-sky-300 transition">
+                        Localizados Venezuela
+                      </a>.
+                    </div>
+                  </li>
+                  <li className="flex items-start gap-2">
+                    <span className="text-orange-500 shrink-0">🤝</span>
+                    <div>
+                      <strong>Ayudas Ciudadanas:</strong> Registro e incidencias mapeadas por{" "}
+                      <a href="https://caracasayuda.com/" target="_blank" rel="noreferrer" className="text-sky-400 underline hover:text-sky-300 transition">
+                        Caracas Ayuda
+                      </a>.
+                    </div>
+                  </li>
+                  <li className="flex items-start gap-2">
+                    <span className="text-orange-500 shrink-0">📦</span>
+                    <div>
+                      <strong>Centros de Acopio y Voluntarios:</strong> Información proveída por{" "}
+                      <a href="https://ayudaparavenezuela.com/" target="_blank" rel="noreferrer" className="text-sky-400 underline hover:text-sky-300 transition">
+                        Ayuda por Venezuela
+                      </a>.
+                    </div>
+                  </li>
+                </ul>
+              </div>
+
+              <div className="border-t border-slate-800/60 pt-3">
+                <h4 className="font-extrabold text-orange-400 uppercase tracking-widest text-[9px] mb-2">
+                  Colaboradores y Desarrollo
+                </h4>
+                <p className="mb-2">
+                  Agradecemos a los colaboradores comunitarios de desarrollo que han ayudado a integrar y optimizar estos sistemas críticos:
+                </p>
+                <div className="flex gap-4">
+                  <a href="https://x.com/vxlentinF" target="_blank" rel="noreferrer" className="flex items-center gap-1.5 px-3 py-1.5 bg-slate-950 hover:bg-slate-850 border border-slate-800 rounded-xl text-slate-200 transition font-bold">
+                    <span>💻</span>
+                    <span>@vxlentinF</span>
+                  </a>
+                  <a href="https://x.com/dergamer777" target="_blank" rel="noreferrer" className="flex items-center gap-1.5 px-3 py-1.5 bg-slate-950 hover:bg-slate-850 border border-slate-800 rounded-xl text-slate-200 transition font-bold">
+                    <span>🎮</span>
+                    <span>@dergamer777</span>
+                  </a>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* 9. Admin Panel Modal (Grant/revoke permissions) */}
+      {isAdminPanelOpen && isOwner && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/80 backdrop-blur-sm animate-in fade-in duration-200">
+          <div className="w-full max-w-md bg-slate-900 border border-slate-800 rounded-3xl p-6 shadow-2xl flex flex-col gap-4 animate-in scale-in-95 duration-200 max-h-[85dvh]">
+            <div className="flex justify-between items-center border-b border-slate-800 pb-3">
+              <div className="flex items-center gap-2">
+                <Settings className="w-5 h-5 text-orange-500" />
+                <h3 className="text-sm font-black text-white uppercase tracking-wider">
+                  Administradores de la App
+                </h3>
+              </div>
+              <button
+                onClick={() => setIsAdminPanelOpen(false)}
+                className="w-7 h-7 rounded-xl bg-slate-950 border border-slate-850 text-slate-400 hover:text-white flex items-center justify-center cursor-pointer transition"
+              >
+                <X className="w-4 h-4" />
+              </button>
+            </div>
+
+            {/* Grant Permission Form */}
+            <form onSubmit={handleAddAdmin} className="flex flex-col gap-1.5 border-b border-slate-800/60 pb-4">
+              <label className="text-[9px] font-bold text-slate-400 uppercase tracking-wider">
+                Agregar nuevo administrador
+              </label>
+              <div className="flex gap-2">
+                <input
+                  type="email"
+                  required
+                  value={newAdminEmail}
+                  onChange={(e) => setNewAdminEmail(e.target.value)}
+                  placeholder="ejemplo@correo.com"
+                  className="flex-1 px-3 py-2 bg-slate-950 border border-slate-800 rounded-xl text-slate-250 text-xs focus:outline-none focus:border-orange-500/50"
+                />
+                <button
+                  type="submit"
+                  className="px-4 py-2 bg-orange-600 hover:bg-orange-500 text-white rounded-xl text-xs font-bold transition shadow-lg"
+                >
+                  Agregar
+                </button>
+              </div>
+            </form>
+
+            {/* Admin List */}
+            <div className="flex-1 overflow-y-auto flex flex-col gap-2 pr-1">
+              <span className="text-[9px] font-extrabold text-orange-400 uppercase tracking-widest mb-1 block">
+                Lista de Administradores
+              </span>
+              
+              {/* Owner card */}
+              <div className="flex justify-between items-center bg-slate-950/60 p-2.5 rounded-xl border border-slate-800/30">
+                <div className="flex flex-col">
+                  <span className="text-xs font-bold text-white">sergioantia11@gmail.com</span>
+                  <span className="text-[8px] text-orange-400 uppercase font-black tracking-wider mt-0.5">Dueño de la App</span>
+                </div>
+              </div>
+
+              {/* Extra admins */}
+              {admins.length === 0 ? (
+                <div className="text-center py-6 text-slate-500 text-xs italic">
+                  No hay otros administradores registrados.
+                </div>
+              ) : (
+                admins.map((email) => (
+                  <div key={email} className="flex justify-between items-center bg-slate-950/40 p-2.5 rounded-xl border border-slate-850 hover:border-slate-800 transition">
+                    <span className="text-xs text-slate-300 font-medium">{email}</span>
+                    <button
+                      onClick={() => handleRemoveAdmin(email)}
+                      className="px-2 py-1 text-[9px] font-extrabold text-rose-400 hover:text-white hover:bg-rose-950/45 border border-rose-900/30 rounded-lg transition"
+                    >
+                      Remover
+                    </button>
+                  </div>
+                ))
+              )}
+            </div>
+          </div>
         </div>
       )}
     </main>

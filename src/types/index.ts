@@ -17,4 +17,8 @@ export interface PuntoReportado {
   aceptan?: string;
   region?: string;
   whatsapp?: string;
+
+  // Moderation fields
+  aprobado?: boolean;
+  creadorAnonimo?: boolean;
 }

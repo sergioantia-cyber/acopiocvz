@@ -16,6 +16,9 @@ interface MapaColaborativoProps {
   onConfirm: (id: string) => void;
   onEdit?: (punto: PuntoReportado) => void;
   userLocation: [number, number] | null;
+  isAdmin?: boolean;
+  onApprove?: (id: string) => void;
+  onDelete?: (id: string) => void;
 }
 
 const CATEGORY_EMOJIS: Record<string, string> = {
@@ -27,30 +30,35 @@ const CATEGORY_EMOJIS: Record<string, string> = {
   movilidad: "🚗",
 };
 
-const createCustomIcon = (tipo: "ofrece" | "necesita", categoria: string, fuente?: string, hasDetails?: boolean) => {
-  const emoji = CATEGORY_EMOJIS[categoria] || "📌";
+const createCustomIcon = (punto: PuntoReportado) => {
+  const emoji = CATEGORY_EMOJIS[punto.categoria] || "📌";
   
   let colorClass = "";
-  if (hasDetails || categoria === "suministros") {
+  if (punto.aprobado === false) {
+    // Blinking warning style for pending points
+    colorClass = "border-amber-500 bg-amber-600/80 shadow-amber-500/50 animate-pulse";
+  } else if (punto.nombre || punto.categoria === "suministros") {
     colorClass = "border-sky-400 bg-sky-500 shadow-sky-500/20";
-  } else if (fuente) {
-    if (fuente === "Localizados VE") {
+  } else if (punto.fuente) {
+    if (punto.fuente === "Localizados VE") {
       colorClass = "border-sky-400 bg-sky-500 shadow-sky-500/20";
-    } else if (fuente === "Caracas Ayuda") {
+    } else if (punto.fuente === "Caracas Ayuda") {
       colorClass = "border-amber-400 bg-amber-500 shadow-amber-500/20";
     } else {
       colorClass = "border-violet-400 bg-violet-500 shadow-violet-500/20";
     }
   } else {
-    colorClass = tipo === "ofrece" ? "border-emerald-400 bg-emerald-500 shadow-emerald-500/20" : "border-rose-400 bg-rose-500 shadow-rose-500/20";
+    colorClass = punto.tipo === "ofrece" ? "border-emerald-400 bg-emerald-500 shadow-emerald-500/20" : "border-rose-400 bg-rose-500 shadow-rose-500/20";
   }
+
+  const isExt = punto.fuente && !punto.nombre;
 
   return L.divIcon({
     html: `
       <div class="relative flex items-center justify-center w-9 h-9 rounded-full text-white text-lg font-semibold shadow-2xl border-2 ${colorClass} transition-transform hover:scale-115 duration-200">
         <span class="z-10">${emoji}</span>
         <span class="absolute -bottom-1 w-2 h-2 rotate-45 ${colorClass} border-r-2 border-b-2"></span>
-        ${fuente && !hasDetails ? `<span class="absolute -top-1.5 -right-1.5 flex h-3.5 w-3.5 items-center justify-center rounded-full bg-slate-900 border border-slate-700 text-[8px] font-bold text-slate-300">ext</span>` : ""}
+        ${isExt ? `<span class="absolute -top-1.5 -right-1.5 flex h-3.5 w-3.5 items-center justify-center rounded-full bg-slate-900 border border-slate-700 text-[8px] font-bold text-slate-300">ext</span>` : ""}
       </div>
     `,
     className: "custom-div-icon",
@@ -97,6 +105,9 @@ export default function MapaColaborativo({
   onConfirm,
   onEdit,
   userLocation,
+  isAdmin = false,
+  onApprove,
+  onDelete,
 }: MapaColaborativoProps) {
   const defaultCenter: [number, number] = userLocation || [10.4806, -66.9036];
   const [isMounted, setIsMounted] = useState(false);
@@ -163,20 +174,25 @@ export default function MapaColaborativo({
               <Marker
                 key={punto.id}
                 position={[punto.lat, punto.lng]}
-                icon={createCustomIcon(punto.tipo, punto.categoria, punto.fuente, hasDetails)}
+                icon={createCustomIcon(punto)}
               >
                 <Popup>
                   {hasDetails ? (
                     /* Premium detailed popup layout (matches MRW screenshot exactly) */
                     <div className="p-4 text-slate-100 flex flex-col gap-2.5 font-sans min-w-[290px] bg-[#111113] rounded-2xl shadow-2xl border border-slate-800/50">
-                      {/* Header Pill depending on source & needs */}
-                      <div className="flex">
+                      {/* Header Pill depending on source & needs & approval */}
+                      <div className="flex items-center gap-2 flex-wrap">
+                        {punto.aprobado === false && (
+                          <span className="text-[9px] font-extrabold uppercase bg-amber-500 text-slate-950 px-2 py-0.5 rounded-full flex items-center gap-1 shadow-lg shadow-amber-500/25 animate-pulse">
+                            ⚠️ Pendiente de Aprobación
+                          </span>
+                        )}
                         {punto.fuente === "Caracas Ayuda" ? (
                           <span className="text-[9px] font-extrabold uppercase tracking-wider bg-sky-950/70 text-sky-400 border border-sky-800/40 px-2.5 py-0.5 rounded-full flex items-center gap-1">
                             📦 Centro de Acopio
                           </span>
                         ) : punto.fuente === "Ayuda por Venezuela" ? (
-                          <span className="text-[9px] font-extrabold uppercase tracking-wider bg-rose-950/70 text-rose-400 border border-rose-800/40 px-2.5 py-0.5 rounded-full flex items-center gap-1 animate-pulse">
+                          <span className="text-[9px] font-extrabold uppercase tracking-wider bg-rose-950/70 text-rose-400 border border-rose-800/40 px-2.5 py-0.5 rounded-full flex items-center gap-1">
                             🆘 Necesita Ayuda
                           </span>
                         ) : (
@@ -265,7 +281,7 @@ export default function MapaColaborativo({
                           </a>
                         )}
 
-                        {onEdit && (
+                        {onEdit && punto.aprobado !== false && (
                           <button
                             onClick={() => onEdit(punto)}
                             className="flex-1 min-w-[70px] flex items-center justify-center gap-1 py-2 bg-orange-600 hover:bg-orange-500 text-white rounded-xl text-[9px] font-extrabold transition border border-orange-500/30 shadow-lg cursor-pointer"
@@ -273,12 +289,39 @@ export default function MapaColaborativo({
                             ✏️ Editar
                           </button>
                         )}
+
+                        {/* Admin Approvals & Delete Moderation Buttons */}
+                        {isAdmin && punto.aprobado === false && (
+                          <div className="w-full flex gap-2 mt-1.5">
+                            {onApprove && (
+                              <button
+                                onClick={() => onApprove(punto.id)}
+                                className="flex-1 py-2 bg-emerald-600 hover:bg-emerald-500 text-white rounded-xl text-[9px] font-extrabold transition shadow-lg cursor-pointer flex items-center justify-center gap-1"
+                              >
+                                ✅ Aprobar
+                              </button>
+                            )}
+                            {onDelete && (
+                              <button
+                                onClick={() => onDelete(punto.id)}
+                                className="flex-1 py-2 bg-rose-600 hover:bg-rose-500 text-white rounded-xl text-[9px] font-extrabold transition shadow-lg cursor-pointer flex items-center justify-center gap-1"
+                              >
+                                ❌ Rechazar
+                              </button>
+                            )}
+                          </div>
+                        )}
                       </div>
                     </div>
                   ) : (
                     /* Standard community report popup layout, modernized to match premium aesthetics */
                     <div className="p-4 text-slate-100 flex flex-col gap-2 font-sans min-w-[240px] bg-[#111113] rounded-2xl">
                       <div className="flex items-center gap-1.5 flex-wrap">
+                        {punto.aprobado === false && (
+                          <span className="text-[8px] font-black uppercase bg-amber-500 text-slate-950 px-2 py-0.5 rounded-full flex items-center gap-0.5 shadow-lg shadow-amber-500/25 animate-pulse">
+                            ⚠️ Pendiente
+                          </span>
+                        )}
                         <span className="text-base">{CATEGORY_EMOJIS[punto.categoria]}</span>
                         <span className="font-bold text-slate-100 text-xs capitalize">
                           {punto.categoria}
@@ -331,13 +374,35 @@ export default function MapaColaborativo({
                         >
                           🧭 Cómo llegar
                         </a>
-                        {onEdit && (
+                        {onEdit && punto.aprobado !== false && (
                           <button
                             onClick={() => onEdit(punto)}
                             className="flex-1 flex items-center justify-center gap-1 py-1.5 bg-orange-600 hover:bg-orange-500 text-white rounded-lg text-[10px] font-bold transition shadow-lg cursor-pointer"
                           >
                             ✏️ Editar
                           </button>
+                        )}
+
+                        {/* Admin Approvals & Delete Moderation Buttons */}
+                        {isAdmin && punto.aprobado === false && (
+                          <div className="w-full flex gap-2 mt-1.5">
+                            {onApprove && (
+                              <button
+                                onClick={() => onApprove(punto.id)}
+                                className="flex-1 py-1.5 bg-emerald-600 hover:bg-emerald-500 text-white rounded-lg text-[9px] font-bold transition shadow-lg cursor-pointer"
+                              >
+                                Aprobar
+                              </button>
+                            )}
+                            {onDelete && (
+                              <button
+                                onClick={() => onDelete(punto.id)}
+                                className="flex-1 py-1.5 bg-rose-600 hover:bg-rose-500 text-white rounded-lg text-[9px] font-bold transition shadow-lg cursor-pointer"
+                              >
+                                Rechazar
+                              </button>
+                            )}
+                          </div>
                         )}
                       </div>
                     </div>
