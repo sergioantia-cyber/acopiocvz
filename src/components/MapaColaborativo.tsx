@@ -66,10 +66,10 @@ const createCustomIcon = (punto: PuntoReportado) => {
 
   return L.divIcon({
     html: `
-      <div class="relative flex items-center justify-center w-9 h-9 rounded-full text-white text-lg font-semibold shadow-2xl border-2 ${colorClass}${dragRing} transition-transform hover:scale-115 duration-200" style="${isDraggingThis ? "cursor:grabbing !important;" : "cursor:grab !important;"}pointer-events:all">
-        <span class="z-10" style="pointer-events:none">${emoji}</span>
-        <span class="absolute -bottom-1 w-2 h-2 rotate-45 ${colorClass} border-r-2 border-b-2" style="pointer-events:none"></span>
-        ${isExt ? `<span class="absolute -top-1.5 -right-1.5 flex h-3.5 w-3.5 items-center justify-center rounded-full bg-slate-900 border border-slate-700 text-[8px] font-bold text-slate-300" style="pointer-events:none">ext</span>` : ""}
+      <div class="relative flex items-center justify-center w-9 h-9 rounded-full text-white text-lg font-semibold shadow-2xl border-2 ${colorClass} transition-transform hover:scale-115 duration-200">
+        <span class="z-10">${emoji}</span>
+        <span class="absolute -bottom-1 w-2 h-2 rotate-45 ${colorClass} border-r-2 border-b-2"></span>
+        ${isExt ? `<span class="absolute -top-1.5 -right-1.5 flex h-3.5 w-3.5 items-center justify-center rounded-full bg-slate-900 border border-slate-700 text-[8px] font-bold text-slate-300">ext</span>` : ""}
       </div>
     `,
     className: "custom-div-icon",
@@ -137,14 +137,8 @@ export default function MapaColaborativo({
 
   const lightCircleOpacity = Math.min(0.75, Math.max(0.15, (zoomLevel - 6) * 0.06));
 
-  // Only owner can drag, and they are draggable only when Modo Editor is toggled ON
-  const isDraggablePunto = (p: PuntoReportado) =>
-    isOwner && modoEditor && DRAGGABLE_CATEGORIES.has(p.categoria) && p.categoria !== "sismo";
-
   const renderMarker = (punto: PuntoReportado) => {
     const hasDetails = !!punto.nombre && !!punto.direccion;
-    const canDrag = isDraggablePunto(punto);
-    const isDraggingThis = draggingId === punto.id;
 
     return (
       <Marker
@@ -155,15 +149,6 @@ export default function MapaColaborativo({
       >
         {/* Full popup — shown for every marker */}
         <Popup>
-          {/* Owner drag hint strip */}
-          {canDrag && (
-            <div className="flex items-center gap-1.5 bg-orange-950/60 border border-orange-700/40 rounded-lg px-2 py-1 mb-2">
-              <span className="text-sm">🖱️</span>
-              <span className="text-[9px] font-extrabold text-orange-300 uppercase tracking-wider">
-                Arrastra para mover · Ctrl+Z deshace
-              </span>
-            </div>
-          )}
 
           {hasDetails ? (
             /* Premium detailed popup */
@@ -400,14 +385,7 @@ export default function MapaColaborativo({
     <div className="w-full h-full min-h-[400px] md:min-h-full relative rounded-2xl overflow-hidden border-4 border-orange-500 shadow-2xl bg-slate-900">
 
 
-      {/* Move toast notification */}
-      {moveToast && (
-        <div className="absolute bottom-6 left-1/2 -translate-x-1/2 z-[500] pointer-events-none">
-          <div className="flex items-center gap-2 bg-slate-900/95 backdrop-blur-md border border-emerald-500/40 text-emerald-300 text-[10px] font-bold px-4 py-2 rounded-full shadow-xl shadow-emerald-500/10">
-            {moveToast}
-          </div>
-        </div>
-      )}
+
 
       <MapContainer
         center={defaultCenter}
@@ -445,17 +423,12 @@ export default function MapaColaborativo({
             />
           ))}
 
-        {/* 2. Normal markers with clustering (only when not being dragged) */}
+        {/* 2. Normal markers with clustering */}
         <MarkerClusterGroup chunkedLoading maxClusterRadius={50}>
           {puntos
-            .filter((p) => p.categoria !== "sismo" && !isDraggablePunto(p))
+            .filter((p) => p.categoria !== "sismo")
             .map((p) => renderMarker(p))}
         </MarkerClusterGroup>
-
-        {/* 2.5. Render active draggable markers outside of the cluster group for native dragging support */}
-        {puntos
-          .filter((p) => p.categoria !== "sismo" && isDraggablePunto(p))
-          .map((p) => renderMarker(p))}
 
         {/* 3. Sismo markers — unclustered, always visible */}
         {puntos

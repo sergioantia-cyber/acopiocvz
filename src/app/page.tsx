@@ -1394,6 +1394,13 @@ export default function HomePage() {
                 >
                   <span>� — �</span>
                   <span>Google Login</span>
+                </button>
+              )}
+            </div>
+          </div>
+        </div>
+      </header>
+
       {/* 1.1. Banners de Alertas Críticas (Tiempo Real Seismológico/Administrador) */}
       {activeAlertsToShow.length > 0 && (
         <div className="absolute top-[72px] sm:top-[88px] left-4 right-4 z-40 max-w-5xl mx-auto flex flex-col gap-2 pointer-events-auto">
@@ -1448,8 +1455,8 @@ export default function HomePage() {
             </div>
 
             {/* 3. Top Filter Pills � —  premium, horizontal, scrollable */}
-            <div className="absolute top-[80px] sm:top-[96px] left-0 right-0 z-20 pointer-events-none"> —  premium, horizontal, scrollable */}
-            <div className="absolute top-[96px] left-0 right-0 z-20 pointer-events-none">
+            <div className="absolute top-[80px] sm:top-[96px] left-0 right-0 z-20 pointer-events-none">
+            
               <div className="flex items-center gap-2 overflow-x-auto pb-1 pointer-events-auto px-4 scrollbar-none">
                 {/* ALL button */}
                 <button
