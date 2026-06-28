@@ -2311,24 +2311,22 @@ export default function HomePage() {
             </div>
 
             {/* Selector de Tipo de Registro */}
-            {!editingPsych && (
-              <div className="flex gap-2 p-1 bg-slate-950 rounded-2xl border border-slate-850">
-                <button
-                  type="button"
-                  onClick={() => setPsychEsInstitucion(false)}
-                  className={`flex-1 py-1.5 rounded-xl text-[10px] font-bold transition ${!psychEsInstitucion ? 'bg-purple-650 text-white shadow-md' : 'text-slate-400 hover:text-white'}`}
-                >
-                  🧑‍⚕️ Profesional
-                </button>
-                <button
-                  type="button"
-                  onClick={() => setPsychEsInstitucion(true)}
-                  className={`flex-1 py-1.5 rounded-xl text-[10px] font-bold transition ${psychEsInstitucion ? 'bg-blue-650 text-white shadow-md' : 'text-slate-400 hover:text-white'}`}
-                >
-                  🏢 Institución / Línea
-                </button>
-              </div>
-            )}
+            <div className="flex gap-2 p-1 bg-slate-950 rounded-2xl border border-slate-850">
+              <button
+                type="button"
+                onClick={() => setPsychEsInstitucion(false)}
+                className={`flex-1 py-1.5 rounded-xl text-[10px] font-bold transition ${!psychEsInstitucion ? 'bg-purple-650 text-white shadow-md' : 'text-slate-400 hover:text-white'}`}
+              >
+                🧑‍⚕️ Profesional
+              </button>
+              <button
+                type="button"
+                onClick={() => setPsychEsInstitucion(true)}
+                className={`flex-1 py-1.5 rounded-xl text-[10px] font-bold transition ${psychEsInstitucion ? 'bg-blue-650 text-white shadow-md' : 'text-slate-400 hover:text-white'}`}
+              >
+                🏢 Institución / Línea
+              </button>
+            </div>
 
             <div className="flex flex-col gap-3 text-xs">
               <div className="flex flex-col gap-1">
