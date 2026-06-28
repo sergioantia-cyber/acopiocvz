@@ -2236,24 +2236,25 @@ export default function HomePage() {
                             </a>
                           )}
                           {p.booking_url && (
-                            p.es_institucion ? (
+                            <>
                               <a
                                 href={p.booking_url}
                                 target="_blank"
                                 rel="noopener noreferrer"
-                                className="px-2.5 py-1.5 text-[9px] font-extrabold hover:text-white border border-blue-900/60 rounded-xl transition flex items-center gap-1 ml-auto text-blue-400 bg-blue-950/20 hover:bg-blue-600/80"
+                                className={`px-2.5 py-1.5 text-[9px] font-extrabold hover:text-white border border-blue-900/60 rounded-xl transition flex items-center gap-1 text-blue-400 bg-blue-950/20 hover:bg-blue-600/80 ${p.es_institucion ? 'ml-auto' : ''}`}
                               >
                                 🌐 Visitar Portal
                               </a>
-                            ) : (
-                              <button
-                                type="button"
-                                onClick={() => setActiveBookingUrl(p.booking_url!)}
-                                className="px-2.5 py-1.5 text-[9px] font-extrabold hover:text-white border border-purple-900/60 rounded-xl transition flex items-center gap-1 ml-auto text-purple-400 bg-purple-955/20 hover:bg-purple-600/80 cursor-pointer"
-                              >
-                                📅 Agendar Cita
-                              </button>
-                            )
+                              {!p.es_institucion && (
+                                <button
+                                  type="button"
+                                  onClick={() => setActiveBookingUrl(p.booking_url!)}
+                                  className="px-2.5 py-1.5 text-[9px] font-extrabold hover:text-white border border-purple-900/60 rounded-xl transition flex items-center gap-1 text-purple-400 bg-purple-955/20 hover:bg-purple-600/80 cursor-pointer ml-auto"
+                                >
+                                  📅 Agendar Cita
+                                </button>
+                              )}
+                            </>
                           )}
                         </div>
 
