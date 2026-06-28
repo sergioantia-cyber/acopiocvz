@@ -1099,6 +1099,7 @@ export default function HomePage() {
 
   const handleLocationSelected = (lat: number, lng: number) => {
     setSelectedCoords({ lat, lng });
+    setFormCategoria(isOwner ? "suministros" : "peligro");
   };
 
   const handleConfirm = async (id: string) => {
@@ -1823,12 +1824,20 @@ export default function HomePage() {
                       onChange={(e) => setFormCategoria(e.target.value as PuntoReportado["categoria"])}
                       className="w-full px-2 py-1.5 bg-slate-950 border border-slate-800 rounded-lg text-slate-300 text-xs focus:outline-none focus:border-orange-500/50 transition"
                     >
-                      <option value="energia">⚡ Energía / Electricidad</option>
-                      <option value="senal">🌐 Señal / Conectividad</option>
-                      <option value="suministros">📦 Suministros / Agua / Alimentos</option>
-                      <option value="salud">🏥 Salud / Primeros Auxilios</option>
+                      {/* Publicly reportable categories: Danger (peligro) or Mobility/Vehicles (movilidad) */}
                       <option value="peligro">⚠️ Peligro / Zonas Afectadas</option>
-                      <option value="movilidad">🚛 Movilidad / Transporte</option>
+                      <option value="movilidad">🚛 Movilidad / Transporte (Vehículos)</option>
+
+                      {/* ONLY Owner/Admin can report: WiFi (senal), Suministros/Acopio (suministros), Energía (energia), Salud (salud) */}
+                      {isOwner && (
+                        <>
+                          <option value="senal">🌐 Señal / Conectividad (WiFi)</option>
+                          <option value="suministros">📦 Suministros / Agua / Alimentos (Acopio)</option>
+                          <option value="energia">⚡ Energía / Electricidad</option>
+                          <option value="salud">🏥 Salud / Primeros Auxilios</option>
+                          <option value="sismo">💥 Alerta Sismológica</option>
+                        </>
+                      )}
                     </select>
                   </div>
 

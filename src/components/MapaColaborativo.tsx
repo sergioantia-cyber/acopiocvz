@@ -212,10 +212,16 @@ export default function MapaColaborativo({
               )}
 
               <div className="flex justify-between items-center text-[10px] text-slate-400 font-medium mt-1">
-                <div className="flex items-center gap-1">
+                <a
+                  href={`https://www.google.com/maps/search/?api=1&query=${punto.lat},${punto.lng}`}
+                  target="_blank"
+                  rel="noreferrer"
+                  className="flex items-center gap-1 hover:text-sky-400 transition cursor-pointer"
+                  title="Ver en Google Maps"
+                >
                   <span>📍</span>
-                  <span>{punto.region || "Venezuela"}</span>
-                </div>
+                  <span>{punto.lat.toFixed(5)}, {punto.lng.toFixed(5)} ({punto.region || "Ver mapa"})</span>
+                </a>
                 <span className="text-[8px] text-slate-500 uppercase tracking-wider font-extrabold">
                   {punto.fuente}
                 </span>
