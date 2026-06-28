@@ -2320,22 +2320,41 @@ export default function HomePage() {
               </button>
             </div>
 
-            {/* Selector de Tipo de Registro */}
-            <div className="flex gap-2 p-1 bg-slate-950 rounded-2xl border border-slate-850">
-              <button
-                type="button"
-                onClick={() => setPsychEsInstitucion(false)}
-                className={`flex-1 py-1.5 rounded-xl text-[10px] font-bold transition ${!psychEsInstitucion ? 'bg-purple-650 text-white shadow-md' : 'text-slate-400 hover:text-white'}`}
-              >
-                🧑‍⚕️ Profesional
-              </button>
-              <button
-                type="button"
-                onClick={() => setPsychEsInstitucion(true)}
-                className={`flex-1 py-1.5 rounded-xl text-[10px] font-bold transition ${psychEsInstitucion ? 'bg-blue-650 text-white shadow-md' : 'text-slate-400 hover:text-white'}`}
-              >
-                🏢 Institución / Línea
-              </button>
+            {/* Categoría de Registro */}
+            <div className="flex flex-col gap-1">
+              <label className="text-[9px] font-extrabold text-slate-500 uppercase tracking-wider">Categoría *</label>
+              <div className="flex flex-col sm:flex-row gap-2 p-1 bg-slate-950 rounded-2xl border border-slate-850">
+                <button
+                  type="button"
+                  onClick={() => {
+                    setPsychEsInstitucion(false);
+                    setPsychTipoServicio("gratuito");
+                  }}
+                  className={`flex-1 py-1.5 rounded-xl text-[10px] font-bold transition cursor-pointer ${(!psychEsInstitucion && psychTipoServicio === "gratuito") ? 'bg-purple-650 text-white shadow-md' : 'text-slate-400 hover:text-white'}`}
+                >
+                  🧑‍⚕️ Profesional Gratis
+                </button>
+                <button
+                  type="button"
+                  onClick={() => {
+                    setPsychEsInstitucion(false);
+                    setPsychTipoServicio("social");
+                  }}
+                  className={`flex-1 py-1.5 rounded-xl text-[10px] font-bold transition cursor-pointer ${(!psychEsInstitucion && psychTipoServicio === "social") ? 'bg-blue-650 text-white shadow-md' : 'text-slate-400 hover:text-white'}`}
+                >
+                  🤝 Tarifa Solidaria
+                </button>
+                <button
+                  type="button"
+                  onClick={() => {
+                    setPsychEsInstitucion(true);
+                    setPsychTipoServicio("gratuito");
+                  }}
+                  className={`flex-1 py-1.5 rounded-xl text-[10px] font-bold transition cursor-pointer ${psychEsInstitucion ? 'bg-slate-800 text-white shadow-md' : 'text-slate-400 hover:text-white'}`}
+                >
+                  🏢 Línea de Ayuda
+                </button>
+              </div>
             </div>
 
             <div className="flex flex-col gap-3 text-xs">
@@ -2469,22 +2488,10 @@ export default function HomePage() {
                 />
               </div>
 
-              {/* Tipo de Servicio & Costos */}
-              <div className="flex flex-col gap-2.5 p-3 bg-slate-950/60 rounded-2xl border border-slate-850">
-                <div className="flex flex-col gap-1">
-                  <label className="text-[9px] font-extrabold text-slate-500 uppercase tracking-wider">Tipo de Servicio *</label>
-                  <select
-                    value={psychTipoServicio}
-                    onChange={(e) => setPsychTipoServicio(e.target.value as "gratuito" | "social")}
-                    className="w-full px-3 py-1.5 bg-slate-900 border border-slate-800 rounded-xl text-slate-200 focus:outline-none focus:border-purple-500 transition-colors text-xs font-semibold"
-                  >
-                    <option value="gratuito">💜 Voluntariado 100% Gratuito</option>
-                    <option value="social">🤝 Consulta Social / Tarifa Solidaria</option>
-                  </select>
-                </div>
-
-                {psychTipoServicio === "social" && (
-                  <div className="grid grid-cols-2 gap-2 animate-in fade-in duration-200">
+              {/* Costos (Solo si es Profesional de Tarifa Solidaria) */}
+              {!psychEsInstitucion && psychTipoServicio === "social" && (
+                <div className="flex flex-col gap-2.5 p-3 bg-slate-950/60 rounded-2xl border border-slate-850 animate-in fade-in duration-200">
+                  <div className="grid grid-cols-2 gap-2">
                     <div className="flex flex-col gap-1">
                       <label className="text-[9px] font-extrabold text-slate-500 uppercase tracking-wider">Monto de la Consulta</label>
                       <input
@@ -2508,8 +2515,8 @@ export default function HomePage() {
                       </select>
                     </div>
                   </div>
-                )}
-              </div>
+                </div>
+              )}
 
               <div className="flex flex-col gap-1">
                 <label className="text-[9px] font-extrabold text-slate-500 uppercase tracking-wider">
