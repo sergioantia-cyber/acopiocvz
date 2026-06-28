@@ -1212,28 +1212,6 @@ export default function HomePage() {
                         Nuestra app filtra y agrupa reportes del terremoto 2026. Mostramos <strong className="text-sky-400">{puntos.filter(p => p.fuente !== "Localizados VE").length} centros funcionales</strong> mapeados, de los <strong className="text-amber-500">403 centros oficiales</strong> reportados en <a href="https://ayudaparavenezuela.com/#centros" target="_blank" rel="noreferrer" className="text-amber-400 underline hover:text-amber-300">ayudaparavenezuela.com</a>.
                       </p>
                     </div>
-
-                    {/* Search Input */}
-                    <div className="relative">
-                      <Search className="w-3.5 h-3.5 text-slate-500 absolute left-3 top-2.5" />
-                      <input
-                        type="text"
-                        value={searchQuery}
-                        onChange={(e) => setSearchQuery(e.target.value)}
-                        placeholder="Buscar reportes..."
-                        className="w-full pl-9 pr-4 py-2 bg-slate-950 border border-slate-800 rounded-lg text-slate-200 placeholder-slate-500 text-xs focus:outline-none focus:border-orange-500/50 transition-all"
-                      />
-                    </div>
-
-
-
-                    {/* TTL Warning info */}
-                    <div className="p-2.5 bg-slate-950/40 border border-slate-800/50 rounded-xl flex gap-2 items-start">
-                      <Clock className="w-3.5 h-3.5 text-orange-500 shrink-0 mt-0.5" />
-                      <p className="text-[9px] text-slate-400 leading-relaxed">
-                        Filtro rápido: Haz clic en un elemento de la tabla. Solicitudes expiran en <strong className="text-rose-400">24h</strong> y ofrecimientos en <strong className="text-emerald-400">72h</strong>.
-                      </p>
-                    </div>
                   </div>
                 )}
               </div>
