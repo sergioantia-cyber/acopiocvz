@@ -50,7 +50,7 @@ export async function GET(request: Request) {
       : "https://localizadosvenezuela.com/api/v1/localizados?limit=500";
 
     const res = await fetch(localizadosUrl, {
-      next: { revalidate: 60 },
+      next: { revalidate: 3600 },
     });
     const result = await res.json();
 
@@ -108,7 +108,7 @@ export async function GET(request: Request) {
         "apikey": supabaseKey,
         "Authorization": `Bearer ${supabaseKey}`,
       },
-      next: { revalidate: 60 },
+      next: { revalidate: 3600 },
     });
     
     if (res.ok) {
@@ -199,7 +199,7 @@ export async function GET(request: Request) {
   // 3. Fetch public centers CSV from Ayuda por Venezuela (403 centers!)
   try {
     const res = await fetch("https://ayudaparavenezuela.com/api/public/centers/csv", {
-      next: { revalidate: 60 },
+      next: { revalidate: 3600 },
     });
     if (res.ok) {
       const csvText = await res.text();
@@ -268,7 +268,7 @@ export async function GET(request: Request) {
       out body 150;
     `;
     const osmRes = await fetch("https://overpass.kumi.systems/api/interpreter?data=" + encodeURIComponent(wifiQuery), {
-      next: { revalidate: 300 }, // Cache for 5 minutes
+      next: { revalidate: 3600 }, // Cache for 1 hour
       signal: AbortSignal.timeout(5000), // 5s timeout
     });
     if (osmRes.ok) {

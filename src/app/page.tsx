@@ -129,6 +129,20 @@ export default function HomePage() {
   const [isONUReportOpen, setIsONUReportOpen] = useState(false);
   const [newAdminEmail, setNewAdminEmail] = useState("");
 
+  // Dynamic ONU Report statistics states
+  const [onuFallecidos, setOnuFallecidos] = useState(1430);
+  const [onuHeridos, setOnuHeridos] = useState(3360);
+  const [onuDesaparecidos, setOnuDesaparecidos] = useState("+50,000");
+  const [onuDescripcion, setOnuDescripcion] = useState("Doblete sísmico Mw 7.2 y 7.5 con epicentro en Yaracuy. Zonas más afectadas: Caracas, La Guaira, Miranda, Carabobo y Yaracuy.");
+  const [onuRespuesta, setOnuRespuesta] = useState("La ONU liberó USD 15 millones de emergencia. Más de 30 equipos USAR de más de 20 países con 1,600+ especialistas INSARAG operan activamente.");
+  
+  const [isONUEditing, setIsONUEditing] = useState(false);
+  const [editOnuFallecidos, setEditOnuFallecidos] = useState(1430);
+  const [editOnuHeridos, setEditOnuHeridos] = useState(3360);
+  const [editOnuDesaparecidos, setEditOnuDesaparecidos] = useState("+50,000");
+  const [editOnuDescripcion, setEditOnuDescripcion] = useState("");
+  const [editOnuRespuesta, setEditOnuRespuesta] = useState("");
+
   const [cercaDeMi, setCercaDeMi] = useState(false);
   const [userLocation, setUserLocation] = useState<[number, number] | null>(null);
   const [searchQuery, setSearchQuery] = useState("");
@@ -483,6 +497,47 @@ export default function HomePage() {
     setIsPsychFormOpen(false);
   };
 
+  const handleSaveONUReport = async (e: React.FormEvent) => {
+    e.preventDefault();
+    const payload = {
+      fallecidos: editOnuFallecidos,
+      heridos: editOnuHeridos,
+      desaparecidos: editOnuDesaparecidos,
+      descripcion: editOnuDescripcion,
+      respuesta: editOnuRespuesta,
+      actualizado_at: new Date().toISOString(),
+    };
+
+    if (isSupabaseConfigured && supabase) {
+      const { error } = await supabase
+        .from("onu_report")
+        .update(payload)
+        .eq("id", 1);
+      if (error) {
+        console.error("Error updating ONU report:", error);
+        alert("Error al actualizar cifras ONU: " + error.message);
+        return;
+      }
+    }
+
+    setOnuFallecidos(editOnuFallecidos);
+    setOnuHeridos(editOnuHeridos);
+    setOnuDesaparecidos(editOnuDesaparecidos);
+    setOnuDescripcion(editOnuDescripcion);
+    setOnuRespuesta(editOnuRespuesta);
+    setIsONUEditing(false);
+    alert("¡Cifras del Reporte ONU actualizadas con éxito!");
+  };
+
+  const handleStartEditONU = () => {
+    setEditOnuFallecidos(onuFallecidos);
+    setEditOnuHeridos(onuHeridos);
+    setEditOnuDesaparecidos(onuDesaparecidos);
+    setEditOnuDescripcion(onuDescripcion);
+    setEditOnuRespuesta(onuRespuesta);
+    setIsONUEditing(true);
+  };
+
   const getDistance = (lat1: number, lon1: number, lat2: number, lon2: number) => {
     const R = 6371;
     const dLat = ((lat2 - lat1) * Math.PI) / 180;
@@ -592,6 +647,20 @@ export default function HomePage() {
           .order("nombre");
         if (psychs && !psychErr) {
           setPsychologists(psychs);
+        }
+
+        // Fetch ONU report statistics
+        const { data: onuData } = await supabase
+          .from("onu_report")
+          .select("*")
+          .eq("id", 1)
+          .single();
+        if (onuData) {
+          setOnuFallecidos(onuData.fallecidos);
+          setOnuHeridos(onuData.heridos);
+          setOnuDesaparecidos(onuData.desaparecidos);
+          setOnuDescripcion(onuData.descripcion);
+          setOnuRespuesta(onuData.respuesta);
         }
       } else {
         const local = localStorage.getItem("punto_de_apoyo_puntos");
@@ -1711,124 +1780,214 @@ export default function HomePage() {
                     Cifras del Reporte ONU
                   </h3>
                   <span className="text-[8px] text-slate-500 font-bold uppercase tracking-wider block mt-0.5">
-                    Fuente oficial: OCHA / INSARAG · Actualizado 27 Jun 2026
+                    Fuente oficial: OCHA / INSARAG · Actualizado en tiempo real
                   </span>
                 </div>
               </div>
               <button
-                onClick={() => setIsONUReportOpen(false)}
+                onClick={() => {
+                  setIsONUReportOpen(false);
+                  setIsONUEditing(false);
+                }}
                 className="w-7 h-7 rounded-xl bg-slate-950 border border-slate-700 text-slate-400 hover:text-white flex items-center justify-center cursor-pointer transition"
               >
                 <X className="w-4 h-4" />
               </button>
             </div>
 
-            <div className="flex flex-col gap-4 text-xs leading-relaxed font-sans">
-              {/* Stats Grid */}
-              <div className="grid grid-cols-3 gap-3">
-                <div className="bg-slate-950/60 p-3 rounded-2xl border border-slate-800 flex flex-col items-center justify-center text-center shadow-lg">
-                  <span className="text-xl mb-1">💀</span>
-                  <span className="text-[9px] font-extrabold text-slate-500 uppercase tracking-wider">Fallecidos</span>
-                  <span className="text-lg font-black text-rose-500 mt-0.5">1,430</span>
-                  <span className="text-[8px] text-slate-600 mt-0.5">confirmados</span>
+            {isONUEditing ? (
+              <form onSubmit={handleSaveONUReport} className="flex flex-col gap-3 text-xs leading-relaxed">
+                <div className="grid grid-cols-3 gap-2">
+                  <div className="flex flex-col gap-1">
+                    <label className="text-[8px] font-extrabold text-slate-500 uppercase tracking-wider text-center">Fallecidos</label>
+                    <input
+                      type="number"
+                      required
+                      value={editOnuFallecidos}
+                      onChange={(e) => setEditOnuFallecidos(Number(e.target.value))}
+                      className="w-full px-2 py-1.5 bg-slate-950 border border-slate-850 rounded-xl text-slate-200 focus:outline-none focus:border-orange-500 transition-colors text-center font-bold text-xs"
+                    />
+                  </div>
+                  <div className="flex flex-col gap-1">
+                    <label className="text-[8px] font-extrabold text-slate-500 uppercase tracking-wider text-center">Heridos</label>
+                    <input
+                      type="number"
+                      required
+                      value={editOnuHeridos}
+                      onChange={(e) => setEditOnuHeridos(Number(e.target.value))}
+                      className="w-full px-2 py-1.5 bg-slate-950 border border-slate-850 rounded-xl text-slate-200 focus:outline-none focus:border-orange-500 transition-colors text-center font-bold text-xs"
+                    />
+                  </div>
+                  <div className="flex flex-col gap-1">
+                    <label className="text-[8px] font-extrabold text-slate-500 uppercase tracking-wider text-center">Desaparecidos</label>
+                    <input
+                      type="text"
+                      required
+                      value={editOnuDesaparecidos}
+                      onChange={(e) => setEditOnuDesaparecidos(e.target.value)}
+                      className="w-full px-2 py-1.5 bg-slate-950 border border-slate-850 rounded-xl text-slate-200 focus:outline-none focus:border-orange-500 transition-colors text-center font-bold text-xs"
+                    />
+                  </div>
                 </div>
-                <div className="bg-slate-950/60 p-3 rounded-2xl border border-slate-800 flex flex-col items-center justify-center text-center shadow-lg">
-                  <span className="text-xl mb-1">🤕</span>
-                  <span className="text-[9px] font-extrabold text-slate-500 uppercase tracking-wider">Heridos</span>
-                  <span className="text-lg font-black text-amber-500 mt-0.5">3,360</span>
-                  <span className="text-[8px] text-slate-600 mt-0.5">reportados</span>
-                </div>
-                <div className="bg-slate-950/60 p-3 rounded-2xl border border-slate-800 flex flex-col items-center justify-center text-center shadow-lg">
-                  <span className="text-xl mb-1">🔍</span>
-                  <span className="text-[9px] font-extrabold text-slate-500 uppercase tracking-wider">Desapar.</span>
-                  <span className="text-lg font-black text-sky-500 mt-0.5">+50,000</span>
-                  <span className="text-[8px] text-slate-600 mt-0.5">preliminar</span>
-                </div>
-              </div>
 
-              {/* Context */}
-              <div className="bg-slate-950/40 p-3 rounded-2xl border border-slate-800 flex flex-col gap-2.5">
-                <div>
-                  <h4 className="font-extrabold text-orange-400 uppercase tracking-widest text-[9px] mb-1">
-                    Emergencia Sísmica · 24 de Junio 2026
+                <div className="flex flex-col gap-1">
+                  <label className="text-[8px] font-extrabold text-slate-500 uppercase tracking-wider">Detalles de Emergencia</label>
+                  <textarea
+                    rows={3}
+                    required
+                    value={editOnuDescripcion}
+                    onChange={(e) => setEditOnuDescripcion(e.target.value)}
+                    className="w-full px-3 py-2 bg-slate-950 border border-slate-850 rounded-xl text-slate-200 focus:outline-none focus:border-orange-500 transition-colors resize-none text-[11px]"
+                  />
+                </div>
+
+                <div className="flex flex-col gap-1">
+                  <label className="text-[8px] font-extrabold text-slate-500 uppercase tracking-wider">Respuesta Humanitaria Internacional</label>
+                  <textarea
+                    rows={3}
+                    required
+                    value={editOnuRespuesta}
+                    onChange={(e) => setEditOnuRespuesta(e.target.value)}
+                    className="w-full px-3 py-2 bg-slate-950 border border-slate-850 rounded-xl text-slate-200 focus:outline-none focus:border-orange-500 transition-colors resize-none text-[11px]"
+                  />
+                </div>
+
+                <div className="flex items-center gap-3 border-t border-slate-850 pt-3 mt-1">
+                  <button
+                    type="button"
+                    onClick={() => setIsONUEditing(false)}
+                    className="flex-1 py-2 bg-slate-950 hover:bg-slate-850 border border-slate-850 hover:border-slate-700 text-slate-400 hover:text-white rounded-xl transition cursor-pointer text-[10px] font-bold"
+                  >
+                    Cancelar
+                  </button>
+                  <button
+                    type="submit"
+                    className="flex-1 py-2 bg-orange-650 hover:bg-orange-600 text-white rounded-xl transition cursor-pointer text-[10px] font-bold shadow-lg shadow-orange-950/20"
+                  >
+                    Guardar
+                  </button>
+                </div>
+              </form>
+            ) : (
+              <div className="flex flex-col gap-4 text-xs leading-relaxed font-sans">
+                {/* Stats Grid */}
+                <div className="grid grid-cols-3 gap-3">
+                  <div className="bg-slate-950/60 p-3 rounded-2xl border border-slate-800 flex flex-col items-center justify-center text-center shadow-lg">
+                    <span className="text-xl mb-1">💀</span>
+                    <span className="text-[9px] font-extrabold text-slate-500 uppercase tracking-wider">Fallecidos</span>
+                    <span className="text-lg font-black text-rose-500 mt-0.5">{onuFallecidos.toLocaleString()}</span>
+                    <span className="text-[8px] text-slate-600 mt-0.5">confirmados</span>
+                  </div>
+                  <div className="bg-slate-950/60 p-3 rounded-2xl border border-slate-800 flex flex-col items-center justify-center text-center shadow-lg">
+                    <span className="text-xl mb-1">🤕</span>
+                    <span className="text-[9px] font-extrabold text-slate-500 uppercase tracking-wider">Heridos</span>
+                    <span className="text-lg font-black text-amber-500 mt-0.5">{onuHeridos.toLocaleString()}</span>
+                    <span className="text-[8px] text-slate-600 mt-0.5">reportados</span>
+                  </div>
+                  <div className="bg-slate-950/60 p-3 rounded-2xl border border-slate-800 flex flex-col items-center justify-center text-center shadow-lg">
+                    <span className="text-xl mb-1">🔍</span>
+                    <span className="text-[9px] font-extrabold text-slate-500 uppercase tracking-wider">Desapar.</span>
+                    <span className="text-lg font-black text-sky-500 mt-0.5">{onuDesaparecidos}</span>
+                    <span className="text-[8px] text-slate-600 mt-0.5">preliminar</span>
+                  </div>
+                </div>
+
+                {/* Context */}
+                <div className="bg-slate-950/40 p-3 rounded-2xl border border-slate-800 flex flex-col gap-2.5">
+                  <div>
+                    <h4 className="font-extrabold text-orange-400 uppercase tracking-widest text-[9px] mb-1">
+                      Emergencia Sísmica
+                    </h4>
+                    <p className="text-[11px] text-slate-300">
+                      {onuDescripcion}
+                    </p>
+                  </div>
+                  <div className="border-t border-slate-800/60 pt-2.5">
+                    <h4 className="font-extrabold text-orange-400 uppercase tracking-widest text-[9px] mb-1">
+                      Respuesta Internacional
+                    </h4>
+                    <p className="text-[11px] text-slate-300">
+                      {onuRespuesta}
+                    </p>
+                  </div>
+                </div>
+
+                {/* Official Links */}
+                <div className="flex flex-col gap-2">
+                  <h4 className="font-extrabold text-slate-400 uppercase tracking-widest text-[9px] px-0.5">
+                    🔗 Fuentes Oficiales de la ONU
                   </h4>
-                  <p className="text-[11px] text-slate-300">
-                    Doblete sísmico <strong className="text-white">Mw 7.2 y 7.5</strong> con epicentro en Yaracuy. Zonas más afectadas: Caracas, La Guaira, Miranda, Carabobo y Yaracuy. Las cifras de desaparecidos son estimaciones preliminares de OCHA en proceso de validación.
-                  </p>
+                  <a
+                    href="https://reliefweb.int/disaster/eq-2026-000109-ven"
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="flex items-center gap-3 p-3 rounded-2xl bg-blue-950/40 border border-blue-900/60 hover:border-blue-600/70 hover:bg-blue-950/70 transition group"
+                  >
+                    <span className="text-lg">🌐</span>
+                    <div className="flex flex-col">
+                      <span className="text-[11px] font-bold text-blue-300 group-hover:text-blue-200">ReliefWeb · OCHA</span>
+                      <span className="text-[9px] text-slate-500">Venezuela: Earthquakes (June 2026) – Situación completa</span>
+                    </div>
+                    <span className="ml-auto text-slate-600 group-hover:text-blue-400 text-xs">↗</span>
+                  </a>
+                  <a
+                    href="https://www.unocha.org/venezuela"
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="flex items-center gap-3 p-3 rounded-2xl bg-blue-950/40 border border-blue-900/60 hover:border-blue-600/70 hover:bg-blue-950/70 transition group"
+                  >
+                    <span className="text-lg">🇺🇳</span>
+                    <div className="flex flex-col">
+                      <span className="text-[11px] font-bold text-blue-300 group-hover:text-blue-200">OCHA Venezuela</span>
+                      <span className="text-[9px] text-slate-500">unocha.org · Coordinación Humanitaria Oficial</span>
+                    </div>
+                    <span className="ml-auto text-slate-600 group-hover:text-blue-400 text-xs">↗</span>
+                  </a>
+                  <a
+                    href="https://www.insarag.org"
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="flex items-center gap-3 p-3 rounded-2xl bg-blue-950/40 border border-blue-900/60 hover:border-blue-600/70 hover:bg-blue-950/70 transition group"
+                  >
+                    <span className="text-lg">🚨</span>
+                    <div className="flex flex-col">
+                      <span className="text-[11px] font-bold text-blue-300 group-hover:text-blue-200">INSARAG · ONU</span>
+                      <span className="text-[9px] text-slate-500">Equipos internacionales de Búsqueda y Rescate Urbano</span>
+                    </div>
+                    <span className="ml-auto text-slate-600 group-hover:text-blue-400 text-xs">↗</span>
+                  </a>
+                  <a
+                    href="https://www.paho.org/es/venezuela"
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="flex items-center gap-3 p-3 rounded-2xl bg-blue-950/40 border border-blue-900/60 hover:border-blue-600/70 hover:bg-blue-950/70 transition group"
+                  >
+                    <span className="text-lg">🏥</span>
+                    <div className="flex flex-col">
+                      <span className="text-[11px] font-bold text-blue-300 group-hover:text-blue-200">OPS / OMS Venezuela</span>
+                      <span className="text-[9px] text-slate-500">paho.org · Respuesta sanitaria y epidemiológica</span>
+                    </div>
+                    <span className="ml-auto text-slate-600 group-hover:text-blue-400 text-xs">↗</span>
+                  </a>
                 </div>
-                <div className="border-t border-slate-800/60 pt-2.5">
-                  <h4 className="font-extrabold text-orange-400 uppercase tracking-widest text-[9px] mb-1">
-                    Respuesta Internacional
-                  </h4>
-                  <p className="text-[11px] text-slate-300">
-                    La ONU liberó <strong className="text-white">USD 15 millones</strong> de emergencia. Más de <strong className="text-white">30 equipos USAR</strong> de más de 20 países con 1,600+ especialistas INSARAG operan activamente.
-                  </p>
-                </div>
-              </div>
 
-              {/* Official Links */}
-              <div className="flex flex-col gap-2">
-                <h4 className="font-extrabold text-slate-400 uppercase tracking-widest text-[9px] px-0.5">
-                  🔗 Fuentes Oficiales de la ONU
-                </h4>
-                <a
-                  href="https://reliefweb.int/disaster/eq-2026-000109-ven"
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="flex items-center gap-3 p-3 rounded-2xl bg-blue-950/40 border border-blue-900/60 hover:border-blue-600/70 hover:bg-blue-950/70 transition group"
-                >
-                  <span className="text-lg">🌐</span>
-                  <div className="flex flex-col">
-                    <span className="text-[11px] font-bold text-blue-300 group-hover:text-blue-200">ReliefWeb · OCHA</span>
-                    <span className="text-[9px] text-slate-500">Venezuela: Earthquakes (June 2026) – Situación completa</span>
-                  </div>
-                  <span className="ml-auto text-slate-600 group-hover:text-blue-400 text-xs">↗</span>
-                </a>
-                <a
-                  href="https://www.unocha.org/venezuela"
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="flex items-center gap-3 p-3 rounded-2xl bg-blue-950/40 border border-blue-900/60 hover:border-blue-600/70 hover:bg-blue-950/70 transition group"
-                >
-                  <span className="text-lg">🇺🇳</span>
-                  <div className="flex flex-col">
-                    <span className="text-[11px] font-bold text-blue-300 group-hover:text-blue-200">OCHA Venezuela</span>
-                    <span className="text-[9px] text-slate-500">unocha.org · Coordinación Humanitaria Oficial</span>
-                  </div>
-                  <span className="ml-auto text-slate-600 group-hover:text-blue-400 text-xs">↗</span>
-                </a>
-                <a
-                  href="https://www.insarag.org"
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="flex items-center gap-3 p-3 rounded-2xl bg-blue-950/40 border border-blue-900/60 hover:border-blue-600/70 hover:bg-blue-950/70 transition group"
-                >
-                  <span className="text-lg">🚨</span>
-                  <div className="flex flex-col">
-                    <span className="text-[11px] font-bold text-blue-300 group-hover:text-blue-200">INSARAG · ONU</span>
-                    <span className="text-[9px] text-slate-500">Equipos internacionales de Búsqueda y Rescate Urbano</span>
-                  </div>
-                  <span className="ml-auto text-slate-600 group-hover:text-blue-400 text-xs">↗</span>
-                </a>
-                <a
-                  href="https://www.paho.org/es/venezuela"
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="flex items-center gap-3 p-3 rounded-2xl bg-blue-950/40 border border-blue-900/60 hover:border-blue-600/70 hover:bg-blue-950/70 transition group"
-                >
-                  <span className="text-lg">🏥</span>
-                  <div className="flex flex-col">
-                    <span className="text-[11px] font-bold text-blue-300 group-hover:text-blue-200">OPS / OMS Venezuela</span>
-                    <span className="text-[9px] text-slate-500">paho.org · Respuesta sanitaria y epidemiológica</span>
-                  </div>
-                  <span className="ml-auto text-slate-600 group-hover:text-blue-400 text-xs">↗</span>
-                </a>
-              </div>
+                <p className="text-center text-[9px] text-slate-600 px-2">
+                  Las cifras son dinámicas y pueden actualizarse conforme avancen las labores de rescate. Consulta las fuentes oficiales para los datos más recientes.
+                </p>
 
-              <p className="text-center text-[9px] text-slate-600 px-2">
-                Las cifras son dinámicas y pueden actualizarse conforme avancen las labores de rescate. Consulta las fuentes oficiales para los datos más recientes.
-              </p>
-            </div>
+                {/* Botón de edición para administradores */}
+                {isAdmin && (
+                  <div className="border-t border-slate-800/80 pt-3 flex justify-end">
+                    <button
+                      onClick={handleStartEditONU}
+                      className="px-3 py-1.5 text-[9px] font-extrabold text-orange-400 bg-orange-950/20 border border-orange-900/60 rounded-xl hover:bg-orange-600 hover:text-white transition flex items-center gap-1.5 cursor-pointer"
+                    >
+                      ✏️ Editar Cifras ONU
+                    </button>
+                  </div>
+                )}
+              </div>
+            )}
           </div>
         </div>
       )}

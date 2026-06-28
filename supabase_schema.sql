@@ -28,3 +28,21 @@ CREATE TABLE IF NOT EXISTS admins (
 -- 3. Insertar al dueño de la app como administrador por defecto
 INSERT INTO admins (email) VALUES ('sergioantia11@gmail.com')
 ON CONFLICT (email) DO NOTHING;
+
+-- 4. Crear la tabla de reporte ONU
+CREATE TABLE IF NOT EXISTS onu_report (
+  id INT PRIMARY KEY DEFAULT 1,
+  fallecidos INT DEFAULT 1430,
+  heridos INT DEFAULT 3360,
+  desaparecidos TEXT DEFAULT '+50,000',
+  descripcion TEXT DEFAULT 'Doblete sísmico Mw 7.2 y 7.5 con epicentro en Yaracuy. Zonas más afectadas: Caracas, La Guaira, Miranda, Carabobo y Yaracuy.',
+  respuesta TEXT DEFAULT 'La ONU liberó USD 15 millones de emergencia. Más de 30 equipos USAR de más de 20 países con 1,600+ especialistas INSARAG operan activamente.',
+  actualizado_at TIMESTAMP WITH TIME ZONE DEFAULT timezone('utc'::text, now())
+);
+
+INSERT INTO onu_report (id, fallecidos, heridos, desaparecidos, descripcion, respuesta)
+VALUES (1, 1430, 3360, '+50,000', 'Doblete sísmico Mw 7.2 y 7.5 con epicentro en Yaracuy. Zonas más afectadas: Caracas, La Guaira, Miranda, Carabobo y Yaracuy.', 'La ONU liberó USD 15 millones de emergencia. Más de 30 equipos USAR de más de 20 países con 1,600+ especialistas INSARAG operan activamente.')
+ON CONFLICT (id) DO NOTHING;
+
+-- Deshabilitar RLS para onu_report para permitir lecturas y modificaciones
+ALTER TABLE onu_report DISABLE ROW LEVEL SECURITY;

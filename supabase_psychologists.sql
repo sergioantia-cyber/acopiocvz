@@ -16,3 +16,7 @@ CREATE TABLE IF NOT EXISTS psychologists (
   activo BOOLEAN DEFAULT true,
   created_at TIMESTAMP WITH TIME ZONE DEFAULT timezone('utc'::text, now())
 );
+
+-- Deshabilitar Row Level Security (RLS) para permitir que la app inserte y modifique
+-- (Igual al funcionamiento de la tabla 'reports')
+ALTER TABLE psychologists DISABLE ROW LEVEL SECURITY;
