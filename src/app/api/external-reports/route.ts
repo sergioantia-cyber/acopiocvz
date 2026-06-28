@@ -256,6 +256,54 @@ export async function GET(request: Request) {
     console.error("Error fetching Ayuda por Venezuela centers CSV:", err);
   }
 
+  // 3.5 Fetch WiFi points from OpenStreetMap (Overpass API)
+  try {
+    const wifiQuery = `
+      [out:json][timeout:5];
+      area["ISO3166-1"="VE"]->.searchArea;
+      (
+        node["internet_access"](area.searchArea);
+        node["wifi"](area.searchArea);
+      );
+      out body 150;
+    `;
+    const osmRes = await fetch("https://overpass.kumi.systems/api/interpreter?data=" + encodeURIComponent(wifiQuery), {
+      next: { revalidate: 300 }, // Cache for 5 minutes
+      signal: AbortSignal.timeout(5000), // 5s timeout
+    });
+    if (osmRes.ok) {
+      const osmData = await osmRes.json();
+      if (osmData && Array.isArray(osmData.elements)) {
+        osmData.elements.forEach((el: any) => {
+          if (!el.lat || !el.lon) return;
+          const name = el.tags?.name || el.tags?.["addr:housename"] || "Punto de Acceso WiFi";
+          const addr = el.tags?.["addr:street"] 
+            ? `${el.tags?.["addr:street"]} ${el.tags?.["addr:housenumber"] || ""}, ${el.tags?.["addr:city"] || ""}`.trim()
+            : "Ubicación reportada en OpenStreetMap";
+          
+          reports.push({
+            id: `osm-wifi-${el.id}`,
+            tipo: "ofrece",
+            categoria: "senal",
+            descripcion: `Punto de acceso WiFi público / comunitario. Proveedor/Lugar: ${el.tags?.brand || name}. Notas: Acceso a internet reportado libre o de cortesía.`,
+            lat: el.lat,
+            lng: el.lon,
+            confirmations: 15, // OSM verified tag
+            creadoAt: new Date().toISOString(),
+            expiresAt: new Date(Date.now() + 365 * 24 * 3600000).toISOString(),
+            fuente: "OpenStreetMap",
+            nombre: `📶 WiFi: ${name}`,
+            direccion: addr,
+            aceptan: "Acceso libre a Internet",
+            region: el.tags?.["addr:city"] || "Venezuela",
+          });
+        });
+      }
+    }
+  } catch (err) {
+    console.error("Error fetching OSM WiFi points:", err);
+  }
+
   // 4. Inject Ureña community point requested by the user as fallback (if not already present)
   if (!reports.some(r => r.nombre?.toLowerCase().includes("ureña") && r.lat === 7.9208)) {
     const urenaPoint: PuntoReportado = {
