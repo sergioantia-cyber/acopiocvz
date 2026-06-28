@@ -1073,7 +1073,7 @@ export default function HomePage() {
             setPuntos((prev) =>
               prev.map((p) =>
                 p.id === updatedPoint.id
-                  ? { ...p, lat: updatedPoint.lat, lng: updatedPoint.lng, aprobado: updatedPoint.aprobado }
+                  ? { ...p, ...updatedPoint }
                   : p
               )
             );
@@ -1831,10 +1831,15 @@ export default function HomePage() {
               {/* Últimas Noticias Button */}
               <button
                 onClick={() => setIsNewsOpen(true)}
-                className="w-11 h-11 rounded-full bg-slate-900/90 border border-slate-800 hover:border-slate-700 text-sky-400 hover:text-sky-350 flex items-center justify-center font-bold text-base shadow-2xl transition-all duration-300 transform hover:scale-110 pointer-events-auto cursor-pointer self-end"
+                className="relative w-11 h-11 rounded-full bg-slate-900/90 border border-slate-800 hover:border-slate-700 text-sky-400 hover:text-sky-350 flex items-center justify-center font-bold text-base shadow-2xl transition-all duration-300 transform hover:scale-110 pointer-events-auto cursor-pointer self-end"
                 title="Últimas Noticias Oficiales"
               >
                 📢
+                {puntos.filter((p) => p.tipo === "noticia").length > 0 && (
+                  <span className="absolute -top-1 -right-1 bg-sky-500 text-slate-950 text-[9px] font-black w-4 h-4 rounded-full flex items-center justify-center border border-slate-900 shadow-lg shadow-sky-500/30 animate-pulse">
+                    {puntos.filter((p) => p.tipo === "noticia").length}
+                  </span>
+                )}
               </button>
 
               {/* Credits & Help Button (?) */}
