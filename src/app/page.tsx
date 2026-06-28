@@ -73,15 +73,73 @@ const MOCK_PERSONS = [
   { id: "3", nombre: "José Gregorio Rivas", edad: 62, estado: "Herido Leve", ubicacion: "Hospital Domingo Luciani", contacto: "0416-2223344" },
 ];
 
-const PERIODIC_ELEMENTS = [
-  { symbol: "Ag", name: "Agua", emoji: "💧", category: "suministros", atomicNumber: 1, percentage: 68, barColor: "bg-sky-500" },
-  { symbol: "Al", name: "Alimentos", emoji: "🍲", category: "suministros", atomicNumber: 2, percentage: 45, barColor: "bg-amber-500" },
-  { symbol: "El", name: "Electricidad", emoji: "⚡", category: "energia", atomicNumber: 3, percentage: 22, barColor: "bg-yellow-400" },
-  { symbol: "Co", name: "Conectividad", emoji: "📶", category: "senal", atomicNumber: 4, percentage: 51, barColor: "bg-indigo-500" },
-  { symbol: "Me", name: "Medicinas", emoji: "💊", category: "salud", atomicNumber: 5, percentage: 30, barColor: "bg-rose-500" },
-  { symbol: "Cm", name: "Camas / Refugio", emoji: "🛏️", category: "suministros", atomicNumber: 6, percentage: 40, barColor: "bg-emerald-500" },
-  { symbol: "Tr", name: "Transporte", emoji: "🚗", category: "movilidad", atomicNumber: 7, percentage: 58, barColor: "bg-teal-500" },
-  { symbol: "Pe", name: "Alertas", emoji: "⚠️", category: "peligro", atomicNumber: 8, percentage: 87, barColor: "bg-red-600" },
+// Main filter categories - clear, user-friendly, pill-style
+const MAIN_FILTERS = [
+  {
+    id: "hospital",
+    name: "Hospitales",
+    shortName: "Hospitales",
+    emoji: "🏥",
+    color: "from-rose-600 to-rose-500",
+    border: "border-rose-500/50",
+    glow: "shadow-rose-500/25",
+    ring: "ring-rose-500/40",
+    bg: "bg-rose-950/60",
+    textActive: "text-rose-100",
+    description: "Centros médicos, clínicas y puestos de salud activos"
+  },
+  {
+    id: "acopio",
+    name: "Centros de Acopio",
+    shortName: "Acopio",
+    emoji: "📦",
+    color: "from-sky-600 to-sky-500",
+    border: "border-sky-500/50",
+    glow: "shadow-sky-500/25",
+    ring: "ring-sky-500/40",
+    bg: "bg-sky-950/60",
+    textActive: "text-sky-100",
+    description: "Puntos de recolección de agua, alimentos, ropa y suministros"
+  },
+  {
+    id: "emergencia",
+    name: "Emergencias",
+    shortName: "Emergencias",
+    emoji: "🆘",
+    color: "from-orange-600 to-amber-500",
+    border: "border-orange-500/50",
+    glow: "shadow-orange-500/25",
+    ring: "ring-orange-500/40",
+    bg: "bg-orange-950/60",
+    textActive: "text-orange-100",
+    description: "Reportes de peligro, rescate, deslaves e inundaciones activos"
+  },
+  {
+    id: "vehiculos",
+    name: "Vehículos / Maquinaria",
+    shortName: "Vehículos",
+    emoji: "🚛",
+    color: "from-teal-600 to-teal-500",
+    border: "border-teal-500/50",
+    glow: "shadow-teal-500/25",
+    ring: "ring-teal-500/40",
+    bg: "bg-teal-950/60",
+    textActive: "text-teal-100",
+    description: "Camiones de suministros, maquinaria pesada y transporte de ayuda"
+  },
+  {
+    id: "wifi",
+    name: "Puntos WiFi",
+    shortName: "WiFi",
+    emoji: "📶",
+    color: "from-violet-600 to-violet-500",
+    border: "border-violet-500/50",
+    glow: "shadow-violet-500/25",
+    ring: "ring-violet-500/40",
+    bg: "bg-violet-950/60",
+    textActive: "text-violet-100",
+    description: "Lugares con señal WiFi gratuita o acceso a internet comunitario"
+  },
 ];
 
 export default function HomePage() {
@@ -97,6 +155,7 @@ export default function HomePage() {
   const [categoriaFilter, setCategoriaFilter] = useState<string>("todos");
   const [selectedElement, setSelectedElement] = useState<string | null>(null);
   const [activeElementMenu, setActiveElementMenu] = useState<string | null>(null);
+  const [activeMainFilter, setActiveMainFilter] = useState<string | null>(null);
   const [cercaDeMi, setCercaDeMi] = useState(false);
   const [userLocation, setUserLocation] = useState<[number, number] | null>(null);
   const [searchQuery, setSearchQuery] = useState("");
@@ -221,13 +280,7 @@ export default function HomePage() {
         });
     }
 
-    // Update the periodic elements percentages dynamically
-    Object.entries(editPercentages).forEach(([symbol, val]) => {
-      const el = PERIODIC_ELEMENTS.find(e => e.symbol === symbol);
-      if (el) {
-        el.percentage = val;
-      }
-    });
+    // (percentages UI removed — now using main category filters)
 
     setEditingPunto(null);
     alert("¡Centro actualizado con éxito en tiempo real!");
@@ -458,40 +511,35 @@ export default function HomePage() {
   };
 
   const filteredPuntos = puntos.filter((punto) => {
-    // Periodic Table Element Filter
-    if (selectedElement) {
-      const desc = (punto.descripcion || "").toLowerCase() + " " + (punto.nombre || "").toLowerCase() + " " + (punto.aceptan || "").toLowerCase();
-      
-      switch (selectedElement) {
-        case "Ag": // Agua
-          if (punto.categoria !== "suministros" || (!desc.includes("agua") && !desc.includes("potable") && !desc.includes("hidra") && !desc.includes("comida") && !desc.includes("alimento") && !desc.includes("acopio"))) return false;
-          // Let's make sure it is related to water
-          if (!desc.includes("agua") && !desc.includes("potable") && !desc.includes("botell") && !desc.includes("recip")) return false;
-          break;
-        case "Al": // Alimentos
-          if (punto.categoria !== "suministros" || (!desc.includes("aliment") && !desc.includes("comida") && !desc.includes("nutri") && !desc.includes("cena") && !desc.includes("seco"))) return false;
-          break;
-        case "El": // Electricidad
-          if (punto.categoria !== "energia") return false;
-          break;
-        case "Co": // Conectividad / Señal
-          if (punto.categoria !== "senal") return false;
-          break;
-        case "Me": // Medicinas
+    // Main category filter (pill buttons)
+    if (activeMainFilter) {
+      const desc = (punto.descripcion || "").toLowerCase() + " " + (punto.nombre || "").toLowerCase() + " " + (punto.aceptan || "").toLowerCase() + " " + (punto.categoria || "").toLowerCase();
+      const fuente = (punto.fuente || "").toLowerCase();
+
+      switch (activeMainFilter) {
+        case "hospital":
+          // Hospitals and health centers
           if (punto.categoria !== "salud") return false;
           break;
-        case "Cm": // Camas / Refugio
-          if (punto.categoria !== "suministros" || (!desc.includes("cama") && !desc.includes("refugio") && !desc.includes("albergue") && !desc.includes("colchon") && !desc.includes("dormir"))) return false;
+        case "acopio":
+          // Collection centers: suministros category OR contains acopio keywords
+          if (punto.categoria !== "suministros" && !desc.includes("acopio") && !desc.includes("centro de recolec") && !desc.includes("mrw") && !fuente.includes("ayuda por venezuela")) return false;
           break;
-        case "Tr": // Transporte
-          if (punto.categoria !== "movilidad") return false;
+        case "emergencia":
+          // Active emergency reports: peligro category OR rescue/emergency keywords
+          if (punto.categoria !== "peligro" && !desc.includes("rescate") && !desc.includes("derrumbe") && !desc.includes("inundaci") && !desc.includes("emergencia") && !desc.includes("peligro")) return false;
           break;
-        case "Pe": // Alertas
-          if (punto.categoria !== "peligro") return false;
+        case "vehiculos":
+          // Vehicles / heavy machinery / supply trucks
+          if (punto.categoria !== "movilidad" && !desc.includes("camion") && !desc.includes("vehiculo") && !desc.includes("maquinaria") && !desc.includes("transporte") && !desc.includes("carga")) return false;
+          break;
+        case "wifi":
+          // WiFi/internet access points
+          if (punto.categoria !== "senal" && !desc.includes("wifi") && !desc.includes("internet") && !desc.includes("señal") && !desc.includes("conect") && !fuente.includes("openstreetmap")) return false;
           break;
       }
     } else {
-      // Standard dropdown filters
+      // Standard dropdown filters when no main filter active
       if (tipoFilter !== "todos" && punto.tipo !== tipoFilter) {
         return false;
       }
@@ -612,137 +660,57 @@ export default function HomePage() {
               />
             </div>
 
-            {/* 3. Top Interactive Resource Bubbles */}
-            <div className="absolute top-[96px] left-4 right-4 z-20 flex flex-col items-center gap-2.5 pointer-events-none">
-              <div className="flex items-center gap-3 overflow-x-auto pb-2 pointer-events-auto max-w-full px-4 scrollbar-none justify-center w-full">
-                {PERIODIC_ELEMENTS.map((el) => {
-                  const isSelected = selectedElement === el.symbol;
-                  const isMenuOpen = activeElementMenu === el.symbol;
+            {/* 3. Top Filter Pills — premium, horizontal, scrollable */}
+            <div className="absolute top-[96px] left-0 right-0 z-20 pointer-events-none">
+              <div className="flex items-center gap-2 overflow-x-auto pb-1 pointer-events-auto px-4 scrollbar-none">
+                {/* ALL button */}
+                <button
+                  onClick={() => setActiveMainFilter(null)}
+                  className={`flex-shrink-0 flex items-center gap-1.5 px-4 py-2 rounded-full border font-bold text-xs transition-all duration-200 backdrop-blur-md shadow-lg cursor-pointer ${
+                    activeMainFilter === null
+                      ? "bg-white text-slate-900 border-white shadow-white/20 ring-2 ring-white/40"
+                      : "bg-slate-900/90 border-slate-700/80 text-slate-400 hover:border-slate-500 hover:text-slate-200"
+                  }`}
+                >
+                  <span className="text-sm">🗺️</span>
+                  <span>Todo</span>
+                </button>
+
+                {MAIN_FILTERS.map((f) => {
+                  const isActive = activeMainFilter === f.id;
                   return (
                     <button
-                      key={el.symbol}
-                      onClick={() => {
-                        setSelectedElement(isSelected ? null : el.symbol);
-                        setActiveElementMenu(isMenuOpen ? null : el.symbol);
-                      }}
-                      className={`relative flex flex-col items-center justify-center w-12 h-12 rounded-full border shadow-lg backdrop-blur-md transition-all duration-300 transform hover:scale-110 cursor-pointer ${
-                        isSelected
-                          ? "bg-orange-500 border-orange-400 text-white shadow-orange-500/25 ring-2 ring-orange-500/50"
-                          : "bg-slate-900/90 border-slate-800/90 hover:border-slate-700 text-slate-300"
+                      key={f.id}
+                      onClick={() => setActiveMainFilter(isActive ? null : f.id)}
+                      title={f.description}
+                      className={`flex-shrink-0 flex items-center gap-2 px-4 py-2 rounded-full border font-bold text-xs transition-all duration-200 backdrop-blur-md shadow-lg cursor-pointer ${
+                        isActive
+                          ? `bg-gradient-to-r ${f.color} ${f.border} ${f.textActive} shadow-lg ${f.glow} ring-2 ${f.ring}`
+                          : `bg-slate-900/90 border-slate-700/80 text-slate-400 hover:border-slate-500 hover:text-slate-200`
                       }`}
                     >
-                      {/* Emoji */}
-                      <span className="text-[15px]">{el.emoji}</span>
-                      {/* Symbol */}
-                      <span className="text-[9px] font-black tracking-wider uppercase leading-none mt-0.5">
-                        {el.symbol}
-                      </span>
-                      {/* Mini indicator bar on the bubble edge */}
-                      <div className="absolute bottom-1 w-6 h-0.5 bg-slate-950/80 rounded-full overflow-hidden">
-                        <div style={{ width: `${el.percentage}%` }} className={`h-full ${el.barColor}`} />
-                      </div>
+                      <span className="text-sm">{f.emoji}</span>
+                      <span className="whitespace-nowrap">{f.shortName}</span>
+                      {isActive && (
+                        <span className="ml-1 w-4 h-4 rounded-full bg-white/20 flex items-center justify-center text-[9px] font-black">
+                          ✕
+                        </span>
+                      )}
                     </button>
                   );
                 })}
+
+                {/* Active filter description chip */}
+                {activeMainFilter && (() => {
+                  const f = MAIN_FILTERS.find(f => f.id === activeMainFilter);
+                  if (!f) return null;
+                  return (
+                    <div className={`flex-shrink-0 flex items-center gap-1.5 px-3 py-1.5 rounded-full ${f.bg} border ${f.border} text-slate-300 text-[10px] font-medium max-w-[200px] truncate`}>
+                      <span className="text-[10px] italic truncate">{f.description}</span>
+                    </div>
+                  );
+                })()}
               </div>
-
-              {/* Floating Individual Element Information Menu */}
-              {activeElementMenu && (() => {
-                const el = PERIODIC_ELEMENTS.find(e => e.symbol === activeElementMenu);
-                if (!el) return null;
-                const statusText = el.percentage < 40 ? "Crítico ⚠️" : el.percentage < 75 ? "Moderado ⚡" : "Óptimo ✅";
-                const statusColor = el.percentage < 40 ? "text-rose-400 bg-rose-500/10 border-rose-500/20" : el.percentage < 75 ? "text-amber-400 bg-amber-500/10 border-amber-500/20" : "text-emerald-400 bg-emerald-500/10 border-emerald-500/20";
-                
-                return (
-                  <div className="w-80 bg-slate-900/95 backdrop-blur-md border border-slate-800 rounded-2xl p-4 shadow-2xl pointer-events-auto flex flex-col gap-3 animate-in slide-in-from-top-2 duration-200">
-                    <div className="flex justify-between items-center border-b border-slate-800 pb-2">
-                      <div className="flex items-center gap-2">
-                        <span className="text-xl">{el.emoji}</span>
-                        <div>
-                          <h3 className="text-xs font-black text-white uppercase tracking-wider leading-none">
-                            {el.symbol} - {el.name}
-                          </h3>
-                          <span className="text-[8px] text-slate-500 font-bold uppercase tracking-wider block mt-0.5">
-                            Insumo #{el.atomicNumber} de Emergencia
-                          </span>
-                        </div>
-                      </div>
-                      <span className={`text-[8px] font-extrabold uppercase px-2 py-0.5 rounded-full border ${statusColor}`}>
-                        {statusText}
-                      </span>
-                    </div>
-
-                    <div className="flex flex-col gap-1">
-                      <div className="flex justify-between text-[10px] text-slate-400 font-bold">
-                        <span>Nivel de Abastecimiento</span>
-                        <span className="text-white">{el.percentage}%</span>
-                      </div>
-                      <div className="w-full bg-slate-950 h-2 rounded-full overflow-hidden border border-slate-800">
-                        <div style={{ width: `${el.percentage}%` }} className={`h-full rounded-full transition-all duration-500 ${el.barColor}`} />
-                      </div>
-                    </div>
-
-                    <p className="text-[9px] text-slate-400 leading-relaxed bg-slate-950/40 p-2 rounded-xl border border-slate-850">
-                      Este indicador calcula el promedio estimado de stock en los puntos mapeados.
-                      {el.symbol === "Ag" && " Filtra centros que distribuyen agua potable, botellones, o cisternas de apoyo."}
-                      {el.symbol === "Al" && " Filtra centros que recolectan o entregan alimentos no perecederos, comidas calientes y víveres."}
-                      {el.symbol === "El" && " Filtra centros con suministro eléctrico alternativo, plantas eléctricas activas o puntos de carga."}
-                      {el.symbol === "Co" && " Filtra centros que disponen de cobertura satelital, señal de celular estable o red Wi-Fi comunitaria."}
-                      {el.symbol === "Me" && " Filtra centros de primeros auxilios, carpas de salud o puntos de distribución de insumos médicos."}
-                      {el.symbol === "Cm" && " Filtra refugios, albergues temporales o centros con capacidad de camas y colchonetas disponibles."}
-                      {el.symbol === "Tr" && " Filtra puntos con unidades de traslado, ambulancias activas o rutas de evacuación terrestre."}
-                      {el.symbol === "Pe" && " Filtra reportes de derrumbes, inundaciones, fallas estructurales graves o zonas de alto riesgo."}
-                    </p>
-
-                    {/* Collaboration edit sliders */}
-                    {user && (
-                      <div className="bg-slate-950/80 p-2.5 rounded-xl border border-slate-850 flex flex-col gap-1.5">
-                        <label className="text-[8px] font-extrabold uppercase tracking-wider text-orange-400 block">
-                          🔧 Ajustar Abastecimiento Nacional
-                        </label>
-                        <div className="flex items-center gap-3">
-                          <input
-                            type="range"
-                            min="1"
-                            max="100"
-                            value={el.percentage}
-                            onChange={(e) => {
-                              const val = parseInt(e.target.value);
-                              // Update local periodic array object
-                              const target = PERIODIC_ELEMENTS.find(item => item.symbol === el.symbol);
-                              if (target) {
-                                target.percentage = val;
-                              }
-                              // Trigger state refresh by changing selectedElement
-                              setSelectedElement(el.symbol);
-                            }}
-                            className="flex-1 accent-orange-500 h-1 cursor-pointer bg-slate-800 rounded-lg appearance-none"
-                          />
-                          <span className="text-[10px] font-black text-slate-200 w-8 text-right">{el.percentage}%</span>
-                        </div>
-                      </div>
-                    )}
-
-                    <div className="flex gap-2">
-                      <button
-                        onClick={() => {
-                          setSelectedElement(null);
-                          setActiveElementMenu(null);
-                        }}
-                        className="flex-1 py-1.5 bg-slate-800 hover:bg-slate-700 text-slate-300 rounded-lg text-[9px] font-extrabold transition cursor-pointer"
-                      >
-                        Limpiar Filtro
-                      </button>
-                      <button
-                        onClick={() => setActiveElementMenu(null)}
-                        className="flex-1 py-1.5 bg-orange-600 hover:bg-orange-500 text-white rounded-lg text-[9px] font-extrabold transition cursor-pointer"
-                      >
-                        Cerrar Menú
-                      </button>
-                    </div>
-                  </div>
-                );
-              })()}
             </div>
 
             {/* 4. Floating Filters Card (Draggable & Collapsible Sidebar Card) */}
@@ -1250,40 +1218,7 @@ export default function HomePage() {
               </div>
             </div>
 
-            {/* Resource Percentages (Periodic Elements update) */}
-            <div className="border-t border-slate-800 pt-3">
-              <label className="text-[9px] font-bold text-slate-400 uppercase tracking-widest block mb-2">
-                Nivel de Abastecimiento por Elemento (%)
-              </label>
-              
-              <div className="grid grid-cols-2 gap-x-4 gap-y-2">
-                {PERIODIC_ELEMENTS.map((el) => (
-                  <div key={el.symbol} className="flex items-center justify-between bg-slate-950/60 p-2 rounded-xl border border-slate-800/40">
-                    <div className="flex items-center gap-1.5 font-sans">
-                      <span className="text-xs">{el.emoji}</span>
-                      <span className="text-[10px] font-black text-slate-350 uppercase">{el.symbol}</span>
-                    </div>
-                    
-                    <div className="flex items-center gap-2">
-                      <input
-                        type="range"
-                        min="1"
-                        max="100"
-                        value={editPercentages[el.symbol] ?? 50}
-                        onChange={(e) => setEditPercentages({
-                          ...editPercentages,
-                          [el.symbol]: parseInt(e.target.value)
-                        })}
-                        className="w-20 accent-orange-500 h-1 cursor-pointer bg-slate-800 rounded-lg appearance-none"
-                      />
-                      <span className="text-[10px] font-black text-slate-300 w-8 text-right">
-                        {editPercentages[el.symbol] ?? 50}%
-                      </span>
-                    </div>
-                  </div>
-                ))}
-              </div>
-            </div>
+            {/* Resource Details inside popup - no longer shown as sliders here */}
 
             {/* Save Buttons */}
             <div className="flex gap-3 border-t border-slate-800 pt-4 mt-2">
