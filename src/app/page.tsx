@@ -1547,56 +1547,123 @@ export default function HomePage() {
                     Cifras del Reporte ONU
                   </h3>
                   <span className="text-[8px] text-slate-500 font-bold uppercase tracking-wider block mt-0.5">
-                    Fuente: ONU OCHA / INSARAG
+                    Fuente oficial: OCHA / INSARAG · Actualizado 27 Jun 2026
                   </span>
                 </div>
               </div>
               <button
                 onClick={() => setIsONUReportOpen(false)}
-                className="w-7 h-7 rounded-xl bg-slate-950 border border-slate-850 text-slate-400 hover:text-white flex items-center justify-center cursor-pointer transition"
+                className="w-7 h-7 rounded-xl bg-slate-950 border border-slate-700 text-slate-400 hover:text-white flex items-center justify-center cursor-pointer transition"
               >
                 <X className="w-4 h-4" />
               </button>
             </div>
 
-            <div className="flex flex-col gap-4 text-xs leading-relaxed text-slate-350 font-sans">
+            <div className="flex flex-col gap-4 text-xs leading-relaxed font-sans">
+              {/* Stats Grid */}
               <div className="grid grid-cols-3 gap-3">
-                <div className="bg-slate-950/60 p-3 rounded-2xl border border-slate-850 flex flex-col items-center justify-center text-center shadow-lg">
+                <div className="bg-slate-950/60 p-3 rounded-2xl border border-slate-800 flex flex-col items-center justify-center text-center shadow-lg">
                   <span className="text-xl mb-1">💀</span>
                   <span className="text-[9px] font-extrabold text-slate-500 uppercase tracking-wider">Fallecidos</span>
-                  <span className="text-base font-black text-rose-500 mt-0.5">920</span>
+                  <span className="text-lg font-black text-rose-500 mt-0.5">1,430</span>
+                  <span className="text-[8px] text-slate-600 mt-0.5">confirmados</span>
                 </div>
-                <div className="bg-slate-950/60 p-3 rounded-2xl border border-slate-850 flex flex-col items-center justify-center text-center shadow-lg">
+                <div className="bg-slate-950/60 p-3 rounded-2xl border border-slate-800 flex flex-col items-center justify-center text-center shadow-lg">
                   <span className="text-xl mb-1">🤕</span>
                   <span className="text-[9px] font-extrabold text-slate-500 uppercase tracking-wider">Heridos</span>
-                  <span className="text-base font-black text-amber-500 mt-0.5">3,360</span>
+                  <span className="text-lg font-black text-amber-500 mt-0.5">3,360</span>
+                  <span className="text-[8px] text-slate-600 mt-0.5">reportados</span>
                 </div>
-                <div className="bg-slate-950/60 p-3 rounded-2xl border border-slate-850 flex flex-col items-center justify-center text-center shadow-lg">
+                <div className="bg-slate-950/60 p-3 rounded-2xl border border-slate-800 flex flex-col items-center justify-center text-center shadow-lg">
                   <span className="text-xl mb-1">🔍</span>
-                  <span className="text-[9px] font-extrabold text-slate-500 uppercase tracking-wider">Desaparecidos</span>
-                  <span className="text-base font-black text-sky-500 mt-0.5">~50k</span>
+                  <span className="text-[9px] font-extrabold text-slate-500 uppercase tracking-wider">Desapar.</span>
+                  <span className="text-lg font-black text-sky-500 mt-0.5">+50,000</span>
+                  <span className="text-[8px] text-slate-600 mt-0.5">preliminar</span>
                 </div>
               </div>
 
-              <div className="bg-slate-950/40 p-3 rounded-2xl border border-slate-850 flex flex-col gap-2.5">
+              {/* Context */}
+              <div className="bg-slate-950/40 p-3 rounded-2xl border border-slate-800 flex flex-col gap-2.5">
                 <div>
                   <h4 className="font-extrabold text-orange-400 uppercase tracking-widest text-[9px] mb-1">
-                    Evaluación de Emergencia (Junio 2026)
+                    Emergencia Sísmica · 24 de Junio 2026
                   </h4>
                   <p className="text-[11px] text-slate-300">
-                    Las cifras oficiales corresponden al impacto directo del <strong>doblete sísmico (magnitudes 7.2 y 7.5)</strong> en la región centro-norte del país. OCHA reporta una estimación de hasta 50,000 personas desaparecidas preliminares bajo los escombros en proceso de validación.
+                    Doblete sísmico <strong className="text-white">Mw 7.2 y 7.5</strong> con epicentro en Yaracuy. Zonas más afectadas: Caracas, La Guaira, Miranda, Carabobo y Yaracuy. Las cifras de desaparecidos son estimaciones preliminares de OCHA en proceso de validación.
                   </p>
                 </div>
-
                 <div className="border-t border-slate-800/60 pt-2.5">
                   <h4 className="font-extrabold text-orange-400 uppercase tracking-widest text-[9px] mb-1">
-                    Respuesta de Asistencia Internacional
+                    Respuesta Internacional
                   </h4>
                   <p className="text-[11px] text-slate-300">
-                    Naciones Unidas ha liberado 15 millones de dólares para ayuda de emergencia. Más de 30 equipos internacionales de búsqueda y rescate (USAR) que agrupan a más de 1,600 especialistas de INSARAG cooperan con las autoridades locales.
+                    La ONU liberó <strong className="text-white">USD 15 millones</strong> de emergencia. Más de <strong className="text-white">30 equipos USAR</strong> de más de 20 países con 1,600+ especialistas INSARAG operan activamente.
                   </p>
                 </div>
               </div>
+
+              {/* Official Links */}
+              <div className="flex flex-col gap-2">
+                <h4 className="font-extrabold text-slate-400 uppercase tracking-widest text-[9px] px-0.5">
+                  🔗 Fuentes Oficiales de la ONU
+                </h4>
+                <a
+                  href="https://reliefweb.int/disaster/eq-2026-000109-ven"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="flex items-center gap-3 p-3 rounded-2xl bg-blue-950/40 border border-blue-900/60 hover:border-blue-600/70 hover:bg-blue-950/70 transition group"
+                >
+                  <span className="text-lg">🌐</span>
+                  <div className="flex flex-col">
+                    <span className="text-[11px] font-bold text-blue-300 group-hover:text-blue-200">ReliefWeb · OCHA</span>
+                    <span className="text-[9px] text-slate-500">Venezuela: Earthquakes (June 2026) – Situación completa</span>
+                  </div>
+                  <span className="ml-auto text-slate-600 group-hover:text-blue-400 text-xs">↗</span>
+                </a>
+                <a
+                  href="https://www.unocha.org/venezuela"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="flex items-center gap-3 p-3 rounded-2xl bg-blue-950/40 border border-blue-900/60 hover:border-blue-600/70 hover:bg-blue-950/70 transition group"
+                >
+                  <span className="text-lg">🇺🇳</span>
+                  <div className="flex flex-col">
+                    <span className="text-[11px] font-bold text-blue-300 group-hover:text-blue-200">OCHA Venezuela</span>
+                    <span className="text-[9px] text-slate-500">unocha.org · Coordinación Humanitaria Oficial</span>
+                  </div>
+                  <span className="ml-auto text-slate-600 group-hover:text-blue-400 text-xs">↗</span>
+                </a>
+                <a
+                  href="https://www.insarag.org"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="flex items-center gap-3 p-3 rounded-2xl bg-blue-950/40 border border-blue-900/60 hover:border-blue-600/70 hover:bg-blue-950/70 transition group"
+                >
+                  <span className="text-lg">🚨</span>
+                  <div className="flex flex-col">
+                    <span className="text-[11px] font-bold text-blue-300 group-hover:text-blue-200">INSARAG · ONU</span>
+                    <span className="text-[9px] text-slate-500">Equipos internacionales de Búsqueda y Rescate Urbano</span>
+                  </div>
+                  <span className="ml-auto text-slate-600 group-hover:text-blue-400 text-xs">↗</span>
+                </a>
+                <a
+                  href="https://www.paho.org/es/venezuela"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="flex items-center gap-3 p-3 rounded-2xl bg-blue-950/40 border border-blue-900/60 hover:border-blue-600/70 hover:bg-blue-950/70 transition group"
+                >
+                  <span className="text-lg">🏥</span>
+                  <div className="flex flex-col">
+                    <span className="text-[11px] font-bold text-blue-300 group-hover:text-blue-200">OPS / OMS Venezuela</span>
+                    <span className="text-[9px] text-slate-500">paho.org · Respuesta sanitaria y epidemiológica</span>
+                  </div>
+                  <span className="ml-auto text-slate-600 group-hover:text-blue-400 text-xs">↗</span>
+                </a>
+              </div>
+
+              <p className="text-center text-[9px] text-slate-600 px-2">
+                Las cifras son dinámicas y pueden actualizarse conforme avancen las labores de rescate. Consulta las fuentes oficiales para los datos más recientes.
+              </p>
             </div>
           </div>
         </div>
