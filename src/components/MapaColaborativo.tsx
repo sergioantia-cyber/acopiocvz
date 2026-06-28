@@ -17,6 +17,7 @@ interface MapaColaborativoProps {
   onEdit?: (punto: PuntoReportado) => void;
   userLocation: [number, number] | null;
   isAdmin?: boolean;
+  isOwner?: boolean;
   onApprove?: (id: string) => void;
   onDelete?: (id: string) => void;
   onMarkerMove?: (id: string, lat: number, lng: number, prevLat: number, prevLng: number) => void;
@@ -111,6 +112,7 @@ export default function MapaColaborativo({
   onEdit,
   userLocation,
   isAdmin = false,
+  isOwner = false,
   onApprove,
   onDelete,
   onMarkerMove,
@@ -142,9 +144,14 @@ export default function MapaColaborativo({
 
   const lightCircleOpacity = Math.min(0.75, Math.max(0.15, (zoomLevel - 6) * 0.06));
 
-  // A punto is draggable if admin mode is on and it's not an external/sismo point
-  const isDraggablePunto = (punto: PuntoReportado) =>
-    isAdmin && !punto.fuente && punto.categoria !== "sismo";
+  // Dragging rules:
+  // - Any admin: can drag user-reported points (no external source, not sismo)
+  // - Owner only: can ALSO drag external-source points (acopio, hospitales, wifi, etc.) except sismo
+  const isDraggablePunto = (punto: PuntoReportado) => {
+    if (punto.categoria === "sismo") return false;
+    if (!punto.fuente) return isAdmin; // user-reported: any admin
+    return isOwner;                   // external source: owner only
+  };
 
   const renderMarker = (punto: PuntoReportado) => {
     const hasDetails = !!punto.nombre && !!punto.direccion;
@@ -431,7 +438,11 @@ export default function MapaColaborativo({
         <div className="absolute top-2 left-1/2 -translate-x-1/2 z-[500] pointer-events-none">
           <div className="flex items-center gap-2 bg-slate-900/90 backdrop-blur-md border border-orange-500/40 text-orange-300 text-[9px] font-extrabold uppercase tracking-wider px-3 py-1.5 rounded-full shadow-lg shadow-orange-500/10">
             <span>🖱️</span>
-            <span>Modo Admin — Arrastra marcadores · Ctrl+Z deshace</span>
+            <span>
+              {isOwner
+                ? "Modo Dueño — Arrastra cualquier marcador · Ctrl+Z deshace"
+                : "Modo Admin — Arrastra tus marcadores · Ctrl+Z deshace"}
+            </span>
           </div>
         </div>
       )}

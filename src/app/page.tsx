@@ -1318,6 +1318,7 @@ export default function HomePage() {
                 onEdit={handleStartEdit}
                 userLocation={userLocation}
                 isAdmin={isAdmin}
+                isOwner={isOwner}
                 onApprove={handleApprovePunto}
                 onDelete={handleDeletePunto}
                 onMarkerMove={handleMarkerMove}
