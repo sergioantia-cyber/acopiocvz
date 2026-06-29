@@ -3175,20 +3175,14 @@ export default function HomePage() {
                         </div>
                       </div>
 
-                        {p.descripcion && (
-                          <p className={`text-[10px] text-slate-400 whitespace-pre-line leading-relaxed bg-slate-900/30 p-2 rounded-xl border border-slate-900 ${expandedPsychId !== p.id ? "line-clamp-2" : ""}`}>
-                            {p.descripcion}
-                          </p>
-                        )}
-                        
-                        {expandedPsychId !== p.id && (
-                          <div className="text-center mt-[-4px]">
-                            <span className="text-[10px] text-purple-400/70 group-hover:text-purple-400 transition-colors">Ver más detalles ⬇️</span>
-                          </div>
-                        )}
-
                         {expandedPsychId === p.id && (
-                          <div className="flex flex-col gap-3 animate-in fade-in slide-in-from-top-2 duration-200">
+                          <div className="flex flex-col gap-3 animate-in fade-in slide-in-from-top-2 duration-200 mt-2">
+                            {p.descripcion && (
+                              <p className="text-[10px] text-slate-400 whitespace-pre-line leading-relaxed bg-slate-900/30 p-2 rounded-xl border border-slate-900">
+                                {p.descripcion}
+                              </p>
+                            )}
+                            
                             <div className="flex items-center gap-1.5 flex-wrap">
                               <span className="inline-block px-1.5 py-0.5 rounded bg-slate-900 text-[8px] font-bold text-slate-400 border border-slate-800/80">
                                 🎯 {p.especialidad}
