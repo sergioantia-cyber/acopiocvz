@@ -3172,6 +3172,20 @@ export default function HomePage() {
                           <span className={`text-[9px] font-extrabold block truncate ${p.es_institucion ? 'text-blue-400' : 'text-purple-400'}`}>
                             {p.titulo}
                           </span>
+                          <div className="flex items-center gap-1.5 flex-wrap mt-1">
+                            <span className="inline-block px-1.5 py-0.5 rounded bg-slate-900 text-[8px] font-bold text-slate-400 border border-slate-800/80">
+                              🎯 {p.especialidad}
+                            </span>
+                            {p.tipo_servicio === "social" ? (
+                              <span className="inline-block px-1.5 py-0.5 rounded bg-blue-955/20 text-[8px] font-extrabold text-blue-400 border border-blue-900/30 animate-pulse">
+                                🤝 Tarifa Social: {p.monto_tarifa} {p.moneda_tarifa || "USD"}
+                              </span>
+                            ) : (
+                              <span className="inline-block px-1.5 py-0.5 rounded bg-purple-955/20 text-[8px] font-extrabold text-purple-400 border border-purple-900/30">
+                                💜 100% Gratuito
+                              </span>
+                            )}
+                          </div>
                         </div>
                       </div>
 
@@ -3183,21 +3197,6 @@ export default function HomePage() {
 
                         {expandedPsychId === p.id && (
                           <div className="flex flex-col gap-3 animate-in fade-in slide-in-from-top-2 duration-200">
-                            <div className="flex items-center gap-1.5 flex-wrap">
-                              <span className="inline-block px-1.5 py-0.5 rounded bg-slate-900 text-[8px] font-bold text-slate-400 border border-slate-800/80">
-                                🎯 {p.especialidad}
-                              </span>
-                              {p.tipo_servicio === "social" ? (
-                                <span className="inline-block px-1.5 py-0.5 rounded bg-blue-955/20 text-[8px] font-extrabold text-blue-400 border border-blue-900/30 animate-pulse">
-                                  🤝 Tarifa Social: {p.monto_tarifa} {p.moneda_tarifa || "USD"}
-                                </span>
-                              ) : (
-                                <span className="inline-block px-1.5 py-0.5 rounded bg-purple-955/20 text-[8px] font-extrabold text-purple-400 border border-purple-900/30">
-                                  💜 100% Gratuito
-                                </span>
-                              )}
-                            </div>
-
                             <div className="flex items-center gap-1.5 flex-wrap">
                               <span className="text-[8px] font-bold px-1.5 py-0.5 rounded bg-slate-900 text-slate-500 border border-slate-850">
                                 🗣️ {p.idiomas || "Español"}
