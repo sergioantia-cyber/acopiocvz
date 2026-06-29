@@ -16,7 +16,8 @@ CREATE TABLE IF NOT EXISTS reports (
   region TEXT,
   whatsapp TEXT,
   aprobado BOOLEAN DEFAULT true,
-  "creadorAnonimo" BOOLEAN DEFAULT false
+  "creadorAnonimo" BOOLEAN DEFAULT false,
+  fuente TEXT
 );
 
 -- Habilitar Row Level Security (RLS) para la tabla reports

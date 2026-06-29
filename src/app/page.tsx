@@ -206,6 +206,7 @@ export default function HomePage() {
   const [isPsychFormOpen, setIsPsychFormOpen] = useState(false);
   const [editingPsych, setEditingPsych] = useState<Psychologist | null>(null);
   const [searchPsych, setSearchPsych] = useState("");
+  const [expandedPsychId, setExpandedPsychId] = useState<string | null>(null);
 
   // Psychologist Form State
   const [psychNombre, setPsychNombre] = useState("");
@@ -3136,7 +3137,8 @@ export default function HomePage() {
                   {filteredPsychs.map((p) => (
                     <div
                       key={p.id}
-                      className={`p-4 rounded-2xl border flex flex-col justify-between gap-3 shadow-lg relative group overflow-hidden hover:border-slate-800 transition-colors bg-slate-950/60 border-slate-850`}
+                      onClick={() => setExpandedPsychId(expandedPsychId === p.id ? null : p.id)}
+                      className={`p-4 rounded-2xl border flex flex-col justify-between gap-3 shadow-lg relative group overflow-hidden hover:border-slate-800 transition-colors cursor-pointer bg-slate-950/60 border-slate-850`}
                     >
                       <div className="flex gap-3">
                         {/* Foto de perfil o ícono de institución */}
@@ -3170,122 +3172,119 @@ export default function HomePage() {
                           <span className={`text-[9px] font-extrabold block truncate ${p.es_institucion ? 'text-blue-400' : 'text-purple-400'}`}>
                             {p.titulo}
                           </span>
-                          
-                          <div className="flex items-center gap-1.5 flex-wrap mt-1">
-                            <span className="inline-block px-1.5 py-0.5 rounded bg-slate-900 text-[8px] font-bold text-slate-400 border border-slate-800/80">
-                              🎯 {p.especialidad}
-                            </span>
-                            {p.tipo_servicio === "social" ? (
-                              <span className="inline-block px-1.5 py-0.5 rounded bg-blue-955/20 text-[8px] font-extrabold text-blue-400 border border-blue-900/30 animate-pulse">
-                                🤝 Tarifa Social: {p.monto_tarifa} {p.moneda_tarifa || "USD"}
-                              </span>
-                            ) : (
-                              <span className="inline-block px-1.5 py-0.5 rounded bg-purple-955/20 text-[8px] font-extrabold text-purple-400 border border-purple-900/30">
-                                💜 100% Gratuito
-                              </span>
-                            )}
-                          </div>
                         </div>
                       </div>
 
                         {p.descripcion && (
-                          <p className="text-[10px] text-slate-400 whitespace-pre-line leading-relaxed bg-slate-900/30 p-2 rounded-xl border border-slate-900">
+                          <p className={`text-[10px] text-slate-400 whitespace-pre-line leading-relaxed bg-slate-900/30 p-2 rounded-xl border border-slate-900 ${expandedPsychId !== p.id ? "line-clamp-2" : ""}`}>
                             {p.descripcion}
                           </p>
                         )}
+                        
+                        {expandedPsychId !== p.id && (
+                          <div className="text-center mt-[-4px]">
+                            <span className="text-[10px] text-purple-400/70 group-hover:text-purple-400 transition-colors">Ver más detalles ⬇️</span>
+                          </div>
+                        )}
 
-                        <div className="flex items-center gap-1.5 flex-wrap">
-                          <span className="text-[8px] font-bold px-1.5 py-0.5 rounded bg-slate-900 text-slate-500 border border-slate-850">
-                            🗣️ {p.idiomas || "Español"}
-                          </span>
-                          {!p.es_institucion && (
-                            <span className="text-[8px] font-bold px-1.5 py-0.5 rounded bg-slate-900 text-slate-500 border border-slate-850">
-                              💻 {p.modalidad === "online" ? "Online" : p.modalidad === "presencial" ? "Presencial" : "Ambas"}
-                            </span>
-                          )}
-                        </div>
-
-                        {/* Botones de acción */}
-                        <div className="flex items-center gap-2 border-t border-slate-900 pt-3">
-                          {p.whatsapp && (
-                            <a
-                              href={`https://wa.me/${p.whatsapp.replace(/\+/g, "").replace(/\s/g, "")}?text=Hola,%20vi%20tu%20contacto%20en%20Punto%20de%20Apoyo%20VZ%20y%20requiero%20asistencia%20psicológica`}
-                              target="_blank"
-                              rel="noopener noreferrer"
-                              className="px-2.5 py-1.5 text-[9px] font-extrabold text-emerald-400 hover:text-white bg-emerald-950/20 hover:bg-emerald-600/80 border border-emerald-900/60 rounded-xl transition flex items-center gap-1"
-                            >
-                              💬 WhatsApp
-                            </a>
-                          )}
-                          {p.telefono && (
-                            <a
-                              href={`tel:${p.telefono}`}
-                              className="px-2.5 py-1.5 text-[9px] font-extrabold text-blue-400 hover:text-white bg-blue-950/20 hover:bg-blue-600/80 border border-blue-900/60 rounded-xl transition flex items-center gap-1"
-                            >
-                              📞 {p.es_institucion ? "Línea de Ayuda" : "Llamar"}
-                            </a>
-                          )}
-                          {p.booking_url && (
-                            <>
-                              <a
-                                href={p.booking_url}
-                                target="_blank"
-                                rel="noopener noreferrer"
-                                className={`px-2.5 py-1.5 text-[9px] font-extrabold hover:text-white border border-blue-900/60 rounded-xl transition flex items-center gap-1 text-blue-400 bg-blue-950/20 hover:bg-blue-600/80 ${p.es_institucion ? 'ml-auto' : ''}`}
-                              >
-                                🌐 Visitar Portal
-                              </a>
-                              {!p.es_institucion && (
-                                <button
-                                  type="button"
-                                  onClick={() => {
-                                    const isGoogleCal = p.booking_url?.includes("google.com") || p.booking_url?.includes("calendar.google");
-                                    if (isGoogleCal) {
-                                      window.open(p.booking_url, "_blank", "noopener,noreferrer");
-                                    } else {
-                                      setActiveBookingUrl(p.booking_url!);
-                                    }
-                                  }}
-                                  className="px-2.5 py-1.5 text-[9px] font-extrabold hover:text-white border border-purple-900/60 rounded-xl transition flex items-center gap-1 text-purple-400 bg-purple-955/20 hover:bg-purple-600/80 cursor-pointer ml-auto"
-                                >
-                                  📅 Agendar Cita
-                                </button>
+                        {expandedPsychId === p.id && (
+                          <div className="flex flex-col gap-3 animate-in fade-in slide-in-from-top-2 duration-200">
+                            <div className="flex items-center gap-1.5 flex-wrap">
+                              <span className="inline-block px-1.5 py-0.5 rounded bg-slate-900 text-[8px] font-bold text-slate-400 border border-slate-800/80">
+                                🎯 {p.especialidad}
+                              </span>
+                              {p.tipo_servicio === "social" ? (
+                                <span className="inline-block px-1.5 py-0.5 rounded bg-blue-955/20 text-[8px] font-extrabold text-blue-400 border border-blue-900/30 animate-pulse">
+                                  🤝 Tarifa Social: {p.monto_tarifa} {p.moneda_tarifa || "USD"}
+                                </span>
+                              ) : (
+                                <span className="inline-block px-1.5 py-0.5 rounded bg-purple-955/20 text-[8px] font-extrabold text-purple-400 border border-purple-900/30">
+                                  💜 100% Gratuito
+                                </span>
                               )}
-                            </>
-                          )}
-                        </div>
+                            </div>
 
-                        {/* Botones de Moderación */}
-                        {(isAdmin || (user && p.email && p.email.toLowerCase() === user.email.toLowerCase())) && (
-                          <div className="absolute top-2 right-2 flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
-                            {isAdmin && p.activo === false && (
-                              <button
-                                type="button"
-                                onClick={() => handleToggleApprovePsych(p)}
-                                className="w-6 h-6 rounded-lg bg-slate-900 border border-slate-800 text-emerald-500 hover:text-white hover:bg-emerald-650 flex items-center justify-center cursor-pointer transition"
-                                title="Aprobar y Activar Perfil"
-                              >
-                                ✅
-                              </button>
-                            )}
-                            <button
-                              type="button"
-                              onClick={() => handleStartEditPsych(p)}
-                              className="w-6 h-6 rounded-lg bg-slate-900 border border-slate-800 text-slate-400 hover:text-white flex items-center justify-center cursor-pointer transition"
-                              title="Editar Perfil"
-                            >
-                              ✏️
-                            </button>
-                            {isAdmin && (
-                              <button
-                                type="button"
-                                onClick={() => handleDeletePsychologist(p.id)}
-                                className="w-6 h-6 rounded-lg bg-slate-900 border border-slate-800 text-rose-500 hover:text-white hover:bg-rose-650 flex items-center justify-center cursor-pointer transition"
-                                title="Eliminar"
-                              >
-                                🌐
-                              </button>
-                            )}
+                            <div className="flex items-center gap-1.5 flex-wrap">
+                              <span className="text-[8px] font-bold px-1.5 py-0.5 rounded bg-slate-900 text-slate-500 border border-slate-850">
+                                🗣️ {p.idiomas || "Español"}
+                              </span>
+                              {!p.es_institucion && (
+                                <span className="text-[8px] font-bold px-1.5 py-0.5 rounded bg-slate-900 text-slate-500 border border-slate-850">
+                                  💻 {p.modalidad === "online" ? "Online" : p.modalidad === "presencial" ? "Presencial" : "Ambas"}
+                                </span>
+                              )}
+                            </div>
+
+                            {/* Botones de acción */}
+                            <div className="flex items-center gap-2 border-t border-slate-900 pt-3" onClick={(e) => e.stopPropagation()}>
+                              {p.whatsapp && (
+                                <a
+                                  href={`https://wa.me/${p.whatsapp.replace(/\+/g, "").replace(/\s/g, "")}?text=Hola,%20vi%20tu%20contacto%20en%20Punto%20de%20Apoyo%20VZ%20y%20requiero%20asistencia%20psicológica`}
+                                  target="_blank"
+                                  rel="noopener noreferrer"
+                                  className="px-2.5 py-1.5 text-[9px] font-extrabold text-emerald-400 hover:text-white bg-emerald-950/20 hover:bg-emerald-600/80 border border-emerald-900/60 rounded-xl transition flex items-center gap-1"
+                                >
+                                  💬 WhatsApp
+                                </a>
+                              )}
+                              {p.telefono && (
+                                <a
+                                  href={`tel:${p.telefono}`}
+                                  className="px-2.5 py-1.5 text-[9px] font-extrabold text-blue-400 hover:text-white bg-blue-950/20 hover:bg-blue-600/80 border border-blue-900/60 rounded-xl transition flex items-center gap-1"
+                                >
+                                  📞 {p.es_institucion ? "Línea de Ayuda" : "Llamar"}
+                                </a>
+                              )}
+                              {p.booking_url && (
+                                <>
+                                  <a
+                                    href={p.booking_url}
+                                    target="_blank"
+                                    rel="noopener noreferrer"
+                                    className={`px-2.5 py-1.5 text-[9px] font-extrabold hover:text-white border border-blue-900/60 rounded-xl transition flex items-center gap-1 text-blue-400 bg-blue-950/20 hover:bg-blue-600/80 ${p.es_institucion ? 'ml-auto' : ''}`}
+                                  >
+                                    📅 {p.es_institucion ? "Sitio Web" : "Agendar"}
+                                  </a>
+                                  {!p.es_institucion && (
+                                    <button
+                                      onClick={() => setActiveBookingUrl(p.booking_url!)}
+                                      className="px-2.5 py-1.5 text-[9px] font-extrabold hover:text-white border border-purple-900/60 rounded-xl transition flex items-center gap-1 text-purple-400 bg-purple-950/20 hover:bg-purple-600/80 ml-auto"
+                                    >
+                                      📄 Formulario Rápido
+                                    </button>
+                                  )}
+                                </>
+                              )}
+                              
+                              {/* Admin / Owner Controls */}
+                              {isAdmin && (
+                                <div className="flex gap-1 ml-auto">
+                                  {p.activo === false && (
+                                    <button
+                                      onClick={() => handleToggleApprovePsych(p)}
+                                      className="w-6 h-6 rounded bg-emerald-900/30 text-emerald-400 hover:bg-emerald-900 hover:text-emerald-300 flex items-center justify-center transition border border-emerald-900/50"
+                                      title="Aprobar Profesional"
+                                    >
+                                      ✓
+                                    </button>
+                                  )}
+                                  <button
+                                    onClick={() => handleStartEditPsych(p)}
+                                    className="w-6 h-6 rounded bg-slate-800/50 text-slate-400 hover:bg-slate-700 hover:text-white flex items-center justify-center transition"
+                                    title="Editar"
+                                  >
+                                    ✎
+                                  </button>
+                                  <button
+                                    onClick={() => handleDeletePsychologist(p.id)}
+                                    className="w-6 h-6 rounded bg-rose-950/30 text-rose-500 hover:bg-rose-900 hover:text-rose-300 flex items-center justify-center transition border border-rose-900/50"
+                                    title="Eliminar"
+                                  >
+                                    <X className="w-3 h-3" />
+                                  </button>
+                                </div>
+                              )}
+                            </div>
                           </div>
                         )}
                       </div>
