@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import dynamic from "next/dynamic";
 import {
   MapPin,
@@ -183,6 +183,107 @@ export default function HomePage() {
   const [newAdminRole, setNewAdminRole] = useState<string>("center_admin");
   const [newPsychPermEmail, setNewPsychPermEmail] = useState("");
 
+  // Offline / Low Data Map Mode state
+  const [isOfflineMode, setIsOfflineMode] = useState(false);
+
+  useEffect(() => {
+    if (typeof window !== "undefined") {
+      const saved = localStorage.getItem("punto_de_apoyo_offline_map");
+      if (saved === "true") setIsOfflineMode(true);
+    }
+  }, []);
+
+  const handleToggleOfflineMode = (val: boolean) => {
+    setIsOfflineMode(val);
+    if (typeof window !== "undefined") {
+      localStorage.setItem("punto_de_apoyo_offline_map", String(val));
+    }
+  };
+
+  const handleMapSearchChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const text = e.target.value;
+    setMapSearchText(text);
+    
+    if (searchTimeoutRef.current) clearTimeout(searchTimeoutRef.current);
+    
+    if (!text.trim()) {
+      setMapSearchResults([]);
+      return;
+    }
+    
+    setIsMapSearching(true);
+    
+    searchTimeoutRef.current = setTimeout(async () => {
+      try {
+        // 1. Search local reported points
+        const localMatches = puntos
+          .filter((p) => p.tipo !== "noticia" && p.aprobado !== false)
+          .filter((p) => {
+            const q = text.toLowerCase();
+            return (
+              (p.nombre && p.nombre.toLowerCase().includes(q)) ||
+              p.descripcion.toLowerCase().includes(q)
+            );
+          })
+          .map((p) => ({
+            type: "report" as const,
+            name: p.nombre || "Punto de Apoyo",
+            details: `${p.categoria.toUpperCase()} - ${p.descripcion.substring(0, 40)}${p.descripcion.length > 40 ? '...' : ''}`,
+            lat: p.lat,
+            lng: p.lng,
+          }));
+
+        // 2. Search external locations (OSM Nominatim)
+        const url = `https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(text)}&countrycodes=ve&limit=5`;
+        const res = await fetch(url, {
+          headers: {
+            "User-Agent": "PuntoDeApoyoVenezuela/1.0 (sergioantia11@gmail.com)",
+            "Accept-Language": "es"
+          }
+        });
+        const data = await res.json();
+        const externalMatches = (data || []).map((item: any) => ({
+          type: "geocode" as const,
+          name: item.display_name.split(",")[0],
+          details: item.display_name.split(",").slice(1).join(",").trim(),
+          lat: parseFloat(item.lat),
+          lng: parseFloat(item.lon),
+        }));
+
+        setMapSearchResults([...localMatches, ...externalMatches]);
+      } catch (err) {
+        console.error("Geocoding search failed:", err);
+      } finally {
+        setIsMapSearching(false);
+      }
+    }, 400);
+  };
+
+  const handleSelectMapSearchResult = (res: any) => {
+    setMapViewControllerTrigger({
+      center: [res.lat, res.lng],
+      zoom: res.type === 'report' ? 16 : 13,
+      timestamp: Date.now(),
+    });
+    setMapSearchText(res.name);
+    setMapSearchResults([]);
+    setIsMapSearchFocused(false);
+  };
+
+  // Close search results dropdown on clicking outside
+  useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      if (
+        mapSearchContainerRef.current &&
+        !mapSearchContainerRef.current.contains(event.target as Node)
+      ) {
+        setIsMapSearchFocused(false);
+      }
+    };
+    document.addEventListener("mousedown", handleClickOutside);
+    return () => document.removeEventListener("mousedown", handleClickOutside);
+  }, []);
+
   // Dynamic ONU Report statistics states
   const [onuFallecidos, setOnuFallecidos] = useState(1430);
   const [onuHeridos, setOnuHeridos] = useState(3360);
@@ -273,6 +374,14 @@ export default function HomePage() {
   const [mapViewControllerTrigger, setMapViewControllerTrigger] = useState<{ center: [number, number]; zoom: number; timestamp: number } | null>(null);
   const [supplySearchQuery, setSupplySearchQuery] = useState("");
   const [selectedSupplyCategory, setSelectedSupplyCategory] = useState<string>("todos");
+  
+  // Map Search States
+  const [mapSearchText, setMapSearchText] = useState("");
+  const [mapSearchResults, setMapSearchResults] = useState<any[]>([]);
+  const [isMapSearching, setIsMapSearching] = useState(false);
+  const [isMapSearchFocused, setIsMapSearchFocused] = useState(false);
+  const searchTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+  const mapSearchContainerRef = useRef<HTMLDivElement | null>(null);
   const [isPsychFormOpen, setIsPsychFormOpen] = useState(false);
   const [editingPsych, setEditingPsych] = useState<Psychologist | null>(null);
   const [searchPsych, setSearchPsych] = useState("");
@@ -1715,6 +1824,7 @@ export default function HomePage() {
                 isOwner={isOwner}
                 isCeo={isCeo}
                 isCenterAdmin={isCenterAdmin}
+                isOfflineMode={isOfflineMode}
                 onApprove={handleApprovePunto}
                 onDelete={handleDeletePunto}
                 onMarkerMove={handleMarkerMove}
@@ -1722,6 +1832,78 @@ export default function HomePage() {
                 mapViewControllerTrigger={mapViewControllerTrigger}
               />
             </div>
+
+            {/* Map Search Bar */}
+            <div 
+              ref={mapSearchContainerRef}
+              className="absolute top-[162px] sm:top-[96px] right-2 sm:right-4 z-20 w-[240px] sm:w-[320px] pointer-events-auto"
+            >
+              <div className="relative">
+                <div className="flex items-center bg-slate-900/90 backdrop-blur-md border border-slate-800 rounded-2xl shadow-xl px-3 py-2 gap-2 transition-all focus-within:border-orange-555/50">
+                  <Search className="w-4 h-4 text-slate-400 shrink-0" />
+                  <input
+                    type="text"
+                    value={mapSearchText}
+                    onChange={handleMapSearchChange}
+                    onFocus={() => setIsMapSearchFocused(true)}
+                    placeholder="Buscar lugar, ciudad o centro..."
+                    className="w-full bg-transparent border-none text-slate-200 placeholder-slate-500 text-xs focus:outline-none"
+                  />
+                  {mapSearchText && (
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setMapSearchText("");
+                        setMapSearchResults([]);
+                      }}
+                      className="text-slate-400 hover:text-white text-xs font-bold px-1 cursor-pointer"
+                    >
+                      ✕
+                    </button>
+                  )}
+                </div>
+
+                {/* Search Results Dropdown */}
+                {isMapSearchFocused && (mapSearchResults.length > 0 || isMapSearching) && (
+                  <div className="absolute top-full left-0 right-0 mt-1.5 max-h-[260px] overflow-y-auto bg-slate-900/95 backdrop-blur-md border border-slate-800 rounded-2xl shadow-2xl flex flex-col divide-y divide-slate-800/40 z-30 scrollbar-none">
+                    {isMapSearching && (
+                      <div className="p-3 text-center text-slate-400 text-[10px] font-semibold flex items-center justify-center gap-1.5">
+                        <span className="w-3.5 h-3.5 border-2 border-orange-500 border-t-transparent rounded-full animate-spin"></span>
+                        Buscando lugares...
+                      </div>
+                    )}
+                    {mapSearchResults.map((res, idx) => (
+                      <button
+                        key={idx}
+                        type="button"
+                        onClick={() => handleSelectMapSearchResult(res)}
+                        className="w-full text-left p-2.5 hover:bg-slate-850/85 transition flex items-start gap-2 text-xs text-slate-300 font-medium cursor-pointer"
+                      >
+                        <span className="text-sm shrink-0">{res.type === 'report' ? '📍' : '🗺️'}</span>
+                        <div className="flex flex-col gap-0.5 min-w-0">
+                          <span className="font-bold text-white truncate leading-tight">
+                            {res.name}
+                          </span>
+                          <span className="text-[9px] text-slate-500 truncate leading-none">
+                            {res.details}
+                          </span>
+                        </div>
+                      </button>
+                    ))}
+                  </div>
+                )}
+              </div>
+            </div>
+
+            {/* Offline Mode Banner */}
+            {isOfflineMode && (
+              <div className="absolute top-[162px] sm:top-[96px] left-2 sm:left-4 z-20 pointer-events-none animate-in fade-in duration-200">
+                <div className="flex items-center gap-1.5 px-3 py-1.5 bg-emerald-950/90 backdrop-blur-md border border-emerald-500/35 text-emerald-400 rounded-full shadow-lg text-[10px] font-black uppercase tracking-wider animate-pulse">
+                  <span>📶</span>
+                  <span>Modo Ahorro de Datos (Mapa Local)</span>
+                </div>
+              </div>
+            )}
 
             {/* 3. Top Filter Pills  —  premium, horizontal, scrollable */}
             <div className="absolute top-[106px] sm:top-[96px] left-0 right-0 z-20 pointer-events-none">
@@ -3010,6 +3192,26 @@ export default function HomePage() {
                     </div>
                   </li>
                 </ul>
+              </div>
+
+              <div className="border-t border-slate-800/60 pt-3 flex flex-col gap-2">
+                <h4 className="font-extrabold text-orange-400 uppercase tracking-widest text-[9px]">
+                  📶 Conexión Inestable / Ahorro de Datos
+                </h4>
+                <p className="text-[11px] text-slate-400">
+                  ¿El mapa tarda en cargar debido a una conexión lenta? Activa el **Mapa de Ahorro de Datos** para utilizar una versión de mapa local precargada que no requiere descargar imágenes de internet.
+                </p>
+                <button
+                  type="button"
+                  onClick={() => handleToggleOfflineMode(!isOfflineMode)}
+                  className={`w-full flex items-center justify-center gap-2 py-2 px-4 rounded-xl text-xs font-bold transition shadow-md border cursor-pointer ${
+                    isOfflineMode
+                      ? "bg-emerald-600/25 hover:bg-emerald-600/35 border-emerald-500/50 text-emerald-400 font-extrabold"
+                      : "bg-slate-950 hover:bg-slate-850 border-slate-800 text-slate-300"
+                  }`}
+                >
+                  {isOfflineMode ? "📶 Desactivar Mapa de Ahorro (Satelital)" : "📶 Activar Mapa de Ahorro (Local / Offline)"}
+                </button>
               </div>
 
               <div className="border-t border-slate-800/60 pt-3">
