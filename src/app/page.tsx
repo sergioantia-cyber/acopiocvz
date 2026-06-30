@@ -1768,7 +1768,7 @@ export default function HomePage() {
             </div>
 
             {/* Buscador Manual de Lugares en el Mapa */}
-            <div className="absolute top-[152px] sm:top-[96px] right-4 z-30 pointer-events-auto w-[calc(100%-2rem)] sm:w-80 max-w-sm">
+            <div className="absolute top-[162px] sm:top-[96px] left-4 sm:left-auto right-4 z-30 pointer-events-auto w-[calc(100%-2rem)] sm:w-80 max-w-sm">
               <div className="relative bg-slate-900/90 backdrop-blur-md border border-slate-800 rounded-2xl shadow-xl overflow-hidden transition-all duration-300 focus-within:border-orange-500/50">
                 <div className="flex items-center px-3 py-2 gap-2">
                   <span className="text-slate-400 text-sm">🔍</span>
@@ -1830,7 +1830,7 @@ export default function HomePage() {
             {/* 3. Top Filter Pills  —  premium, horizontal, scrollable */}
             <div className="absolute top-[106px] sm:top-[96px] left-0 right-0 z-20 pointer-events-none">
             
-              <div className="flex flex-wrap sm:flex-nowrap items-center justify-center sm:justify-start gap-1 sm:gap-1.5 pointer-events-auto px-2 sm:px-4">
+              <div className="flex overflow-x-auto flex-nowrap items-center justify-start sm:justify-start gap-1.5 pointer-events-auto px-4 scrollbar-none pb-2">
                 {/* ALL button */}
                 <button
                   onClick={() => setActiveMainFilter(null)}
