@@ -174,11 +174,13 @@ export default function HomePage() {
 
   // Admin & Moderation states
   const [admins, setAdmins] = useState<string[]>([]);
+  const [adminsWithRoles, setAdminsWithRoles] = useState<{ email: string; role: string }[]>([]);
   const [authorizedPsychs, setAuthorizedPsychs] = useState<string[]>([]);
   const [isAdminPanelOpen, setIsAdminPanelOpen] = useState(false);
   const [isCreditsOpen, setIsCreditsOpen] = useState(false);
   const [isONUReportOpen, setIsONUReportOpen] = useState(false);
   const [newAdminEmail, setNewAdminEmail] = useState("");
+  const [newAdminRole, setNewAdminRole] = useState<string>("center_admin");
   const [newPsychPermEmail, setNewPsychPermEmail] = useState("");
 
   // Dynamic ONU Report statistics states
@@ -221,14 +223,25 @@ export default function HomePage() {
   // Auth State
   const [user, setUser] = useState<{ email: string; name: string; avatar: string } | null>(null);
 
-  const isAdmin = !!(user && (
-    user.email.toLowerCase() === "sergioantia11@gmail.com" ||
-    user.email.toLowerCase() === "colaborador@ayudaparavenezuela.com" ||
-    admins.includes(user.email.toLowerCase())
-  ));
-  
-  const isOwner = !!(user && user.email.toLowerCase() === "sergioantia11@gmail.com");
-  
+  const userRole = (() => {
+    if (!user) return null;
+    const email = user.email.toLowerCase();
+    
+    if (email === "sergioantia11@gmail.com") return "owner";
+    
+    const adminEntry = adminsWithRoles.find((a) => a.email === email);
+    if (adminEntry) return adminEntry.role;
+    
+    if (email === "colaborador@ayudaparavenezuela.com") return "ceo";
+    
+    return null;
+  })();
+
+  const isOwner = userRole === "owner";
+  const isCeo = userRole === "ceo";
+  const isCenterAdmin = userRole === "center_admin";
+  const isAdmin = isOwner || isCeo;
+
   const isPsychologist = !!(user && (
     authorizedPsychs.includes(user.email.toLowerCase()) ||
     isAdmin
@@ -1700,6 +1713,8 @@ export default function HomePage() {
                 userLocation={userLocation}
                 isAdmin={isAdmin}
                 isOwner={isOwner}
+                isCeo={isCeo}
+                isCenterAdmin={isCenterAdmin}
                 onApprove={handleApprovePunto}
                 onDelete={handleDeletePunto}
                 onMarkerMove={handleMarkerMove}
@@ -3098,25 +3113,35 @@ export default function HomePage() {
                   </span>
                   
                   {/* Grant Permission Form */}
-                  <form onSubmit={handleAddAdmin} className="flex flex-col gap-1.5 bg-slate-950/40 p-3 rounded-xl border border-slate-850">
+                  <form onSubmit={handleAddAdmin} className="flex flex-col gap-2 bg-slate-950/40 p-3 rounded-xl border border-slate-850">
                     <label className="text-[9px] font-bold text-slate-400 uppercase tracking-wider">
-                      Agregar nuevo administrador
+                      Agregar nuevo administrador con rol
                     </label>
-                    <div className="flex gap-2">
+                    <div className="flex flex-col gap-2">
                       <input
                         type="email"
                         required
                         value={newAdminEmail}
                         onChange={(e) => setNewAdminEmail(e.target.value)}
                         placeholder="ejemplo@correo.com"
-                        className="flex-1 px-3 py-1.5 bg-slate-950 border border-slate-800 rounded-xl text-slate-200 text-xs focus:outline-none focus:border-orange-500/50"
+                        className="w-full px-3 py-1.5 bg-slate-950 border border-slate-800 rounded-xl text-slate-200 text-xs focus:outline-none focus:border-orange-500/50"
                       />
-                      <button
-                        type="submit"
-                        className="px-3 py-1.5 bg-orange-600 hover:bg-orange-500 text-white rounded-xl text-xs font-bold transition shadow-lg cursor-pointer"
-                      >
-                        Agregar
-                      </button>
+                      <div className="flex gap-2">
+                        <select
+                          value={newAdminRole}
+                          onChange={(e) => setNewAdminRole(e.target.value)}
+                          className="flex-1 px-2.5 py-1.5 bg-slate-950 border border-slate-800 rounded-xl text-slate-350 text-xs focus:outline-none focus:border-orange-500/50 cursor-pointer font-semibold"
+                        >
+                          <option value="center_admin">Encargado de Centro</option>
+                          <option value="ceo">CEO (Admins - No Inventarios)</option>
+                        </select>
+                        <button
+                          type="submit"
+                          className="px-4 py-1.5 bg-orange-600 hover:bg-orange-500 text-white rounded-xl text-xs font-bold transition shadow-lg cursor-pointer shrink-0"
+                        >
+                          Agregar
+                        </button>
+                      </div>
                     </div>
                   </form>
 
@@ -3131,17 +3156,25 @@ export default function HomePage() {
                     </div>
 
                     {/* Extra admins */}
-                    {admins.length === 0 ? (
+                    {adminsWithRoles.length === 0 ? (
                       <div className="text-center py-3 text-slate-500 text-xs italic">
                         No hay otros administradores registrados.
                       </div>
                     ) : (
-                      admins.map((email) => (
-                        <div key={email} className="flex justify-between items-center bg-slate-950/40 p-2.5 rounded-xl border border-slate-850 hover:border-slate-800 transition">
-                          <span className="text-xs text-slate-300 font-medium">{email}</span>
+                      adminsWithRoles.map((admin) => (
+                        <div key={admin.email} className="flex justify-between items-center bg-slate-950/40 p-2.5 rounded-xl border border-slate-850 hover:border-slate-800 transition">
+                          <div className="flex flex-col">
+                            <span className="text-xs text-slate-300 font-medium">{admin.email}</span>
+                            <span className={`text-[8px] font-black uppercase tracking-wider mt-0.5 ${
+                              admin.role === "ceo" ? "text-sky-400" : "text-amber-500"
+                            }`}>
+                              {admin.role === "ceo" ? "CEO (Admins - No Inventarios)" : "Encargado de Centro"}
+                            </span>
+                          </div>
                           <button
-                            onClick={() => handleRemoveAdmin(email)}
-                            className="px-2 py-1 text-[9px] font-extrabold text-rose-400 hover:text-white hover:bg-rose-950/45 border border-rose-900/30 rounded-lg transition"
+                            type="button"
+                            onClick={() => handleRemoveAdmin(admin.email)}
+                            className="px-2 py-1 text-[9px] font-extrabold text-rose-400 hover:text-white hover:bg-rose-950/45 border border-rose-900/30 rounded-lg transition cursor-pointer"
                           >
                             Remover
                           </button>

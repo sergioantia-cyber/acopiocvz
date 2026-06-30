@@ -21,6 +21,8 @@ interface MapaColaborativoProps {
   userLocation: [number, number] | null;
   isAdmin?: boolean;
   isOwner?: boolean;
+  isCeo?: boolean;
+  isCenterAdmin?: boolean;
   user?: { email: string; name: string; avatar?: string } | null;
   onApprove?: (id: string) => void;
   onDelete?: (id: string) => void;
@@ -135,6 +137,8 @@ export default function MapaColaborativo({
   userLocation,
   isAdmin = false,
   isOwner = false,
+  isCeo = false,
+  isCenterAdmin = false,
   user = null,
   onApprove,
   onDelete,
@@ -396,7 +400,7 @@ export default function MapaColaborativo({
                 >
                   🧭 Cómo llegar
                 </a>
-                {onEdit && punto.aprobado !== false && (
+                {onEdit && (isOwner || isCeo || isCreator(punto)) && punto.aprobado !== false && (
                   <button
                     onClick={() => onEdit(punto)}
                     className="flex-1 flex items-center justify-center gap-1 py-1.5 bg-orange-600 hover:bg-orange-500 text-white rounded-lg text-[10px] font-bold transition shadow-lg cursor-pointer"
@@ -412,7 +416,7 @@ export default function MapaColaborativo({
                     📋 Ver Suministros
                   </button>
                 )}
-                {(isAdmin || isOwner || isCreator(punto)) && (
+                {(isOwner || isCeo || isCreator(punto) || (isAdmin && punto.aprobado === false)) && (
                   <div className="w-full flex gap-2 mt-1.5">
                     {isAdmin && punto.aprobado === false && onApprove && (
                       <button
@@ -422,7 +426,7 @@ export default function MapaColaborativo({
                         Aprobar
                       </button>
                     )}
-                    {onDelete && (
+                    {onDelete && (isOwner || isCeo || isCreator(punto)) && (
                       <button
                         onClick={() => onDelete(punto.id)}
                         className="flex-1 py-1.5 bg-rose-600 hover:bg-rose-500 text-white rounded-lg text-[9px] font-bold transition shadow-lg cursor-pointer"

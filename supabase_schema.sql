@@ -42,6 +42,7 @@ CREATE POLICY "Allow delete by creator or admin" ON reports
 -- 2. Crear la tabla de administradores autorizados
 CREATE TABLE IF NOT EXISTS admins (
   email TEXT PRIMARY KEY,
+  role TEXT DEFAULT 'center_admin',
   created_at TIMESTAMP WITH TIME ZONE DEFAULT timezone('utc'::text, now())
 );
 
@@ -56,8 +57,8 @@ CREATE POLICY "Allow write access to owner only" ON admins
   FOR ALL USING (auth.jwt() ->> 'email' = 'sergioantia11@gmail.com');
 
 -- 3. Insertar al dueño de la app como administrador por defecto
-INSERT INTO admins (email) VALUES ('sergioantia11@gmail.com')
-ON CONFLICT (email) DO NOTHING;
+INSERT INTO admins (email, role) VALUES ('sergioantia11@gmail.com', 'owner')
+ON CONFLICT (email) DO UPDATE SET role = 'owner';
 
 -- 4. Crear la tabla de reporte ONU
 CREATE TABLE IF NOT EXISTS onu_report (
@@ -121,4 +122,8 @@ ALTER TABLE reports ADD COLUMN IF NOT EXISTS supply_details JSONB;
 
 -- 8. Agregar columna image_url para fotos en las noticias
 ALTER TABLE reports ADD COLUMN IF NOT EXISTS image_url TEXT;
+
+-- 9. Agregar columna role a la tabla de administradores
+ALTER TABLE admins ADD COLUMN IF NOT EXISTS role TEXT DEFAULT 'center_admin';
+
 
