@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useRef, useState, Fragment } from "react";
-import { MapContainer, TileLayer, Marker, Popup, useMapEvents, useMap, Circle, ImageOverlay } from "react-leaflet";
+import { MapContainer, TileLayer, Marker, Popup, useMapEvents, useMap, Circle } from "react-leaflet";
 import MarkerClusterGroup from "react-leaflet-cluster";
 import L from "leaflet";
 
@@ -24,7 +24,6 @@ interface MapaColaborativoProps {
   isCeo?: boolean;
   isCenterAdmin?: boolean;
   user?: { email: string; name: string; avatar?: string } | null;
-  isOfflineMode?: boolean;
   onApprove?: (id: string) => void;
   onDelete?: (id: string) => void;
   onMarkerMove?: (id: string, lat: number, lng: number, prevLat: number, prevLng: number) => void;
@@ -141,7 +140,6 @@ export default function MapaColaborativo({
   isCeo = false,
   isCenterAdmin = false,
   user = null,
-  isOfflineMode = false,
   onApprove,
   onDelete,
   onMarkerMove,
@@ -455,6 +453,7 @@ export default function MapaColaborativo({
       <MapContainer
         center={defaultCenter}
         zoom={userLocation ? 13 : 7}
+        maxZoom={18}
         style={{ height: "100%", width: "100%", minHeight: "400px" }}
         zoomControl={false}
         preferCanvas={true}
@@ -462,18 +461,11 @@ export default function MapaColaborativo({
         {/* Locks map panning while a marker is being dragged */}
         
 
-        {isOfflineMode ? (
-          <ImageOverlay
-            url="/venezuela_offline.png"
-            bounds={[[0.5, -73.5], [12.5, -59.5]]}
-            opacity={0.95}
-          />
-        ) : (
-          <TileLayer
-            attribution='&copy; OpenStreetMap contributors &copy; CARTO'
-            url="https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png"
-          />
-        )}
+        <TileLayer
+          attribution='&copy; OpenStreetMap contributors'
+          url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
+          maxZoom={18}
+        />
 
         <ZoomTracker onZoomChange={setZoomLevel} />
         <MapViewController trigger={mapViewControllerTrigger} />
