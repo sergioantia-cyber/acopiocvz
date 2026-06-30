@@ -275,7 +275,10 @@ export default function HomePage() {
   const [isSuppliesOpen, setIsSuppliesOpen] = useState(false);
   const [isEditingSupplies, setIsEditingSupplies] = useState(false);
   const [activeSuppliesPunto, setActiveSuppliesPunto] = useState<PuntoReportado | null>(null);
-  const [supplyStates, setSupplyStates] = useState<Record<string, boolean>>({});
+  // supplyStates: number = quantity (0 means unavailable/out of stock)
+  const [supplyStates, setSupplyStates] = useState<Record<string, number>>({});
+  const [supplyDonor, setSupplyDonor] = useState("");
+  const [supplyLastModified, setSupplyLastModified] = useState<string | null>(null);
   const [hoveredElement, setHoveredElement] = useState<any>(null);
   const [mapViewControllerTrigger, setMapViewControllerTrigger] = useState<{ center: [number, number]; zoom: number; timestamp: number } | null>(null);
   const [supplySearchQuery, setSupplySearchQuery] = useState("");
@@ -415,18 +418,23 @@ export default function HomePage() {
     setSupplySearchQuery("");
     setSelectedSupplyCategory("todos");
     
-    // Load existing supply_details or initialize to default (all true)
-    const initialStates: Record<string, boolean> = {};
-    
+    // Load quantities — default 0 (all out of stock)
+    const initialStates: Record<string, number> = {};
     PERIODIC_SUPPLIES.forEach((elem) => {
-      if (punto.supply_details && typeof punto.supply_details[elem.symbol] === "boolean") {
-        initialStates[elem.symbol] = punto.supply_details[elem.symbol];
+      const stored = punto.supply_details?.[elem.symbol];
+      if (typeof stored === "number") {
+        initialStates[elem.symbol] = stored;
+      } else if (typeof stored === "boolean") {
+        // Migrate old boolean: true→1, false→0
+        initialStates[elem.symbol] = stored ? 1 : 0;
       } else {
-        initialStates[elem.symbol] = true;
+        initialStates[elem.symbol] = 0;
       }
     });
-    
     setSupplyStates(initialStates);
+    setSupplyDonor(String(punto.supply_details?.__donor ?? ""));
+    setSupplyLastModified(punto.supply_details?.__last_modified != null ? String(punto.supply_details.__last_modified) : null);
+
     setIsEditingSupplies(false);
     setIsSuppliesOpen(true);
   };
@@ -434,9 +442,16 @@ export default function HomePage() {
   const handleSaveSupplies = async () => {
     if (!activeSuppliesPunto) return;
 
+    const now = new Date().toISOString();
+    const fullDetails = {
+      ...supplyStates,
+      __donor: supplyDonor.trim(),
+      __last_modified: now,
+    };
+
     const updatedPunto: PuntoReportado = {
       ...activeSuppliesPunto,
-      supply_details: supplyStates,
+      supply_details: fullDetails,
     };
 
     const updated = puntos.map((p) => (p.id === activeSuppliesPunto.id ? updatedPunto : p));
@@ -446,16 +461,16 @@ export default function HomePage() {
     if (isSupabaseConfigured && supabase) {
       const { error } = await supabase
         .from("reports")
-        .update({ supply_details: supplyStates })
+        .update({ supply_details: fullDetails })
         .eq("id", activeSuppliesPunto.id);
       if (error) {
         console.error("Error saving supply details in Supabase:", error);
       }
     }
 
-    setIsSuppliesOpen(false);
-    setActiveSuppliesPunto(null);
-    alert("¡Inventario de suministros actualizado con éxito!");
+    setSupplyLastModified(now);
+    setIsEditingSupplies(false);
+    alert("¡Inventario actualizado con éxito!");
   };
 
   const handleStartEdit = (punto: PuntoReportado) => {
@@ -2583,362 +2598,342 @@ export default function HomePage() {
       {isSuppliesOpen && activeSuppliesPunto && (() => {
         const isAuthorizedToEditSupplies = !!(user && (
           isAdmin || 
+          isCenterAdmin ||
           activeSuppliesPunto.id.includes("-creator-" + user.email.toLowerCase())
         ));
 
         const filteredSuppliesList = PERIODIC_SUPPLIES.filter((elem) => {
-          if (selectedSupplyCategory !== "todos" && elem.category !== selectedSupplyCategory) {
-            return false;
-          }
+          if (selectedSupplyCategory !== "todos" && elem.category !== selectedSupplyCategory) return false;
           if (supplySearchQuery) {
             const q = supplySearchQuery.toLowerCase();
-            return (
-              elem.name.toLowerCase().includes(q) ||
-              elem.symbol.toLowerCase().includes(q) ||
-              elem.description.toLowerCase().includes(q)
-            );
+            return elem.name.toLowerCase().includes(q) || elem.symbol.toLowerCase().includes(q) || elem.description.toLowerCase().includes(q);
           }
           return true;
         });
 
+        // Category summary stats
+        const categoryStats = ["alimentos","servicios","ropa","higiene","salud"].map((cat) => {
+          const items = PERIODIC_SUPPLIES.filter(e => e.category === cat);
+          const available = items.filter(e => (supplyStates[e.symbol] ?? 0) > 0).length;
+          return { cat, available, total: items.length };
+        });
+
+        const catMeta: Record<string, { label: string; emoji: string; color: string; activeClass: string }> = {
+          alimentos:  { label: "Alimentos",  emoji: "🌾", color: "border-amber-500/30 text-amber-400 bg-amber-500/5",   activeClass: "bg-amber-500/20 border-amber-400 text-amber-200" },
+          servicios:  { label: "Servicios",  emoji: "⚡", color: "border-sky-500/30 text-sky-400 bg-sky-500/5",         activeClass: "bg-sky-500/20 border-sky-400 text-sky-200" },
+          ropa:       { label: "Ropa",       emoji: "👕", color: "border-purple-500/30 text-purple-400 bg-purple-500/5", activeClass: "bg-purple-500/20 border-purple-400 text-purple-200" },
+          higiene:    { label: "Higiene",    emoji: "🧼", color: "border-teal-500/30 text-teal-400 bg-teal-500/5",       activeClass: "bg-teal-500/20 border-teal-400 text-teal-200" },
+          salud:      { label: "Salud",      emoji: "💊", color: "border-rose-500/30 text-rose-400 bg-rose-500/5",       activeClass: "bg-rose-500/20 border-rose-400 text-rose-200" },
+        };
+
+        const fmtDate = (iso: string | null) => {
+          if (!iso) return null;
+          try {
+            return new Date(iso).toLocaleString("es-VE", { day:"2-digit", month:"short", year:"numeric", hour:"2-digit", minute:"2-digit" });
+          } catch { return iso; }
+        };
+
         return (
-          <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/80 backdrop-blur-sm animate-in fade-in duration-200">
-            <div className="w-full max-w-xl bg-slate-900 border border-slate-800 rounded-3xl p-5 shadow-2xl flex flex-col gap-3 animate-in scale-in-95 duration-200 max-h-[96dvh] overflow-y-auto">
+          <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center sm:p-4 bg-slate-950/85 backdrop-blur-sm animate-in fade-in duration-200">
+            <div className="w-full sm:max-w-lg bg-slate-950 border border-slate-800/80 rounded-t-3xl sm:rounded-3xl shadow-2xl flex flex-col gap-2 animate-in slide-in-from-bottom sm:scale-in-95 duration-250 max-h-[92dvh] overflow-hidden">
               
-              {/* Modal Header */}
-              <div className="flex justify-between items-center border-b border-slate-800 pb-2.5">
-                <div className="flex flex-col">
-                  <div className="flex items-center gap-2">
-                    <span className="text-lg">📋</span>
-                    <h3 className="text-xs font-black text-white uppercase tracking-wider">
-                      Inventario de Insumos & Servicios
-                    </h3>
+              {/* Drag handle (mobile only) */}
+              <div className="flex justify-center pt-2.5 pb-0.5 sm:hidden">
+                <div className="w-10 h-1 rounded-full bg-slate-700"></div>
+              </div>
+
+              {/* Scrollable body */}
+              <div className="overflow-y-auto flex flex-col gap-2.5 px-4 pb-4 pt-1">
+
+                {/* Header row */}
+                <div className="flex justify-between items-start">
+                  <div className="flex flex-col">
+                    <div className="flex items-center gap-1.5">
+                      <span className="text-base">📋</span>
+                      <h3 className="text-[11px] font-black text-white uppercase tracking-wider">Inventario de Insumos</h3>
+                    </div>
+                    <span className="text-[10px] text-orange-500 font-bold mt-0.5">{activeSuppliesPunto.nombre || "Centro de Ayuda / Hospital"}</span>
+                    {supplyLastModified && (
+                      <span className="text-[8px] text-slate-500 mt-0.5">🕐 Modificado: {fmtDate(supplyLastModified)}</span>
+                    )}
+                    {(activeSuppliesPunto.supply_details?.__donor || supplyDonor) && !isEditingSupplies && (
+                      <span className="text-[8px] text-slate-400 mt-0.5">🏢 Donante: <span className="text-slate-300 font-bold">{activeSuppliesPunto.supply_details?.__donor || supplyDonor}</span></span>
+                    )}
                   </div>
-                  <span className="text-[10px] text-orange-500 font-bold tracking-wide mt-0.5">
-                    {activeSuppliesPunto.nombre || "Centro de Ayuda / Hospital"}
-                  </span>
+                  <button
+                    onClick={() => { setIsSuppliesOpen(false); setActiveSuppliesPunto(null); }}
+                    className="w-7 h-7 mt-0.5 rounded-xl bg-slate-900 border border-slate-800 text-slate-400 hover:text-white flex items-center justify-center cursor-pointer transition flex-shrink-0"
+                  >
+                    <X className="w-3.5 h-3.5" />
+                  </button>
                 </div>
-                <button
-                  onClick={() => {
-                    setIsSuppliesOpen(false);
-                    setActiveSuppliesPunto(null);
-                  }}
-                  className="w-7 h-7 rounded-xl bg-slate-950 border border-slate-850 text-slate-400 hover:text-white flex items-center justify-center cursor-pointer transition"
-                >
-                  <X className="w-4 h-4" />
-                </button>
-              </div>
 
-              {/* Warning for Read-only Mode or Edit Mode */}
-              {!isAuthorizedToEditSupplies ? (
-                <div className="bg-amber-500/10 border border-amber-500/20 text-amber-450 rounded-xl px-2.5 py-1.5 text-[8.5px] font-bold flex items-center gap-1.5">
-                  <span>🔒</span>
-                  <span>Modo Lectura: Solo los administradores y dueños del centro pueden registrar o cambiar el inventario.</span>
+                {/* Status banner */}
+                <div className={`rounded-xl px-2.5 py-1.5 text-[8px] font-bold flex items-center gap-1.5 ${
+                  !isAuthorizedToEditSupplies
+                    ? "bg-amber-500/10 border border-amber-500/20 text-amber-400"
+                    : !isEditingSupplies
+                    ? "bg-sky-500/10 border border-sky-500/20 text-sky-400"
+                    : "bg-orange-500/10 border border-orange-500/20 text-orange-400"
+                }`}>
+                  <span>{!isAuthorizedToEditSupplies ? "🔒" : !isEditingSupplies ? "🔓" : "✏️"}</span>
+                  <span>{
+                    !isAuthorizedToEditSupplies
+                      ? "Modo Lectura: Solo administradores o encargados del centro pueden editar."
+                      : !isEditingSupplies
+                      ? "Tienes permiso. Presiona \"Editar\" para modificar cantidades."
+                      : "Modo Edición: Ajusta las cantidades y presiona Guardar."
+                  }</span>
                 </div>
-              ) : !isEditingSupplies ? (
-                <div className="bg-sky-500/10 border border-sky-500/20 text-sky-400 rounded-xl px-2.5 py-1.5 text-[8.5px] font-bold flex items-center gap-1.5">
-                  <span>🔓</span>
-                  <span>Tienes permisos de edición. Presiona el botón de "Habilitar Edición" abajo para hacer cambios.</span>
-                </div>
-              ) : (
-                <div className="bg-orange-500/10 border border-orange-500/20 text-orange-400 rounded-xl px-2.5 py-1.5 text-[8.5px] font-bold flex items-center gap-1.5">
-                  <span>✏️</span>
-                  <span>Modo Edición Activo: Haz clic en las casillas de la tabla periódica para activar/desactivar insumos.</span>
-                </div>
-              )}
 
-              {/* Search Bar & Category Filter Pills */}
-              <div className="flex flex-col gap-2 bg-slate-950/40 p-2 rounded-2xl border border-slate-850/60">
-                <div className="relative">
-                  <span className="absolute left-2.5 top-2 text-slate-500 text-[10px]">🔍</span>
-                  <input
-                    type="text"
-                    placeholder="Buscar insumo por nombre o símbolo..."
-                    value={supplySearchQuery}
-                    onChange={(e) => setSupplySearchQuery(e.target.value)}
-                    className="w-full bg-slate-950 border border-slate-850 rounded-xl py-1 pl-7 pr-3 text-[9.5px] text-white focus:outline-none focus:border-orange-500/50 transition font-medium"
-                  />
-                </div>
-                
-                <div className="flex flex-wrap gap-1 items-center">
-                  <span className="text-[8px] font-bold text-slate-500 uppercase tracking-wider mr-1">Sectores:</span>
-                  {[
-                    { id: "todos", label: "Todos", color: "border-slate-800 text-slate-400" },
-                    { id: "alimentos", label: "Alimentos", color: "border-amber-500/30 text-amber-400 bg-amber-500/5" },
-                    { id: "servicios", label: "Servicios", color: "border-sky-500/30 text-sky-400 bg-sky-500/5" },
-                    { id: "ropa", label: "Ropa", color: "border-purple-500/30 text-purple-400 bg-purple-500/5" },
-                    { id: "higiene", label: "Higiene", color: "border-teal-500/30 text-teal-400 bg-teal-500/5" },
-                    { id: "salud", label: "Salud", color: "border-rose-500/30 text-rose-400 bg-rose-500/5" },
-                  ].map((cat) => (
-                    <button
-                      key={cat.id}
-                      type="button"
-                      onClick={() => setSelectedSupplyCategory(cat.id)}
-                      className={`px-2 py-0.5 rounded-lg text-[8px] font-extrabold uppercase transition border cursor-pointer ${
-                        selectedSupplyCategory === cat.id
-                          ? "bg-gradient-to-r from-orange-600 to-amber-500 border-transparent text-white shadow-sm"
-                          : `${cat.color} hover:border-slate-400`
-                      }`}
-                    >
-                      {cat.label}
-                    </button>
-                  ))}
-                </div>
-              </div>
-
-              {/* Periodic Table Grid wrapper */}
-              <div className="flex-1 py-1.5 flex justify-start sm:justify-center items-center overflow-x-auto scrollbar-none select-none w-full">
-                <div className="grid grid-cols-12 gap-1.5 min-w-[620px] sm:min-w-0 w-full sm:max-w-[620px] aspect-[12/4] mx-auto">
-                  {PERIODIC_SUPPLIES.map((elem) => {
-                    const isAvailable = supplyStates[elem.symbol] !== false;
-                    
-                    // Filter match
-                    const matchesSearch = !supplySearchQuery || (
-                      elem.name.toLowerCase().includes(supplySearchQuery.toLowerCase()) ||
-                      elem.symbol.toLowerCase().includes(supplySearchQuery.toLowerCase()) ||
-                      elem.description.toLowerCase().includes(supplySearchQuery.toLowerCase())
-                    );
-                    const matchesCategory = selectedSupplyCategory === "todos" || elem.category === selectedSupplyCategory;
-                    const isDimmed = !matchesSearch || !matchesCategory;
-
-                    // Category Styling
-                    let catColor = "";
-                    if (elem.category === "alimentos") {
-                      catColor = isAvailable 
-                        ? "bg-amber-950/65 border-amber-600/70 text-amber-200 shadow-lg shadow-amber-500/5"
-                        : "bg-slate-950/40 border-slate-850 text-slate-650 line-through opacity-45";
-                    } else if (elem.category === "servicios") {
-                      if ((elem.symbol === "Wf" || elem.symbol === "Lz") && !isAvailable) {
-                        catColor = "bg-rose-950/60 border-rose-600 text-rose-400 font-extrabold shadow-lg shadow-rose-500/10";
-                      } else {
-                        catColor = isAvailable 
-                          ? "bg-sky-950/65 border-sky-600/70 text-sky-200 shadow-lg shadow-sky-500/5"
-                          : "bg-slate-950/40 border-slate-850 text-slate-650 line-through opacity-45";
-                      }
-                    } else if (elem.category === "ropa") {
-                      catColor = isAvailable 
-                        ? "bg-purple-950/65 border-purple-600/70 text-purple-200 shadow-lg shadow-purple-500/5"
-                        : "bg-slate-950/40 border-slate-850 text-slate-650 line-through opacity-45";
-                    } else if (elem.category === "higiene") {
-                      catColor = isAvailable 
-                        ? "bg-teal-950/65 border-teal-600/70 text-teal-200 shadow-lg shadow-teal-500/5"
-                        : "bg-slate-950/40 border-slate-850 text-slate-650 line-through opacity-45";
-                    } else if (elem.category === "salud") {
-                      catColor = isAvailable 
-                        ? "bg-rose-950/65 border-rose-600/70 text-rose-200 shadow-lg shadow-rose-500/5"
-                        : "bg-slate-950/40 border-slate-850 text-slate-650 line-through opacity-45";
-                    }
-
-                    const activeBorder = isAvailable && isEditingSupplies
-                      ? "hover:scale-105 hover:border-white/40"
-                      : isEditingSupplies ? "hover:scale-105" : "";
-
-                    return (
-                      <button
-                        key={elem.symbol}
-                        type="button"
-                        style={{ gridRow: elem.row, gridColumn: elem.col }}
-                        onMouseEnter={() => setHoveredElement(elem)}
-                        onMouseLeave={() => setHoveredElement(null)}
-                        onClick={() => {
-                          if (isEditingSupplies) {
-                            setSupplyStates((prev) => ({
-                              ...prev,
-                              [elem.symbol]: !isAvailable,
-                            }));
-                          }
-                        }}
-                        className={`relative flex flex-col justify-between p-1 sm:p-1.5 rounded-xl border text-left cursor-pointer transition-all duration-200 select-none aspect-square ${catColor} ${activeBorder} ${
-                          isDimmed ? "opacity-15 scale-95 saturate-50 pointer-events-none" : ""
-                        }`}
-                      >
-                        {/* Top Corner Details */}
-                        <div className="flex justify-between items-center w-full leading-none">
-                          <span className="text-[7px] sm:text-[8px] font-bold opacity-45">{elem.num}</span>
-                          <span className={`w-1 h-1 sm:w-1.5 sm:h-1.5 rounded-full ${isAvailable ? "bg-emerald-500" : "bg-rose-500"}`}></span>
-                        </div>
-
-                        {/* Main Symbol & Emoji */}
-                        <div className="flex flex-col items-center justify-center py-0.5 leading-none">
-                          <span className="text-xs sm:text-base select-none">{elem.emoji}</span>
-                          <span className="text-[10px] sm:text-xs font-black tracking-wider select-none">{elem.symbol}</span>
-                        </div>
-
-                        {/* Name Bottom */}
-                        <div className="text-center w-full leading-none overflow-hidden text-ellipsis whitespace-nowrap mt-0.5">
-                          <span className="text-[6px] sm:text-[7px] font-bold tracking-tight uppercase select-none opacity-80">{elem.name}</span>
-                        </div>
-                      </button>
-                    );
-                  })}
-                </div>
-              </div>
-
-              {/* Bottom Element Detailed Panel (big periodic element display) */}
-              <div className="bg-slate-950/60 border border-slate-850/80 rounded-2xl p-2.5 min-h-[50px] flex items-center justify-between gap-4">
-                {hoveredElement ? (
-                  <>
-                    <div className="flex items-center gap-3">
-                      <div className="w-9 h-9 rounded-lg bg-slate-900 border border-slate-800 flex flex-col items-center justify-center leading-none">
-                        <span className="text-sm">{hoveredElement.emoji}</span>
-                        <span className="text-[8px] font-black text-slate-400">{hoveredElement.symbol}</span>
-                      </div>
-                      <div className="flex flex-col leading-tight">
-                        <div className="flex items-center gap-2">
-                          <span className="text-[10px] font-black text-white">{hoveredElement.name}</span>
-                          <span className={`text-[7px] font-extrabold uppercase px-1.5 py-0.5 rounded-full ${
-                            hoveredElement.category === "alimentos" ? "bg-amber-500/10 text-amber-400 border border-amber-500/20" :
-                            hoveredElement.category === "servicios" ? "bg-sky-500/10 text-sky-400 border border-sky-500/20" :
-                            hoveredElement.category === "ropa" ? "bg-purple-500/10 text-purple-400 border border-purple-500/20" :
-                            hoveredElement.category === "higiene" ? "bg-teal-500/10 text-teal-400 border border-teal-500/20" :
-                            "bg-rose-500/10 text-rose-400 border border-rose-500/20"
-                          }`}>
-                            {hoveredElement.category}
-                          </span>
-                        </div>
-                        <span className="text-[8.5px] text-slate-400 leading-normal font-medium">{hoveredElement.description}</span>
-                      </div>
-                    </div>
-                    <div className="text-right">
-                      <span className={`text-[9px] font-black uppercase tracking-wider ${supplyStates[hoveredElement.symbol] !== false ? "text-emerald-400" : "text-rose-500"}`}>
-                        {supplyStates[hoveredElement.symbol] !== false ? "🟢 Disponible" : hoveredElement.symbol === "Wf" ? "🔴 Sin WiFi" : hoveredElement.symbol === "Lz" ? "🔴 Sin Luz" : "🔴 Agotado"}
-                      </span>
-                    </div>
-                  </>
-                ) : (
-                  <div className="flex items-center justify-center w-full py-1 text-center">
-                    <p className="text-[9px] text-slate-500 font-semibold leading-relaxed">
-                      💡 <em>Coloque el cursor o mantenga presionado un elemento para ver su descripción. Toque para alternar estado.</em>
-                    </p>
+                {/* Donor input (only in edit mode) */}
+                {isEditingSupplies && (
+                  <div className="flex flex-col gap-1">
+                    <label className="text-[8px] font-black text-slate-500 uppercase tracking-wider">🏢 Donante / Corporación (opcional)</label>
+                    <input
+                      type="text"
+                      value={supplyDonor}
+                      onChange={(e) => setSupplyDonor(e.target.value)}
+                      placeholder="Ej: Cruz Roja, PDVSA Social, Sin especificar..."
+                      className="w-full bg-slate-900 border border-slate-800 rounded-xl py-1.5 px-3 text-[9px] text-white focus:outline-none focus:border-orange-500/50 transition font-medium placeholder-slate-600"
+                    />
                   </div>
                 )}
-              </div>
 
-              {/* Matching Supplies Detailed List */}
-              <div className="flex-1 overflow-y-auto max-h-[160px] border border-slate-850/60 rounded-2xl bg-slate-950/40 p-2 flex flex-col gap-1.5">
-                <span className="text-[8px] font-black text-slate-500 uppercase tracking-widest px-1">
-                  {supplySearchQuery || selectedSupplyCategory !== "todos" ? "🔍 Resultados de Búsqueda / Filtro" : "📦 Listado Completo de Insumos"}
-                </span>
-                
-                {filteredSuppliesList.length === 0 ? (
-                  <div className="text-center py-4 text-[9px] text-slate-500 italic">
-                    No se encontraron insumos coincidentes.
-                  </div>
-                ) : (
-                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-1.5">
-                    {filteredSuppliesList.map((elem) => {
-                      const isAvailable = supplyStates[elem.symbol] !== false;
+                {/* Category stat pills + Search combined row */}
+                <div className="flex flex-col gap-1.5">
+                  <div className="flex overflow-x-auto gap-1.5 scrollbar-none pb-0.5">
+                    {/* Todos pill */}
+                    <button
+                      type="button"
+                      onClick={() => setSelectedSupplyCategory("todos")}
+                      className={`flex-shrink-0 flex flex-col items-center px-2.5 py-1 rounded-xl border text-[7px] font-extrabold uppercase transition cursor-pointer ${
+                        selectedSupplyCategory === "todos"
+                          ? "bg-white/10 border-white/30 text-white"
+                          : "border-slate-800 text-slate-500 hover:border-slate-600"
+                      }`}
+                    >
+                      <span className="text-xs">🌍</span>
+                      <span>Todo</span>
+                      <span className="text-[6px] opacity-60">{PERIODIC_SUPPLIES.filter(e => (supplyStates[e.symbol] ?? 0) > 0).length}/{PERIODIC_SUPPLIES.length}</span>
+                    </button>
+                    {categoryStats.map(({ cat, available, total }) => {
+                      const m = catMeta[cat];
+                      const isActive = selectedSupplyCategory === cat;
                       return (
-                        <div 
-                          key={elem.symbol}
-                          className={`flex items-center justify-between p-2 rounded-xl border transition ${
-                            isAvailable 
-                              ? "bg-slate-900/60 border-slate-800" 
-                              : "bg-rose-950/15 border-rose-900/20"
+                        <button
+                          key={cat}
+                          type="button"
+                          onClick={() => setSelectedSupplyCategory(isActive ? "todos" : cat)}
+                          className={`flex-shrink-0 flex flex-col items-center px-2.5 py-1 rounded-xl border text-[7px] font-extrabold uppercase transition cursor-pointer ${
+                            isActive ? m.activeClass + " border-current" : m.color + " hover:border-current"
                           }`}
                         >
-                          <div className="flex items-center gap-2">
-                            <span className="text-xs">{elem.emoji}</span>
-                            <div className="flex flex-col leading-none">
-                              <span className="text-[9.5px] font-black text-white">{elem.name} ({elem.symbol})</span>
-                              <span className="text-[7.5px] text-slate-400 mt-0.5 max-w-[140px] overflow-hidden text-ellipsis whitespace-nowrap" title={elem.description}>
-                                {elem.description}
-                              </span>
-                            </div>
+                          <span className="text-xs">{m.emoji}</span>
+                          <span>{m.label}</span>
+                          <span className="text-[6px] opacity-70 font-bold">{available}/{total}</span>
+                        </button>
+                      );
+                    })}
+                  </div>
+                  
+                  {/* Search bar */}
+                  <div className="relative">
+                    <span className="absolute left-2.5 top-[7px] text-slate-500 text-[9px]">🔍</span>
+                    <input
+                      type="text"
+                      placeholder="Buscar insumo..."
+                      value={supplySearchQuery}
+                      onChange={(e) => setSupplySearchQuery(e.target.value)}
+                      className="w-full bg-slate-900 border border-slate-800 rounded-xl py-1.5 pl-7 pr-3 text-[9px] text-white focus:outline-none focus:border-orange-500/50 transition font-medium placeholder-slate-600"
+                    />
+                  </div>
+                </div>
+
+                {/* Periodic Table Grid — compact */}
+                <div className="overflow-x-auto scrollbar-none select-none">
+                  <div className="grid grid-cols-12 gap-1 min-w-[520px] sm:min-w-0 w-full aspect-[12/4]">
+                    {PERIODIC_SUPPLIES.map((elem) => {
+                      const qty = supplyStates[elem.symbol] ?? 0;
+                      const isAvailable = qty > 0;
+                      const matchesSearch = !supplySearchQuery || (
+                        elem.name.toLowerCase().includes(supplySearchQuery.toLowerCase()) ||
+                        elem.symbol.toLowerCase().includes(supplySearchQuery.toLowerCase())
+                      );
+                      const matchesCategory = selectedSupplyCategory === "todos" || elem.category === selectedSupplyCategory;
+                      const isDimmed = !matchesSearch || !matchesCategory;
+
+                      let catColor = "";
+                      if (elem.category === "alimentos") {
+                        catColor = isAvailable ? "bg-amber-950/70 border-amber-600/60 text-amber-200" : "bg-slate-950/50 border-slate-800 text-slate-600 opacity-40";
+                      } else if (elem.category === "servicios") {
+                        catColor = isAvailable ? "bg-sky-950/70 border-sky-600/60 text-sky-200" : "bg-slate-950/50 border-slate-800 text-slate-600 opacity-40";
+                      } else if (elem.category === "ropa") {
+                        catColor = isAvailable ? "bg-purple-950/70 border-purple-600/60 text-purple-200" : "bg-slate-950/50 border-slate-800 text-slate-600 opacity-40";
+                      } else if (elem.category === "higiene") {
+                        catColor = isAvailable ? "bg-teal-950/70 border-teal-600/60 text-teal-200" : "bg-slate-950/50 border-slate-800 text-slate-600 opacity-40";
+                      } else if (elem.category === "salud") {
+                        catColor = isAvailable ? "bg-rose-950/70 border-rose-600/60 text-rose-200" : "bg-slate-950/50 border-slate-800 text-slate-600 opacity-40";
+                      }
+
+                      return (
+                        <div
+                          key={elem.symbol}
+                          style={{ gridRow: elem.row, gridColumn: elem.col }}
+                          onMouseEnter={() => setHoveredElement(elem)}
+                          onMouseLeave={() => setHoveredElement(null)}
+                          className={`relative flex flex-col justify-between p-0.5 rounded-lg border transition-all duration-150 aspect-square ${catColor} ${isDimmed ? "opacity-10 pointer-events-none" : ""}`}
+                        >
+                          {/* Number + dot */}
+                          <div className="flex justify-between items-center leading-none">
+                            <span className="text-[5px] font-bold opacity-40">{elem.num}</span>
+                            <span className={`w-1 h-1 rounded-full ${isAvailable ? "bg-emerald-500" : "bg-rose-700"}`}></span>
                           </div>
-                          
-                          {isEditingSupplies ? (
-                            <button
-                              type="button"
-                              onClick={() => {
-                                setSupplyStates((prev) => ({
-                                  ...prev,
-                                  [elem.symbol]: !isAvailable,
-                                }));
-                              }}
-                              className={`px-2 py-0.5 rounded-lg text-[8px] font-black uppercase cursor-pointer transition ${
-                                isAvailable 
-                                  ? "bg-emerald-500/10 text-emerald-400 border border-emerald-500/20"
-                                  : "bg-rose-500/10 text-rose-400 border border-rose-500/20"
-                              }`}
-                            >
-                              {isAvailable ? "Disponible" : "Agotado"}
-                            </button>
-                          ) : (
-                            <span className={`px-2 py-0.5 rounded-lg text-[8px] font-black uppercase ${
-                              isAvailable 
-                                ? "bg-emerald-500/5 text-emerald-500/60"
-                                : "bg-rose-500/5 text-rose-500/60"
-                            }`}>
-                              {isAvailable ? "Disponible" : "Agotado"}
-                            </span>
-                          )}
+                          {/* Emoji + symbol */}
+                          <div className="flex flex-col items-center justify-center leading-none">
+                            <span className="text-[10px] select-none">{elem.emoji}</span>
+                            <span className="text-[8px] font-black tracking-wide select-none">{elem.symbol}</span>
+                          </div>
+                          {/* Qty or name at bottom */}
+                          <div className="text-center leading-none">
+                            {isEditingSupplies ? (
+                              <input
+                                type="number"
+                                min={0}
+                                max={9999}
+                                value={qty}
+                                onClick={(e) => e.stopPropagation()}
+                                onChange={(e) => {
+                                  const v = Math.max(0, parseInt(e.target.value) || 0);
+                                  setSupplyStates(prev => ({ ...prev, [elem.symbol]: v }));
+                                }}
+                                className="w-full bg-transparent border-none text-center text-[7px] font-black text-white focus:outline-none focus:ring-1 focus:ring-white/30 rounded"
+                              />
+                            ) : (
+                              <span className="text-[6px] font-bold tracking-tight uppercase select-none opacity-70">
+                                {isAvailable ? `×${qty}` : elem.name.substring(0, 4)}
+                              </span>
+                            )}
+                          </div>
                         </div>
                       );
                     })}
                   </div>
-                )}
-              </div>
+                </div>
 
-              {/* Action buttons */}
-              <div className="flex gap-3 border-t border-slate-800/80 pt-2.5">
-                {isEditingSupplies ? (
-                  <>
-                    <button
-                      type="button"
-                      onClick={() => {
-                        // Reopen the modal with original data to cancel changes
-                        handleOpenSupplies(activeSuppliesPunto);
-                      }}
-                      className="flex-1 py-2 border border-slate-800 text-slate-400 hover:text-white rounded-xl text-[10px] font-black transition cursor-pointer"
-                    >
-                      Cancelar Edición
-                    </button>
-                    <button
-                      type="button"
-                      onClick={handleSaveSupplies}
-                      className="flex-1 py-2 bg-gradient-to-r from-orange-600 to-amber-500 hover:from-orange-500 hover:to-amber-400 text-white rounded-xl text-[10px] font-black transition shadow-lg cursor-pointer animate-pulse"
-                    >
-                      Guardar Inventario
-                    </button>
-                  </>
-                ) : (
-                  <>
-                    <button
-                      type="button"
-                      onClick={() => {
-                        setIsSuppliesOpen(false);
-                        setActiveSuppliesPunto(null);
-                      }}
-                      className="flex-1 py-2 border border-slate-800 text-slate-400 hover:text-white rounded-xl text-[10px] font-black transition cursor-pointer"
-                    >
-                      Cerrar
-                    </button>
-                    {isAuthorizedToEditSupplies ? (
-                      <button
-                        type="button"
-                        onClick={() => setIsEditingSupplies(true)}
-                        className="flex-1 py-2 bg-blue-650 hover:bg-blue-600 text-white rounded-xl text-[10px] font-black transition shadow-lg cursor-pointer"
-                      >
-                        ✏️ Habilitar Edición
-                      </button>
+                {/* Hover panel */}
+                {hoveredElement && (
+                  <div className="bg-slate-900/80 border border-slate-800 rounded-xl px-3 py-2 flex items-center justify-between gap-3">
+                    <div className="flex items-center gap-2">
+                      <span className="text-base">{hoveredElement.emoji}</span>
+                      <div className="flex flex-col">
+                        <div className="flex items-center gap-1.5">
+                          <span className="text-[9px] font-black text-white">{hoveredElement.name}</span>
+                          <span className={`text-[6px] px-1 py-0.5 rounded font-black uppercase ${catMeta[hoveredElement.category]?.color}`}>{hoveredElement.category}</span>
+                        </div>
+                        <span className="text-[7.5px] text-slate-400">{hoveredElement.description}</span>
+                      </div>
+                    </div>
+                    <span className={`text-[8px] font-black uppercase whitespace-nowrap ${(supplyStates[hoveredElement.symbol] ?? 0) > 0 ? "text-emerald-400" : "text-rose-500"}`}>
+                      {(supplyStates[hoveredElement.symbol] ?? 0) > 0 ? `🟢 ×${supplyStates[hoveredElement.symbol]}` : "🔴 Agotado"}
+                    </span>
+                  </div>
+                )}
+
+                {/* Filtered list (compact 2-col grid) */}
+                {(supplySearchQuery || selectedSupplyCategory !== "todos") && (
+                  <div className="border border-slate-800/60 rounded-xl bg-slate-900/40 p-2 flex flex-col gap-1 max-h-[130px] overflow-y-auto scrollbar-none">
+                    <span className="text-[7px] font-black text-slate-500 uppercase tracking-widest px-0.5">🔍 Resultados</span>
+                    {filteredSuppliesList.length === 0 ? (
+                      <p className="text-center text-[8px] text-slate-500 italic py-2">Sin coincidencias</p>
                     ) : (
+                      <div className="grid grid-cols-2 gap-1">
+                        {filteredSuppliesList.map((elem) => {
+                          const qty = supplyStates[elem.symbol] ?? 0;
+                          return (
+                            <div key={elem.symbol} className="flex items-center justify-between p-1.5 rounded-lg bg-slate-900 border border-slate-800 gap-1">
+                              <div className="flex items-center gap-1.5 min-w-0">
+                                <span className="text-[10px]">{elem.emoji}</span>
+                                <div className="flex flex-col leading-none min-w-0">
+                                  <span className="text-[8px] font-black text-white truncate">{elem.name}</span>
+                                  <span className="text-[6px] text-slate-500">{elem.symbol}</span>
+                                </div>
+                              </div>
+                              {isEditingSupplies ? (
+                                <input
+                                  type="number"
+                                  min={0}
+                                  value={qty}
+                                  onChange={(e) => {
+                                    const v = Math.max(0, parseInt(e.target.value) || 0);
+                                    setSupplyStates(prev => ({ ...prev, [elem.symbol]: v }));
+                                  }}
+                                  className="w-10 bg-slate-800 border border-slate-700 rounded-lg text-center text-[8px] font-black text-white focus:outline-none focus:border-orange-500/50"
+                                />
+                              ) : (
+                                <span className={`text-[7px] font-black px-1.5 py-0.5 rounded-lg ${qty > 0 ? "text-emerald-400 bg-emerald-500/10" : "text-rose-500 bg-rose-500/10"}`}>
+                                  {qty > 0 ? `×${qty}` : "—"}
+                                </span>
+                              )}
+                            </div>
+                          );
+                        })}
+                      </div>
+                    )}
+                  </div>
+                )}
+
+                {/* Action buttons */}
+                <div className="flex gap-2 pt-1">
+                  {isEditingSupplies ? (
+                    <>
                       <button
                         type="button"
-                        disabled
-                        className="flex-1 py-2 bg-slate-800 text-slate-500 rounded-xl text-[10px] font-black cursor-not-allowed opacity-50"
+                        onClick={() => handleOpenSupplies(activeSuppliesPunto)}
+                        className="flex-1 py-2 border border-slate-800 text-slate-400 hover:text-white rounded-xl text-[9px] font-black transition cursor-pointer"
                       >
-                        Inventario Bloqueado
+                        Cancelar
                       </button>
-                    )}
-                  </>
-                )}
-              </div>
+                      <button
+                        type="button"
+                        onClick={handleSaveSupplies}
+                        className="flex-1 py-2 bg-gradient-to-r from-orange-600 to-amber-500 hover:from-orange-500 hover:to-amber-400 text-white rounded-xl text-[9px] font-black transition shadow-lg cursor-pointer"
+                      >
+                        💾 Guardar Inventario
+                      </button>
+                    </>
+                  ) : (
+                    <>
+                      <button
+                        type="button"
+                        onClick={() => { setIsSuppliesOpen(false); setActiveSuppliesPunto(null); }}
+                        className="flex-1 py-2 border border-slate-800 text-slate-400 hover:text-white rounded-xl text-[9px] font-black transition cursor-pointer"
+                      >
+                        Cerrar
+                      </button>
+                      {isAuthorizedToEditSupplies ? (
+                        <button
+                          type="button"
+                          onClick={() => setIsEditingSupplies(true)}
+                          className="flex-1 py-2 bg-blue-600 hover:bg-blue-500 text-white rounded-xl text-[9px] font-black transition shadow-lg cursor-pointer"
+                        >
+                          ✏️ Editar Inventario
+                        </button>
+                      ) : (
+                        <button type="button" disabled className="flex-1 py-2 bg-slate-800 text-slate-600 rounded-xl text-[9px] font-black cursor-not-allowed opacity-50">
+                          🔒 Bloqueado
+                        </button>
+                      )}
+                    </>
+                  )}
+                </div>
 
+              </div>
             </div>
           </div>
         );
       })()}
+
 
       {/* 11. Seismic Bulletin Modal */}
       {isSeismicOpen && (

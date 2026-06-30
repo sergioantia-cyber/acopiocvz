@@ -22,7 +22,8 @@ export interface PuntoReportado {
   aprobado?: boolean;
   creadorAnonimo?: boolean;
 
-  supply_details?: Record<string, boolean>;
+  supply_details?: Record<string, number | boolean | string>;
+
   image_url?: string;
 }
 
