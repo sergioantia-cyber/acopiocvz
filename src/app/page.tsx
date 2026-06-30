@@ -120,34 +120,41 @@ interface SupplyElement {
 }
 
 const PERIODIC_SUPPLIES: SupplyElement[] = [
-  // Fila 1
-  { num: 1, symbol: "Ag", name: "Agua", emoji: "💧", category: "alimentos", description: "Agua potable o embotellada", row: 1, col: 1 },
-  { num: 2, symbol: "Lz", name: "Luz", emoji: "💡", category: "servicios", description: "Servicio eléctrico activo en el centro", row: 1, col: 7 },
+  // --- SECTOR 1: Servicios & Salud (Col 1-3) ---
+  // Servicios
+  { num: 1, symbol: "Lz", name: "Luz", emoji: "💡", category: "servicios", description: "Servicio eléctrico activo en el centro", row: 1, col: 1 },
+  { num: 2, symbol: "Wf", name: "WiFi", emoji: "📶", category: "servicios", description: "Acceso a internet inalámbrico", row: 1, col: 2 },
+  { num: 3, symbol: "Bt", name: "Batería", emoji: "🔋", category: "servicios", description: "Pilas y acumuladores portátiles", row: 1, col: 3 },
   
-  // Fila 2
-  { num: 3, symbol: "Az", name: "Azúcar", emoji: "🍬", category: "alimentos", description: "Azúcar refinada o endulzantes", row: 2, col: 1 },
-  { num: 4, symbol: "Ha", name: "Harina", emoji: "🌾", category: "alimentos", description: "Harina de maíz precocido o trigo", row: 2, col: 2 },
-  { num: 5, symbol: "Lt", name: "Lata", emoji: "🥫", category: "alimentos", description: "Alimentos enlatados no perecederos", row: 2, col: 3 },
-  { num: 6, symbol: "Le", name: "Leche", emoji: "🥛", category: "alimentos", description: "Leche en polvo o líquida pasteurizada", row: 2, col: 4 },
-  { num: 7, symbol: "Ar", name: "Arroz", emoji: "🍚", category: "alimentos", description: "Arroz blanco o integral", row: 2, col: 5 },
-  { num: 8, symbol: "Gr", name: "Granos", emoji: "🫘", category: "alimentos", description: "Frijoles, lentejas, caraotas", row: 2, col: 6 },
-  { num: 9, symbol: "Wf", name: "WiFi", emoji: "📶", category: "servicios", description: "Acceso a internet inalámbrico", row: 2, col: 7 },
-  
-  // Fila 3
-  { num: 10, symbol: "Me", name: "Medias", emoji: "🧦", category: "ropa", description: "Medias de abrigo y uso diario", row: 3, col: 1 },
-  { num: 11, symbol: "Ri", name: "Ropa I.", emoji: "🩲", category: "ropa", description: "Ropa íntima nueva o limpia", row: 3, col: 2 },
-  { num: 12, symbol: "Sh", name: "Shorts", emoji: "🩳", category: "ropa", description: "Pantalones cortos o shorts", row: 3, col: 3 },
-  { num: 13, symbol: "Ca", name: "Camisa", emoji: "👔", category: "ropa", description: "Camisas limpias", row: 3, col: 4 },
-  { num: 14, symbol: "Fr", name: "Franela", emoji: "👕", category: "ropa", description: "Franelas o camisetas cómodas", row: 3, col: 5 },
-  { num: 15, symbol: "Mn", name: "Manta", emoji: "🧣", category: "ropa", description: "Mantas para el frío", row: 3, col: 6 },
-  { num: 16, symbol: "Cb", name: "Cobija", emoji: "🛌", category: "ropa", description: "Cobijas, edredones o sábanas", row: 3, col: 7 },
-  
-  // Fila 4
-  { num: 17, symbol: "Kh", name: "Higiene", emoji: "🧼", category: "higiene", description: "Jabón, desodorante, pasta dental", row: 4, col: 1 },
-  { num: 18, symbol: "Pn", name: "Pañal", emoji: "👶", category: "higiene", description: "Pañales desechables de niños/adultos", row: 4, col: 2 },
-  { num: 19, symbol: "Bt", name: "Batería", emoji: "🔋", category: "servicios", description: "Pilas y acumuladores portátiles", row: 4, col: 5 },
-  { num: 20, symbol: "Md", name: "Med.", emoji: "💊", category: "salud", description: "Medicamentos de uso común", row: 4, col: 6 },
-  { num: 21, symbol: "Pa", name: "Auxilio", emoji: "🩹", category: "salud", description: "Material de curación y desinfección", row: 4, col: 7 },
+  // Salud
+  { num: 4, symbol: "Md", name: "Med.", emoji: "💊", category: "salud", description: "Medicamentos de uso común (analgésicos, antipiréticos)", row: 2, col: 1 },
+  { num: 5, symbol: "Pa", name: "Auxilio", emoji: "🩹", category: "salud", description: "Material de curación, vendas y desinfección", row: 2, col: 2 },
+  { num: 6, symbol: "In", name: "Insulina", emoji: "💉", category: "salud", description: "Insulina y jeringas para pacientes diabéticos", row: 2, col: 3 },
+  { num: 7, symbol: "Cr", name: "Crema", emoji: "🧴", category: "salud", description: "Cremas antibióticas, hidratantes o para quemaduras", row: 3, col: 1 },
+  { num: 8, symbol: "Al", name: "Alcohol", emoji: "🧪", category: "salud", description: "Alcohol antiséptico para desinfectar heridas", row: 3, col: 2 },
+  { num: 9, symbol: "Su", name: "Suero", emoji: "🥤", category: "salud", description: "Suero oral o intravenoso para rehidratación", row: 3, col: 3 },
+
+  // --- SECTOR 2: Higiene (Col 5-6) ---
+  { num: 10, symbol: "Kh", name: "Higiene", emoji: "🧼", category: "higiene", description: "Jabón, desodorante, pasta y cepillos de dientes", row: 2, col: 5 },
+  { num: 11, symbol: "Pn", name: "Pañal", emoji: "👶", category: "higiene", description: "Pañales desechables para bebés o adultos", row: 2, col: 6 },
+
+  // --- SECTOR 3: Alimentos (Col 8-9) ---
+  { num: 12, symbol: "Ag", name: "Agua", emoji: "💧", category: "alimentos", description: "Agua potable o embotellada", row: 1, col: 8 },
+  { num: 13, symbol: "Az", name: "Azúcar", emoji: "🍬", category: "alimentos", description: "Azúcar refinada o endulzantes", row: 2, col: 8 },
+  { num: 14, symbol: "Ha", name: "Harina", emoji: "🌾", category: "alimentos", description: "Harina de maíz precocido o trigo", row: 2, col: 9 },
+  { num: 15, symbol: "Lt", name: "Lata", emoji: "🥫", category: "alimentos", description: "Alimentos enlatados no perecederos", row: 3, col: 8 },
+  { num: 16, symbol: "Le", name: "Leche", emoji: "🥛", category: "alimentos", description: "Leche en polvo o líquida pasteurizada", row: 3, col: 9 },
+  { num: 17, symbol: "Ar", name: "Arroz", emoji: "🍚", category: "alimentos", description: "Arroz blanco o integral", row: 4, col: 8 },
+  { num: 18, symbol: "Gr", name: "Granos", emoji: "🫘", category: "alimentos", description: "Frijoles, lentejas, caraotas", row: 4, col: 9 },
+
+  // --- SECTOR 4: Ropa (Col 11-12) ---
+  { num: 19, symbol: "Me", name: "Medias", emoji: "🧦", category: "ropa", description: "Medias de abrigo y uso diario", row: 1, col: 11 },
+  { num: 20, symbol: "Ri", name: "Ropa I.", emoji: "🩲", category: "ropa", description: "Ropa íntima nueva o limpia", row: 1, col: 12 },
+  { num: 21, symbol: "Sh", name: "Shorts", emoji: "🩳", category: "ropa", description: "Pantalones cortos o shorts", row: 2, col: 11 },
+  { num: 22, symbol: "Ca", name: "Camisa", emoji: "👔", category: "ropa", description: "Camisas limpias", row: 2, col: 12 },
+  { num: 23, symbol: "Fr", name: "Franela", emoji: "👕", category: "ropa", description: "Franelas o camisetas cómodas", row: 3, col: 11 },
+  { num: 24, symbol: "Mn", name: "Manta", emoji: "🧣", category: "ropa", description: "Mantas para el frío", row: 3, col: 12 },
+  { num: 25, symbol: "Cb", name: "Cobija", emoji: "🛌", category: "ropa", description: "Cobijas, edredones o sábanas", row: 4, col: 11 },
 ];
 
 export default function HomePage() {
@@ -250,6 +257,9 @@ export default function HomePage() {
   const [activeSuppliesPunto, setActiveSuppliesPunto] = useState<PuntoReportado | null>(null);
   const [supplyStates, setSupplyStates] = useState<Record<string, boolean>>({});
   const [hoveredElement, setHoveredElement] = useState<any>(null);
+  const [mapViewControllerTrigger, setMapViewControllerTrigger] = useState<{ center: [number, number]; zoom: number; timestamp: number } | null>(null);
+  const [supplySearchQuery, setSupplySearchQuery] = useState("");
+  const [selectedSupplyCategory, setSelectedSupplyCategory] = useState<string>("todos");
   const [isPsychFormOpen, setIsPsychFormOpen] = useState(false);
   const [editingPsych, setEditingPsych] = useState<Psychologist | null>(null);
   const [searchPsych, setSearchPsych] = useState("");
@@ -344,19 +354,17 @@ export default function HomePage() {
 
   const handleOpenSupplies = (punto: PuntoReportado) => {
     setActiveSuppliesPunto(punto);
+    setSupplySearchQuery("");
+    setSelectedSupplyCategory("todos");
     
     // Load existing supply_details or initialize to default (all true)
     const initialStates: Record<string, boolean> = {};
-    const defaultSymbols = [
-      "Ag", "Lz", "Az", "Ha", "Lt", "Wf", "Me", "Ri", "Sh", "Ca", "Fr", "Mn", "Cb", 
-      "Le", "Ar", "Gr", "Bt", "Kh", "Pn", "Md", "Pa"
-    ];
     
-    defaultSymbols.forEach((sym) => {
-      if (punto.supply_details && typeof punto.supply_details[sym] === "boolean") {
-        initialStates[sym] = punto.supply_details[sym];
+    PERIODIC_SUPPLIES.forEach((elem) => {
+      if (punto.supply_details && typeof punto.supply_details[elem.symbol] === "boolean") {
+        initialStates[elem.symbol] = punto.supply_details[elem.symbol];
       } else {
-        initialStates[sym] = true;
+        initialStates[elem.symbol] = true;
       }
     });
     
@@ -1396,7 +1404,23 @@ export default function HomePage() {
     setFormDireccion("");
   };
 
-  const filteredPuntos = [...puntos, ...reconectaSites].filter((punto) => {
+  const seismicMapPuntos: PuntoReportado[] = (alerts.seismic || []).map((s) => ({
+    id: s.id,
+    tipo: "ofrece" as const,
+    categoria: "sismo" as const,
+    descripcion: s.mensaje,
+    lat: s.lat,
+    lng: s.lng,
+    confirmations: 0,
+    creadoAt: s.creado_at,
+    expiresAt: s.creado_at,
+    nombre: `Sismo Magnitud ${s.mag}`,
+    direccion: s.place,
+    fuente: "USGS / FUNVISIS",
+    aprobado: true
+  }));
+
+  const filteredPuntos = [...puntos, ...reconectaSites, ...seismicMapPuntos].filter((punto) => {
     // Exclude news/noticias from map rendering
     if (punto.tipo === "noticia") return false;
 
@@ -1621,7 +1645,18 @@ export default function HomePage() {
           {activeAlertsToShow.slice(0, 3).map((alert: any) => (
             <div
               key={alert.id}
-              className={`relative px-4 py-2.5 rounded-xl border flex items-center justify-between gap-3 shadow-lg backdrop-blur-md ${
+              onClick={() => {
+                if (alert.lat && alert.lng) {
+                  setMapViewControllerTrigger({
+                    center: [parseFloat(alert.lat), parseFloat(alert.lng)],
+                    zoom: 12,
+                    timestamp: Date.now()
+                  });
+                }
+              }}
+              className={`relative px-4 py-2.5 rounded-xl border flex items-center justify-between gap-3 shadow-lg backdrop-blur-md transition-all duration-300 ${
+                alert.lat && alert.lng ? 'cursor-pointer hover:border-slate-500 hover:scale-[1.01]' : ''
+              } ${
                 alert.tipo === 'critico'
                   ? 'bg-rose-950/90 border-rose-500/40 text-rose-200'
                   : alert.tipo === 'sismo'
@@ -1631,13 +1666,16 @@ export default function HomePage() {
             >
               <div className="flex items-center gap-2 text-[10px] font-bold leading-snug">
                 <span className="text-xs shrink-0">
-                  {alert.tipo === 'critico' ? '⚠️' : alert.tipo === 'sismo' ? '💥' : '�🇺🇳�'}
+                  {alert.tipo === 'critico' ? '⚠️' : alert.tipo === 'sismo' ? '💥' : '🇺🇳'}
                 </span>
                 <span>{alert.mensaje}</span>
               </div>
               <button
-                onClick={() => handleDismissAlert(alert.id)}
-                className="text-[10px] font-extrabold hover:text-white text-slate-400 p-1 cursor-pointer transition shrink-0"
+                onClick={(e) => {
+                  e.stopPropagation();
+                  handleDismissAlert(alert.id);
+                }}
+                className="text-[10px] font-extrabold hover:text-white text-slate-400 p-1 cursor-pointer transition shrink-0 z-10"
                 title="Descartar alerta"
               >
                 ✕
@@ -1666,6 +1704,7 @@ export default function HomePage() {
                 onDelete={handleDeletePunto}
                 onMarkerMove={handleMarkerMove}
                 onViewSupplies={handleOpenSupplies}
+                mapViewControllerTrigger={mapViewControllerTrigger}
               />
             </div>
 
@@ -2420,190 +2459,331 @@ export default function HomePage() {
       )}
 
       {/* 12. Supply Periodic Table Modal */}
-      {isSuppliesOpen && activeSuppliesPunto && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/80 backdrop-blur-sm animate-in fade-in duration-200">
-          <div className="w-full max-w-xl bg-slate-900 border border-slate-800 rounded-3xl p-5 shadow-2xl flex flex-col gap-3 animate-in scale-in-95 duration-200 max-h-[96dvh] overflow-y-auto">
-            
-            {/* Modal Header */}
-            <div className="flex justify-between items-center border-b border-slate-800 pb-2.5">
-              <div className="flex flex-col">
-                <div className="flex items-center gap-2">
-                  <span className="text-lg">📋</span>
-                  <h3 className="text-xs font-black text-white uppercase tracking-wider">
-                    Inventario de Insumos & Servicios
-                  </h3>
+      {isSuppliesOpen && activeSuppliesPunto && (() => {
+        const isAuthorizedToEditSupplies = !!(user && (
+          isAdmin || 
+          activeSuppliesPunto.id.includes("-creator-" + user.email.toLowerCase())
+        ));
+
+        const filteredSuppliesList = PERIODIC_SUPPLIES.filter((elem) => {
+          if (selectedSupplyCategory !== "todos" && elem.category !== selectedSupplyCategory) {
+            return false;
+          }
+          if (supplySearchQuery) {
+            const q = supplySearchQuery.toLowerCase();
+            return (
+              elem.name.toLowerCase().includes(q) ||
+              elem.symbol.toLowerCase().includes(q) ||
+              elem.description.toLowerCase().includes(q)
+            );
+          }
+          return true;
+        });
+
+        return (
+          <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/80 backdrop-blur-sm animate-in fade-in duration-200">
+            <div className="w-full max-w-xl bg-slate-900 border border-slate-800 rounded-3xl p-5 shadow-2xl flex flex-col gap-3 animate-in scale-in-95 duration-200 max-h-[96dvh] overflow-y-auto">
+              
+              {/* Modal Header */}
+              <div className="flex justify-between items-center border-b border-slate-800 pb-2.5">
+                <div className="flex flex-col">
+                  <div className="flex items-center gap-2">
+                    <span className="text-lg">📋</span>
+                    <h3 className="text-xs font-black text-white uppercase tracking-wider">
+                      Inventario de Insumos & Servicios
+                    </h3>
+                  </div>
+                  <span className="text-[10px] text-orange-500 font-bold tracking-wide mt-0.5">
+                    {activeSuppliesPunto.nombre || "Centro de Ayuda / Hospital"}
+                  </span>
                 </div>
-                <span className="text-[10px] text-orange-500 font-bold tracking-wide mt-0.5">
-                  {activeSuppliesPunto.nombre || "Centro de Ayuda / Hospital"}
-                </span>
+                <button
+                  onClick={() => {
+                    setIsSuppliesOpen(false);
+                    setActiveSuppliesPunto(null);
+                  }}
+                  className="w-7 h-7 rounded-xl bg-slate-950 border border-slate-850 text-slate-400 hover:text-white flex items-center justify-center cursor-pointer transition"
+                >
+                  <X className="w-4 h-4" />
+                </button>
               </div>
-              <button
-                onClick={() => {
-                  setIsSuppliesOpen(false);
-                  setActiveSuppliesPunto(null);
-                }}
-                className="w-7 h-7 rounded-xl bg-slate-950 border border-slate-850 text-slate-400 hover:text-white flex items-center justify-center cursor-pointer transition"
-              >
-                <X className="w-4 h-4" />
-              </button>
-            </div>
 
-            {/* Instruction / legend */}
-            <div className="text-[9px] text-slate-400 flex flex-col gap-1">
-              <p className="leading-relaxed">
-                Haga clic o toque en cualquier casilla de elemento para alternar su disponibilidad.
-              </p>
-              <div className="flex flex-wrap gap-2 mt-1 border-b border-slate-850 pb-2 text-[8px] sm:text-[9px]">
-                <span className="flex items-center gap-1"><span className="w-2 h-2 rounded bg-amber-500/20 border border-amber-500/50"></span> Alimentos</span>
-                <span className="flex items-center gap-1"><span className="w-2 h-2 rounded bg-sky-500/20 border border-sky-500/50"></span> Servicios</span>
-                <span className="flex items-center gap-1"><span className="w-2 h-2 rounded bg-purple-500/20 border border-purple-500/50"></span> Ropa</span>
-                <span className="flex items-center gap-1"><span className="w-2 h-2 rounded bg-teal-500/20 border border-teal-500/50"></span> Higiene</span>
-                <span className="flex items-center gap-1"><span className="w-2 h-2 rounded bg-rose-500/20 border border-rose-500/50"></span> Salud</span>
-              </div>
-            </div>
-
-            {/* Periodic Table Grid wrapper */}
-            <div className="flex-1 py-1 flex justify-center items-center overflow-visible">
-              <div className="grid grid-cols-7 gap-1 sm:gap-1.5 w-full max-w-[480px] aspect-[7/4] mx-auto">
-                {PERIODIC_SUPPLIES.map((elem) => {
-                  const isAvailable = supplyStates[elem.symbol] !== false;
-                  
-                  // Category Styling
-                  let catColor = "";
-                  if (elem.category === "alimentos") {
-                    catColor = isAvailable 
-                      ? "bg-amber-950/65 border-amber-600/70 text-amber-200 shadow-lg shadow-amber-500/5"
-                      : "bg-slate-950/40 border-slate-850 text-slate-650 line-through opacity-45";
-                  } else if (elem.category === "servicios") {
-                    // Check if it is WiFi or Luz (needs red styling if unavailable)
-                    if ((elem.symbol === "Wf" || elem.symbol === "Lz") && !isAvailable) {
-                      catColor = "bg-rose-950/60 border-rose-600 text-rose-400 font-extrabold shadow-lg shadow-rose-500/10";
-                    } else {
-                      catColor = isAvailable 
-                        ? "bg-sky-950/65 border-sky-600/70 text-sky-200 shadow-lg shadow-sky-500/5"
-                        : "bg-slate-950/40 border-slate-850 text-slate-650 line-through opacity-45";
-                    }
-                  } else if (elem.category === "ropa") {
-                    catColor = isAvailable 
-                      ? "bg-purple-950/65 border-purple-600/70 text-purple-200 shadow-lg shadow-purple-500/5"
-                      : "bg-slate-950/40 border-slate-850 text-slate-650 line-through opacity-45";
-                  } else if (elem.category === "higiene") {
-                    catColor = isAvailable 
-                      ? "bg-teal-950/65 border-teal-600/70 text-teal-200 shadow-lg shadow-teal-500/5"
-                      : "bg-slate-950/40 border-slate-850 text-slate-650 line-through opacity-45";
-                  } else if (elem.category === "salud") {
-                    catColor = isAvailable 
-                      ? "bg-rose-950/65 border-rose-600/70 text-rose-200 shadow-lg shadow-rose-500/5"
-                      : "bg-slate-950/40 border-slate-850 text-slate-650 line-through opacity-45";
-                  }
-
-                  // Available vs Out of stock styling overlays
-                  const activeBorder = isAvailable 
-                    ? "hover:scale-105 hover:border-white/40"
-                    : "hover:scale-105";
-
-                  return (
-                    <button
-                      key={elem.symbol}
-                      type="button"
-                      style={{ gridRow: elem.row, gridColumn: elem.col }}
-                      onMouseEnter={() => setHoveredElement(elem)}
-                      onMouseLeave={() => setHoveredElement(null)}
-                      onClick={() => {
-                        setSupplyStates((prev) => ({
-                          ...prev,
-                          [elem.symbol]: !isAvailable,
-                        }));
-                      }}
-                      className={`relative flex flex-col justify-between p-1 sm:p-1.5 rounded-lg sm:rounded-xl border text-left cursor-pointer transition-all duration-200 select-none aspect-square ${catColor} ${activeBorder}`}
-                    >
-                      {/* Top Corner Details */}
-                      <div className="flex justify-between items-center w-full leading-none">
-                        <span className="text-[6px] sm:text-[7.5px] font-bold opacity-45">{elem.num}</span>
-                        {/* Dot Indicator */}
-                        <span className={`w-1 h-1 sm:w-1.5 sm:h-1.5 rounded-full ${isAvailable ? "bg-emerald-500" : "bg-rose-500"}`}></span>
-                      </div>
-
-                      {/* Main Symbol & Emoji */}
-                      <div className="flex flex-col items-center justify-center py-0.5 leading-none">
-                        <span className="text-xs sm:text-sm select-none">{elem.emoji}</span>
-                        <span className="text-[9px] sm:text-[11px] font-black tracking-wide select-none">{elem.symbol}</span>
-                      </div>
-
-                      {/* Name Bottom */}
-                      <div className="text-center w-full leading-none overflow-hidden text-ellipsis whitespace-nowrap mt-0.5">
-                        <span className="text-[6px] sm:text-[7px] font-bold tracking-tight uppercase select-none opacity-80">{elem.name}</span>
-                      </div>
-                    </button>
-                  );
-                })}
-              </div>
-            </div>
-
-            {/* Bottom Element Detailed Panel (big periodic element display) */}
-            <div className="bg-slate-950/60 border border-slate-850/80 rounded-2xl p-2.5 min-h-[50px] flex items-center justify-between gap-4">
-              {hoveredElement ? (
-                <>
-                  <div className="flex items-center gap-3">
-                    <div className="w-9 h-9 rounded-lg bg-slate-900 border border-slate-800 flex flex-col items-center justify-center leading-none">
-                      <span className="text-sm">{hoveredElement.emoji}</span>
-                      <span className="text-[8px] font-black text-slate-400">{hoveredElement.symbol}</span>
-                    </div>
-                    <div className="flex flex-col leading-tight">
-                      <div className="flex items-center gap-2">
-                        <span className="text-[10px] font-black text-white">{hoveredElement.name}</span>
-                        <span className={`text-[7px] font-extrabold uppercase px-1.5 py-0.5 rounded-full ${
-                          hoveredElement.category === "alimentos" ? "bg-amber-500/10 text-amber-400 border border-amber-500/20" :
-                          hoveredElement.category === "servicios" ? "bg-sky-500/10 text-sky-400 border border-sky-500/20" :
-                          hoveredElement.category === "ropa" ? "bg-purple-500/10 text-purple-400 border border-purple-500/20" :
-                          hoveredElement.category === "higiene" ? "bg-teal-500/10 text-teal-400 border border-teal-500/20" :
-                          "bg-rose-500/10 text-rose-400 border border-rose-500/20"
-                        }`}>
-                          {hoveredElement.category}
-                        </span>
-                      </div>
-                      <span className="text-[8.5px] text-slate-400 leading-normal font-medium">{hoveredElement.description}</span>
-                    </div>
-                  </div>
-                  <div className="text-right">
-                    <span className={`text-[9px] font-black uppercase tracking-wider ${supplyStates[hoveredElement.symbol] !== false ? "text-emerald-400" : "text-rose-500"}`}>
-                      {supplyStates[hoveredElement.symbol] !== false ? "🟢 Disponible" : hoveredElement.symbol === "Wf" ? "🔴 Sin WiFi" : hoveredElement.symbol === "Lz" ? "🔴 Sin Luz" : "🔴 Agotado"}
-                    </span>
-                  </div>
-                </>
-              ) : (
-                <div className="flex items-center justify-center w-full py-1 text-center">
-                  <p className="text-[9px] text-slate-500 font-semibold leading-relaxed">
-                    💡 <em>Coloque el cursor o mantenga presionado un elemento para ver su descripción. Toque para alternar estado.</em>
-                  </p>
+              {/* Warning for Read-only Mode */}
+              {!isAuthorizedToEditSupplies && (
+                <div className="bg-amber-500/10 border border-amber-500/20 text-amber-450 rounded-xl px-2.5 py-1.5 text-[8.5px] font-bold flex items-center gap-1.5">
+                  <span>🔒</span>
+                  <span>Modo Lectura: Solo los administradores y dueños del centro pueden registrar o cambiar el inventario.</span>
                 </div>
               )}
-            </div>
 
-            {/* Action buttons */}
-            <div className="flex gap-3 border-t border-slate-800/80 pt-2.5">
-              <button
-                type="button"
-                onClick={() => {
-                  setIsSuppliesOpen(false);
-                  setActiveSuppliesPunto(null);
-                }}
-                className="flex-1 py-2 border border-slate-800 text-slate-400 hover:text-white rounded-xl text-[10px] font-black transition cursor-pointer"
-              >
-                Cerrar sin guardar
-              </button>
-              <button
-                type="button"
-                onClick={handleSaveSupplies}
-                className="flex-1 py-2 bg-gradient-to-r from-orange-600 to-amber-500 hover:from-orange-500 hover:to-amber-400 text-white rounded-xl text-[10px] font-black transition shadow-lg cursor-pointer"
-              >
-                Guardar Inventario
-              </button>
-            </div>
+              {/* Search Bar & Category Filter Pills */}
+              <div className="flex flex-col gap-2 bg-slate-950/40 p-2 rounded-2xl border border-slate-850/60">
+                <div className="relative">
+                  <span className="absolute left-2.5 top-2 text-slate-500 text-[10px]">🔍</span>
+                  <input
+                    type="text"
+                    placeholder="Buscar insumo por nombre o símbolo..."
+                    value={supplySearchQuery}
+                    onChange={(e) => setSupplySearchQuery(e.target.value)}
+                    className="w-full bg-slate-950 border border-slate-850 rounded-xl py-1 pl-7 pr-3 text-[9.5px] text-white focus:outline-none focus:border-orange-500/50 transition font-medium"
+                  />
+                </div>
+                
+                <div className="flex flex-wrap gap-1 items-center">
+                  <span className="text-[8px] font-bold text-slate-500 uppercase tracking-wider mr-1">Sectores:</span>
+                  {[
+                    { id: "todos", label: "Todos", color: "border-slate-800 text-slate-400" },
+                    { id: "alimentos", label: "Alimentos", color: "border-amber-500/30 text-amber-400 bg-amber-500/5" },
+                    { id: "servicios", label: "Servicios", color: "border-sky-500/30 text-sky-400 bg-sky-500/5" },
+                    { id: "ropa", label: "Ropa", color: "border-purple-500/30 text-purple-400 bg-purple-500/5" },
+                    { id: "higiene", label: "Higiene", color: "border-teal-500/30 text-teal-400 bg-teal-500/5" },
+                    { id: "salud", label: "Salud", color: "border-rose-500/30 text-rose-400 bg-rose-500/5" },
+                  ].map((cat) => (
+                    <button
+                      key={cat.id}
+                      type="button"
+                      onClick={() => setSelectedSupplyCategory(cat.id)}
+                      className={`px-2 py-0.5 rounded-lg text-[8px] font-extrabold uppercase transition border cursor-pointer ${
+                        selectedSupplyCategory === cat.id
+                          ? "bg-gradient-to-r from-orange-600 to-amber-500 border-transparent text-white shadow-sm"
+                          : `${cat.color} hover:border-slate-400`
+                      }`}
+                    >
+                      {cat.label}
+                    </button>
+                  ))}
+                </div>
+              </div>
 
+              {/* Periodic Table Grid wrapper */}
+              <div className="flex-1 py-1.5 flex justify-center items-center overflow-visible">
+                <div className="grid grid-cols-12 gap-0.5 sm:gap-1 w-full max-w-[500px] aspect-[12/4] mx-auto">
+                  {PERIODIC_SUPPLIES.map((elem) => {
+                    const isAvailable = supplyStates[elem.symbol] !== false;
+                    
+                    // Filter match
+                    const matchesSearch = !supplySearchQuery || (
+                      elem.name.toLowerCase().includes(supplySearchQuery.toLowerCase()) ||
+                      elem.symbol.toLowerCase().includes(supplySearchQuery.toLowerCase()) ||
+                      elem.description.toLowerCase().includes(supplySearchQuery.toLowerCase())
+                    );
+                    const matchesCategory = selectedSupplyCategory === "todos" || elem.category === selectedSupplyCategory;
+                    const isDimmed = !matchesSearch || !matchesCategory;
+
+                    // Category Styling
+                    let catColor = "";
+                    if (elem.category === "alimentos") {
+                      catColor = isAvailable 
+                        ? "bg-amber-950/65 border-amber-600/70 text-amber-200 shadow-lg shadow-amber-500/5"
+                        : "bg-slate-950/40 border-slate-850 text-slate-650 line-through opacity-45";
+                    } else if (elem.category === "servicios") {
+                      if ((elem.symbol === "Wf" || elem.symbol === "Lz") && !isAvailable) {
+                        catColor = "bg-rose-950/60 border-rose-600 text-rose-400 font-extrabold shadow-lg shadow-rose-500/10";
+                      } else {
+                        catColor = isAvailable 
+                          ? "bg-sky-950/65 border-sky-600/70 text-sky-200 shadow-lg shadow-sky-500/5"
+                          : "bg-slate-950/40 border-slate-850 text-slate-650 line-through opacity-45";
+                      }
+                    } else if (elem.category === "ropa") {
+                      catColor = isAvailable 
+                        ? "bg-purple-950/65 border-purple-600/70 text-purple-200 shadow-lg shadow-purple-500/5"
+                        : "bg-slate-950/40 border-slate-850 text-slate-650 line-through opacity-45";
+                    } else if (elem.category === "higiene") {
+                      catColor = isAvailable 
+                        ? "bg-teal-950/65 border-teal-600/70 text-teal-200 shadow-lg shadow-teal-500/5"
+                        : "bg-slate-950/40 border-slate-850 text-slate-650 line-through opacity-45";
+                    } else if (elem.category === "salud") {
+                      catColor = isAvailable 
+                        ? "bg-rose-950/65 border-rose-600/70 text-rose-200 shadow-lg shadow-rose-500/5"
+                        : "bg-slate-950/40 border-slate-850 text-slate-650 line-through opacity-45";
+                    }
+
+                    const activeBorder = isAvailable && isAuthorizedToEditSupplies
+                      ? "hover:scale-105 hover:border-white/40"
+                      : isAuthorizedToEditSupplies ? "hover:scale-105" : "";
+
+                    return (
+                      <button
+                        key={elem.symbol}
+                        type="button"
+                        style={{ gridRow: elem.row, gridColumn: elem.col }}
+                        onMouseEnter={() => setHoveredElement(elem)}
+                        onMouseLeave={() => setHoveredElement(null)}
+                        onClick={() => {
+                          if (isAuthorizedToEditSupplies) {
+                            setSupplyStates((prev) => ({
+                              ...prev,
+                              [elem.symbol]: !isAvailable,
+                            }));
+                          }
+                        }}
+                        className={`relative flex flex-col justify-between p-0.5 sm:p-1 rounded border text-left cursor-pointer transition-all duration-200 select-none aspect-square ${catColor} ${activeBorder} ${
+                          isDimmed ? "opacity-15 scale-95 saturate-50 pointer-events-none" : ""
+                        }`}
+                      >
+                        {/* Top Corner Details */}
+                        <div className="flex justify-between items-center w-full leading-none">
+                          <span className="text-[5px] sm:text-[6px] font-bold opacity-45">{elem.num}</span>
+                          <span className={`w-0.5 h-0.5 sm:w-1 sm:h-1 rounded-full ${isAvailable ? "bg-emerald-500" : "bg-rose-500"}`}></span>
+                        </div>
+
+                        {/* Main Symbol & Emoji */}
+                        <div className="flex flex-col items-center justify-center py-0.5 leading-none">
+                          <span className="text-[8px] sm:text-xs select-none">{elem.emoji}</span>
+                          <span className="text-[7px] sm:text-[9px] font-black tracking-wider select-none">{elem.symbol}</span>
+                        </div>
+
+                        {/* Name Bottom */}
+                        <div className="text-center w-full leading-none overflow-hidden text-ellipsis whitespace-nowrap mt-0.5">
+                          <span className="text-[5px] sm:text-[6px] font-bold tracking-tight uppercase select-none opacity-80">{elem.name}</span>
+                        </div>
+                      </button>
+                    );
+                  })}
+                </div>
+              </div>
+
+              {/* Bottom Element Detailed Panel (big periodic element display) */}
+              <div className="bg-slate-950/60 border border-slate-850/80 rounded-2xl p-2.5 min-h-[50px] flex items-center justify-between gap-4">
+                {hoveredElement ? (
+                  <>
+                    <div className="flex items-center gap-3">
+                      <div className="w-9 h-9 rounded-lg bg-slate-900 border border-slate-800 flex flex-col items-center justify-center leading-none">
+                        <span className="text-sm">{hoveredElement.emoji}</span>
+                        <span className="text-[8px] font-black text-slate-400">{hoveredElement.symbol}</span>
+                      </div>
+                      <div className="flex flex-col leading-tight">
+                        <div className="flex items-center gap-2">
+                          <span className="text-[10px] font-black text-white">{hoveredElement.name}</span>
+                          <span className={`text-[7px] font-extrabold uppercase px-1.5 py-0.5 rounded-full ${
+                            hoveredElement.category === "alimentos" ? "bg-amber-500/10 text-amber-400 border border-amber-500/20" :
+                            hoveredElement.category === "servicios" ? "bg-sky-500/10 text-sky-400 border border-sky-500/20" :
+                            hoveredElement.category === "ropa" ? "bg-purple-500/10 text-purple-400 border border-purple-500/20" :
+                            hoveredElement.category === "higiene" ? "bg-teal-500/10 text-teal-400 border border-teal-500/20" :
+                            "bg-rose-500/10 text-rose-400 border border-rose-500/20"
+                          }`}>
+                            {hoveredElement.category}
+                          </span>
+                        </div>
+                        <span className="text-[8.5px] text-slate-400 leading-normal font-medium">{hoveredElement.description}</span>
+                      </div>
+                    </div>
+                    <div className="text-right">
+                      <span className={`text-[9px] font-black uppercase tracking-wider ${supplyStates[hoveredElement.symbol] !== false ? "text-emerald-400" : "text-rose-500"}`}>
+                        {supplyStates[hoveredElement.symbol] !== false ? "🟢 Disponible" : hoveredElement.symbol === "Wf" ? "🔴 Sin WiFi" : hoveredElement.symbol === "Lz" ? "🔴 Sin Luz" : "🔴 Agotado"}
+                      </span>
+                    </div>
+                  </>
+                ) : (
+                  <div className="flex items-center justify-center w-full py-1 text-center">
+                    <p className="text-[9px] text-slate-500 font-semibold leading-relaxed">
+                      💡 <em>Coloque el cursor o mantenga presionado un elemento para ver su descripción. Toque para alternar estado.</em>
+                    </p>
+                  </div>
+                )}
+              </div>
+
+              {/* Matching Supplies Detailed List */}
+              <div className="flex-1 overflow-y-auto max-h-[160px] border border-slate-850/60 rounded-2xl bg-slate-950/40 p-2 flex flex-col gap-1.5">
+                <span className="text-[8px] font-black text-slate-500 uppercase tracking-widest px-1">
+                  {supplySearchQuery || selectedSupplyCategory !== "todos" ? "🔍 Resultados de Búsqueda / Filtro" : "📦 Listado Completo de Insumos"}
+                </span>
+                
+                {filteredSuppliesList.length === 0 ? (
+                  <div className="text-center py-4 text-[9px] text-slate-500 italic">
+                    No se encontraron insumos coincidentes.
+                  </div>
+                ) : (
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-1.5">
+                    {filteredSuppliesList.map((elem) => {
+                      const isAvailable = supplyStates[elem.symbol] !== false;
+                      return (
+                        <div 
+                          key={elem.symbol}
+                          className={`flex items-center justify-between p-2 rounded-xl border transition ${
+                            isAvailable 
+                              ? "bg-slate-900/60 border-slate-800" 
+                              : "bg-rose-950/15 border-rose-900/20"
+                          }`}
+                        >
+                          <div className="flex items-center gap-2">
+                            <span className="text-xs">{elem.emoji}</span>
+                            <div className="flex flex-col leading-none">
+                              <span className="text-[9.5px] font-black text-white">{elem.name} ({elem.symbol})</span>
+                              <span className="text-[7.5px] text-slate-400 mt-0.5 max-w-[140px] overflow-hidden text-ellipsis whitespace-nowrap" title={elem.description}>
+                                {elem.description}
+                              </span>
+                            </div>
+                          </div>
+                          
+                          {isAuthorizedToEditSupplies ? (
+                            <button
+                              type="button"
+                              onClick={() => {
+                                setSupplyStates((prev) => ({
+                                  ...prev,
+                                  [elem.symbol]: !isAvailable,
+                                }));
+                              }}
+                              className={`px-2 py-0.5 rounded-lg text-[8px] font-black uppercase cursor-pointer transition ${
+                                isAvailable 
+                                  ? "bg-emerald-500/10 text-emerald-400 border border-emerald-500/20"
+                                  : "bg-rose-500/10 text-rose-400 border border-rose-500/20"
+                              }`}
+                            >
+                              {isAvailable ? "Disponible" : "Agotado"}
+                            </button>
+                          ) : (
+                            <span className={`px-2 py-0.5 rounded-lg text-[8px] font-black uppercase ${
+                              isAvailable 
+                                ? "bg-emerald-500/5 text-emerald-500/60"
+                                : "bg-rose-500/5 text-rose-500/60"
+                            }`}>
+                              {isAvailable ? "Disponible" : "Agotado"}
+                            </span>
+                          )}
+                        </div>
+                      );
+                    })}
+                  </div>
+                )}
+              </div>
+
+              {/* Action buttons */}
+              <div className="flex gap-3 border-t border-slate-800/80 pt-2.5">
+                <button
+                  type="button"
+                  onClick={() => {
+                    setIsSuppliesOpen(false);
+                    setActiveSuppliesPunto(null);
+                  }}
+                  className="flex-1 py-2 border border-slate-800 text-slate-400 hover:text-white rounded-xl text-[10px] font-black transition cursor-pointer"
+                >
+                  Cerrar sin guardar
+                </button>
+                {isAuthorizedToEditSupplies ? (
+                  <button
+                    type="button"
+                    onClick={handleSaveSupplies}
+                    className="flex-1 py-2 bg-gradient-to-r from-orange-600 to-amber-500 hover:from-orange-500 hover:to-amber-400 text-white rounded-xl text-[10px] font-black transition shadow-lg cursor-pointer"
+                  >
+                    Guardar Inventario
+                  </button>
+                ) : (
+                  <button
+                    type="button"
+                    disabled
+                    className="flex-1 py-2 bg-slate-800 text-slate-500 rounded-xl text-[10px] font-black cursor-not-allowed opacity-50"
+                  >
+                    Inventario Bloqueado
+                  </button>
+                )}
+              </div>
+
+            </div>
           </div>
-        </div>
-      )}
+        );
+      })()}
 
       {/* 11. Seismic Bulletin Modal */}
       {isSeismicOpen && (
@@ -2676,12 +2856,33 @@ export default function HomePage() {
                         </div>
                         <div className="flex flex-col items-end gap-1">
                           <span className="text-[9px] font-bold text-slate-400">📅 {fecha}</span>
-                          {s.url && (
-                            <a href={s.url} target="_blank" rel="noreferrer"
-                              className="text-[9px] text-sky-400 hover:text-sky-300 font-bold underline">
-                              Ver en USGS ↗
-                            </a>
-                          )}
+                          <div className="flex items-center gap-2">
+                            {s.url && (
+                              <a href={s.url} target="_blank" rel="noreferrer"
+                                className="text-[9px] text-sky-400 hover:text-sky-300 font-bold underline">
+                                USGS ↗
+                              </a>
+                            )}
+                            {s.lat && s.lng && (
+                              <>
+                                <span className="text-[8px] text-slate-650">•</span>
+                                <button
+                                  type="button"
+                                  onClick={() => {
+                                    setIsSeismicOpen(false);
+                                    setMapViewControllerTrigger({
+                                      center: [parseFloat(s.lat), parseFloat(s.lng)],
+                                      zoom: 12,
+                                      timestamp: Date.now()
+                                    });
+                                  }}
+                                  className="text-[9px] text-amber-400 hover:text-amber-300 font-bold underline cursor-pointer"
+                                >
+                                  Ver mapa 📍
+                                </button>
+                              </>
+                            )}
+                          </div>
                         </div>
                       </div>
                       {/* Detail grid */}

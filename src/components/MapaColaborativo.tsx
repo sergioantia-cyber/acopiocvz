@@ -26,6 +26,7 @@ interface MapaColaborativoProps {
   onDelete?: (id: string) => void;
   onMarkerMove?: (id: string, lat: number, lng: number, prevLat: number, prevLng: number) => void;
   onViewSupplies?: (punto: PuntoReportado) => void;
+  mapViewControllerTrigger?: { center: [number, number]; zoom: number; timestamp: number } | null;
 }
 
 const CATEGORY_EMOJIS: Record<string, string> = {
@@ -92,6 +93,22 @@ function ZoomTracker({ onZoomChange }: { onZoomChange: (zoom: number) => void })
   return null;
 }
 
+// ─── Map view controller ──────────────────────────────────────────────────────
+function MapViewController({
+  trigger,
+}: {
+  trigger: { center: [number, number]; zoom: number; timestamp: number } | null | undefined;
+}) {
+  const map = useMap();
+  useEffect(() => {
+    if (trigger) {
+      map.flyTo(trigger.center, trigger.zoom, { duration: 1.5 });
+    }
+  }, [trigger, map]);
+  return null;
+}
+
+
 // ─── Map click events ─────────────────────────────────────────────────────────
 function MapClickEvents({
   isReportingMode,
@@ -123,6 +140,7 @@ export default function MapaColaborativo({
   onDelete,
   onMarkerMove,
   onViewSupplies,
+  mapViewControllerTrigger,
 }: MapaColaborativoProps) {
   const defaultCenter: [number, number] = userLocation || [10.4806, -66.9036];
   const [isMounted, setIsMounted] = useState(false);
@@ -444,6 +462,7 @@ export default function MapaColaborativo({
         />
 
         <ZoomTracker onZoomChange={setZoomLevel} />
+        <MapViewController trigger={mapViewControllerTrigger} />
         <MapClickEvents isReportingMode={isReportingMode} onLocationSelected={onLocationSelected} />
 
         {/* 1. Electricity coverage circles */}
