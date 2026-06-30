@@ -273,6 +273,7 @@ export default function HomePage() {
   const [editingNews, setEditingNews] = useState<PuntoReportado | null>(null);
   const [isSeismicOpen, setIsSeismicOpen] = useState(false);
   const [isSuppliesOpen, setIsSuppliesOpen] = useState(false);
+  const [isEditingSupplies, setIsEditingSupplies] = useState(false);
   const [activeSuppliesPunto, setActiveSuppliesPunto] = useState<PuntoReportado | null>(null);
   const [supplyStates, setSupplyStates] = useState<Record<string, boolean>>({});
   const [hoveredElement, setHoveredElement] = useState<any>(null);
@@ -426,6 +427,7 @@ export default function HomePage() {
     });
     
     setSupplyStates(initialStates);
+    setIsEditingSupplies(false);
     setIsSuppliesOpen(true);
   };
 
@@ -2627,11 +2629,21 @@ export default function HomePage() {
                 </button>
               </div>
 
-              {/* Warning for Read-only Mode */}
-              {!isAuthorizedToEditSupplies && (
+              {/* Warning for Read-only Mode or Edit Mode */}
+              {!isAuthorizedToEditSupplies ? (
                 <div className="bg-amber-500/10 border border-amber-500/20 text-amber-450 rounded-xl px-2.5 py-1.5 text-[8.5px] font-bold flex items-center gap-1.5">
                   <span>🔒</span>
                   <span>Modo Lectura: Solo los administradores y dueños del centro pueden registrar o cambiar el inventario.</span>
+                </div>
+              ) : !isEditingSupplies ? (
+                <div className="bg-sky-500/10 border border-sky-500/20 text-sky-400 rounded-xl px-2.5 py-1.5 text-[8.5px] font-bold flex items-center gap-1.5">
+                  <span>🔓</span>
+                  <span>Tienes permisos de edición. Presiona el botón de "Habilitar Edición" abajo para hacer cambios.</span>
+                </div>
+              ) : (
+                <div className="bg-orange-500/10 border border-orange-500/20 text-orange-400 rounded-xl px-2.5 py-1.5 text-[8.5px] font-bold flex items-center gap-1.5">
+                  <span>✏️</span>
+                  <span>Modo Edición Activo: Haz clic en las casillas de la tabla periódica para activar/desactivar insumos.</span>
                 </div>
               )}
 
@@ -2717,9 +2729,9 @@ export default function HomePage() {
                         : "bg-slate-950/40 border-slate-850 text-slate-650 line-through opacity-45";
                     }
 
-                    const activeBorder = isAvailable && isAuthorizedToEditSupplies
+                    const activeBorder = isAvailable && isEditingSupplies
                       ? "hover:scale-105 hover:border-white/40"
-                      : isAuthorizedToEditSupplies ? "hover:scale-105" : "";
+                      : isEditingSupplies ? "hover:scale-105" : "";
 
                     return (
                       <button
@@ -2729,7 +2741,7 @@ export default function HomePage() {
                         onMouseEnter={() => setHoveredElement(elem)}
                         onMouseLeave={() => setHoveredElement(null)}
                         onClick={() => {
-                          if (isAuthorizedToEditSupplies) {
+                          if (isEditingSupplies) {
                             setSupplyStates((prev) => ({
                               ...prev,
                               [elem.symbol]: !isAvailable,
@@ -2835,7 +2847,7 @@ export default function HomePage() {
                             </div>
                           </div>
                           
-                          {isAuthorizedToEditSupplies ? (
+                          {isEditingSupplies ? (
                             <button
                               type="button"
                               onClick={() => {
@@ -2870,32 +2882,56 @@ export default function HomePage() {
 
               {/* Action buttons */}
               <div className="flex gap-3 border-t border-slate-800/80 pt-2.5">
-                <button
-                  type="button"
-                  onClick={() => {
-                    setIsSuppliesOpen(false);
-                    setActiveSuppliesPunto(null);
-                  }}
-                  className="flex-1 py-2 border border-slate-800 text-slate-400 hover:text-white rounded-xl text-[10px] font-black transition cursor-pointer"
-                >
-                  Cerrar sin guardar
-                </button>
-                {isAuthorizedToEditSupplies ? (
-                  <button
-                    type="button"
-                    onClick={handleSaveSupplies}
-                    className="flex-1 py-2 bg-gradient-to-r from-orange-600 to-amber-500 hover:from-orange-500 hover:to-amber-400 text-white rounded-xl text-[10px] font-black transition shadow-lg cursor-pointer"
-                  >
-                    Guardar Inventario
-                  </button>
+                {isEditingSupplies ? (
+                  <>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        // Reopen the modal with original data to cancel changes
+                        handleOpenSupplies(activeSuppliesPunto);
+                      }}
+                      className="flex-1 py-2 border border-slate-800 text-slate-400 hover:text-white rounded-xl text-[10px] font-black transition cursor-pointer"
+                    >
+                      Cancelar Edición
+                    </button>
+                    <button
+                      type="button"
+                      onClick={handleSaveSupplies}
+                      className="flex-1 py-2 bg-gradient-to-r from-orange-600 to-amber-500 hover:from-orange-500 hover:to-amber-400 text-white rounded-xl text-[10px] font-black transition shadow-lg cursor-pointer animate-pulse"
+                    >
+                      Guardar Inventario
+                    </button>
+                  </>
                 ) : (
-                  <button
-                    type="button"
-                    disabled
-                    className="flex-1 py-2 bg-slate-800 text-slate-500 rounded-xl text-[10px] font-black cursor-not-allowed opacity-50"
-                  >
-                    Inventario Bloqueado
-                  </button>
+                  <>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setIsSuppliesOpen(false);
+                        setActiveSuppliesPunto(null);
+                      }}
+                      className="flex-1 py-2 border border-slate-800 text-slate-400 hover:text-white rounded-xl text-[10px] font-black transition cursor-pointer"
+                    >
+                      Cerrar
+                    </button>
+                    {isAuthorizedToEditSupplies ? (
+                      <button
+                        type="button"
+                        onClick={() => setIsEditingSupplies(true)}
+                        className="flex-1 py-2 bg-blue-650 hover:bg-blue-600 text-white rounded-xl text-[10px] font-black transition shadow-lg cursor-pointer"
+                      >
+                        ✏️ Habilitar Edición
+                      </button>
+                    ) : (
+                      <button
+                        type="button"
+                        disabled
+                        className="flex-1 py-2 bg-slate-800 text-slate-500 rounded-xl text-[10px] font-black cursor-not-allowed opacity-50"
+                      >
+                        Inventario Bloqueado
+                      </button>
+                    )}
+                  </>
                 )}
               </div>
 
