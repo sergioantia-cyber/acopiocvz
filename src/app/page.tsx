@@ -107,6 +107,49 @@ const MAIN_FILTERS = [
   },
 ];
 
+
+interface SupplyElement {
+  num: number;
+  symbol: string;
+  name: string;
+  emoji: string;
+  category: "alimentos" | "ropa" | "servicios" | "salud" | "higiene";
+  description: string;
+  row: number;
+  col: number;
+}
+
+const PERIODIC_SUPPLIES: SupplyElement[] = [
+  // Fila 1
+  { num: 1, symbol: "Ag", name: "Agua", emoji: "💧", category: "alimentos", description: "Agua potable o embotellada", row: 1, col: 1 },
+  { num: 2, symbol: "Lz", name: "Luz / Elec", emoji: "💡", category: "servicios", description: "Servicio eléctrico activo en el centro", row: 1, col: 7 },
+  
+  // Fila 2
+  { num: 3, symbol: "Az", name: "Azúcar", emoji: "🍬", category: "alimentos", description: "Azúcar refinada o endulzantes", row: 2, col: 1 },
+  { num: 4, symbol: "Ha", name: "Harina", emoji: "🌾", category: "alimentos", description: "Harina de maíz precocido o trigo", row: 2, col: 2 },
+  { num: 5, symbol: "Lt", name: "Enlatados", emoji: "🥫", category: "alimentos", description: "Alimentos enlatados no perecederos", row: 2, col: 3 },
+  { num: 6, symbol: "Le", name: "Leche", emoji: "🥛", category: "alimentos", description: "Leche en polvo o líquida pasteurizada", row: 2, col: 4 },
+  { num: 7, symbol: "Ar", name: "Arroz", emoji: "🍚", category: "alimentos", description: "Arroz blanco o integral", row: 2, col: 5 },
+  { num: 8, symbol: "Gr", name: "Granos", emoji: "🫘", category: "alimentos", description: "Frijoles, lentejas, caraotas", row: 2, col: 6 },
+  { num: 9, symbol: "Wf", name: "WiFi", emoji: "📶", category: "servicios", description: "Acceso a internet inalámbrico", row: 2, col: 7 },
+  
+  // Fila 3
+  { num: 10, symbol: "Me", name: "Medias", emoji: "🧦", category: "ropa", description: "Medias de abrigo y uso diario", row: 3, col: 1 },
+  { num: 11, symbol: "Ri", name: "Ropa Interior", emoji: "🩲", category: "ropa", description: "Ropa íntima nueva o limpia", row: 3, col: 2 },
+  { num: 12, symbol: "Sh", name: "Shorts", emoji: "🩳", category: "ropa", description: "Pantalones cortos o shorts", row: 3, col: 3 },
+  { num: 13, symbol: "Ca", name: "Camisas", emoji: "👔", category: "ropa", description: "Camisas limpias", row: 3, col: 4 },
+  { num: 14, symbol: "Fr", name: "Franelas", emoji: "👕", category: "ropa", description: "Franelas o camisetas cómodas", row: 3, col: 5 },
+  { num: 15, symbol: "Mn", name: "Mantas", emoji: "🧣", category: "ropa", description: "Mantas para el frío", row: 3, col: 6 },
+  { num: 16, symbol: "Cb", name: "Cobijas", emoji: "🛌", category: "ropa", description: "Cobijas, edredones o sábanas", row: 3, col: 7 },
+  
+  // Fila 4
+  { num: 17, symbol: "Kh", name: "Hig. Personal", emoji: "🧼", category: "higiene", description: "Jabón, desodorante, pasta dental", row: 4, col: 1 },
+  { num: 18, symbol: "Pn", name: "Pañales", emoji: "👶", category: "higiene", description: "Pañales desechables de niños/adultos", row: 4, col: 2 },
+  { num: 19, symbol: "Bt", name: "Baterías", emoji: "🔋", category: "servicios", description: "Pilas y acumuladores portátiles", row: 4, col: 5 },
+  { num: 20, symbol: "Md", name: "Medicinas", emoji: "💊", category: "salud", description: "Medicamentos de uso común", row: 4, col: 6 },
+  { num: 21, symbol: "Pa", name: "1ros Auxilios", emoji: "🩹", category: "salud", description: "Material de curación y desinfección", row: 4, col: 7 },
+];
+
 export default function HomePage() {
   const [puntos, setPuntos] = useState<PuntoReportado[]>([]);
   const [localizados, setLocalizados] = useState<any[]>([]);
@@ -203,6 +246,10 @@ export default function HomePage() {
   const [isNewsFormOpen, setIsNewsFormOpen] = useState(false);
   const [editingNews, setEditingNews] = useState<PuntoReportado | null>(null);
   const [isSeismicOpen, setIsSeismicOpen] = useState(false);
+  const [isSuppliesOpen, setIsSuppliesOpen] = useState(false);
+  const [activeSuppliesPunto, setActiveSuppliesPunto] = useState<PuntoReportado | null>(null);
+  const [supplyStates, setSupplyStates] = useState<Record<string, boolean>>({});
+  const [hoveredElement, setHoveredElement] = useState<any>(null);
   const [isPsychFormOpen, setIsPsychFormOpen] = useState(false);
   const [editingPsych, setEditingPsych] = useState<Psychologist | null>(null);
   const [searchPsych, setSearchPsych] = useState("");
@@ -293,6 +340,55 @@ export default function HomePage() {
       }
     }
     alert("¡Noticia republicada con éxito! Se ha movido al inicio y notificado a los usuarios.");
+  };
+
+  const handleOpenSupplies = (punto: PuntoReportado) => {
+    setActiveSuppliesPunto(punto);
+    
+    // Load existing supply_details or initialize to default (all true)
+    const initialStates: Record<string, boolean> = {};
+    const defaultSymbols = [
+      "Ag", "Lz", "Az", "Ha", "Lt", "Wf", "Me", "Ri", "Sh", "Ca", "Fr", "Mn", "Cb", 
+      "Le", "Ar", "Gr", "Bt", "Kh", "Pn", "Md", "Pa"
+    ];
+    
+    defaultSymbols.forEach((sym) => {
+      if (punto.supply_details && typeof punto.supply_details[sym] === "boolean") {
+        initialStates[sym] = punto.supply_details[sym];
+      } else {
+        initialStates[sym] = true;
+      }
+    });
+    
+    setSupplyStates(initialStates);
+    setIsSuppliesOpen(true);
+  };
+
+  const handleSaveSupplies = async () => {
+    if (!activeSuppliesPunto) return;
+
+    const updatedPunto: PuntoReportado = {
+      ...activeSuppliesPunto,
+      supply_details: supplyStates,
+    };
+
+    const updated = puntos.map((p) => (p.id === activeSuppliesPunto.id ? updatedPunto : p));
+    setPuntos(updated);
+    localStorage.setItem("punto_de_apoyo_puntos", JSON.stringify(updated));
+
+    if (isSupabaseConfigured && supabase) {
+      const { error } = await supabase
+        .from("reports")
+        .update({ supply_details: supplyStates })
+        .eq("id", activeSuppliesPunto.id);
+      if (error) {
+        console.error("Error saving supply details in Supabase:", error);
+      }
+    }
+
+    setIsSuppliesOpen(false);
+    setActiveSuppliesPunto(null);
+    alert("¡Inventario de suministros actualizado con éxito!");
   };
 
   const handleStartEdit = (punto: PuntoReportado) => {
@@ -1569,6 +1665,7 @@ export default function HomePage() {
                 onApprove={handleApprovePunto}
                 onDelete={handleDeletePunto}
                 onMarkerMove={handleMarkerMove}
+                onViewSupplies={handleOpenSupplies}
               />
             </div>
 
@@ -2319,6 +2416,204 @@ export default function HomePage() {
               </button>
             </div>
           </form>
+        </div>
+      )}
+
+      {/* 12. Supply Periodic Table Modal */}
+      {isSuppliesOpen && activeSuppliesPunto && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/80 backdrop-blur-sm animate-in fade-in duration-200">
+          <div className="w-full max-w-2xl bg-slate-900 border border-slate-800 rounded-3xl p-6 shadow-2xl flex flex-col gap-4 animate-in scale-in-95 duration-200 max-h-[90dvh]">
+            
+            {/* Modal Header */}
+            <div className="flex justify-between items-center border-b border-slate-800 pb-3">
+              <div className="flex flex-col">
+                <div className="flex items-center gap-2">
+                  <span className="text-lg">📋</span>
+                  <h3 className="text-sm font-black text-white uppercase tracking-wider">
+                    Inventario de Insumos & Servicios
+                  </h3>
+                </div>
+                <span className="text-[10px] text-orange-500 font-bold tracking-wide mt-0.5">
+                  {activeSuppliesPunto.nombre || "Centro de Ayuda / Hospital"}
+                </span>
+              </div>
+              <button
+                onClick={() => {
+                  setIsSuppliesOpen(false);
+                  setActiveSuppliesPunto(null);
+                }}
+                className="w-7 h-7 rounded-xl bg-slate-950 border border-slate-850 text-slate-400 hover:text-white flex items-center justify-center cursor-pointer transition"
+              >
+                <X className="w-4 h-4" />
+              </button>
+            </div>
+
+            {/* Instruction / legend */}
+            <div className="text-[10px] text-slate-400 flex flex-col gap-1">
+              <p className="leading-relaxed">
+                Haga clic o toque en cualquier casilla de elemento para alternar su disponibilidad.
+              </p>
+              <div className="flex flex-wrap gap-2.5 mt-1 border-b border-slate-850 pb-2">
+                <span className="flex items-center gap-1"><span className="w-2.5 h-2.5 rounded bg-amber-500/20 border border-amber-500/50"></span> Alimentos</span>
+                <span className="flex items-center gap-1"><span className="w-2.5 h-2.5 rounded bg-sky-500/20 border border-sky-500/50"></span> Servicios</span>
+                <span className="flex items-center gap-1"><span className="w-2.5 h-2.5 rounded bg-purple-500/20 border border-purple-500/50"></span> Ropa / Vestimenta</span>
+                <span className="flex items-center gap-1"><span className="w-2.5 h-2.5 rounded bg-teal-500/20 border border-teal-500/50"></span> Higiene</span>
+                <span className="flex items-center gap-1"><span className="w-2.5 h-2.5 rounded bg-rose-500/20 border border-rose-500/50"></span> Salud / Auxilio</span>
+              </div>
+            </div>
+
+            {/* Periodic Table Grid wrapper (scrollable on mobile) */}
+            <div className="flex-1 overflow-x-auto py-2 flex justify-center items-center">
+              <div className="grid grid-cols-7 gap-1.5 min-w-[500px] w-full max-w-[620px] aspect-[7/4]">
+                {PERIODIC_SUPPLIES.map((elem) => {
+                  const isAvailable = supplyStates[elem.symbol] !== false;
+                  
+                  // Category Styling
+                  let catColor = "";
+                  if (elem.category === "alimentos") {
+                    catColor = isAvailable 
+                      ? "bg-amber-950/65 border-amber-600/70 text-amber-200 shadow-lg shadow-amber-500/5"
+                      : "bg-slate-950/40 border-slate-850 text-slate-600/80 line-through opacity-45";
+                  } else if (elem.category === "servicios") {
+                    // Check if it is WiFi (needs red styling if unavailable)
+                    if (elem.symbol === "Wf" && !isAvailable) {
+                      catColor = "bg-rose-950/60 border-rose-600 text-rose-400 font-extrabold shadow-lg shadow-rose-500/10";
+                    } else if (elem.symbol === "Lz" && !isAvailable) {
+                      catColor = "bg-rose-950/60 border-rose-600 text-rose-400 font-extrabold shadow-lg shadow-rose-500/10";
+                    } else {
+                      catColor = isAvailable 
+                        ? "bg-sky-950/65 border-sky-600/70 text-sky-200 shadow-lg shadow-sky-500/5"
+                        : "bg-slate-950/40 border-slate-850 text-slate-600/80 line-through opacity-45";
+                    }
+                  } else if (elem.category === "ropa") {
+                    catColor = isAvailable 
+                      ? "bg-purple-950/65 border-purple-600/70 text-purple-200 shadow-lg shadow-purple-500/5"
+                      : "bg-slate-950/40 border-slate-850 text-slate-600/80 line-through opacity-45";
+                  } else if (elem.category === "higiene") {
+                    catColor = isAvailable 
+                      ? "bg-teal-950/65 border-teal-600/70 text-teal-200 shadow-lg shadow-teal-500/5"
+                      : "bg-slate-950/40 border-slate-850 text-slate-600/80 line-through opacity-45";
+                  } else if (elem.category === "salud") {
+                    catColor = isAvailable 
+                      ? "bg-rose-950/65 border-rose-600/70 text-rose-200 shadow-lg shadow-rose-500/5"
+                      : "bg-slate-950/40 border-slate-850 text-slate-600/80 line-through opacity-45";
+                  }
+
+                  // Available vs Out of stock styling overlays
+                  const activeBorder = isAvailable 
+                    ? "hover:scale-105 hover:border-white/40"
+                    : "hover:scale-105";
+
+                  return (
+                    <button
+                      key={elem.symbol}
+                      type="button"
+                      style={{ gridRow: elem.row, gridColumn: elem.col }}
+                      onMouseEnter={() => setHoveredElement(elem)}
+                      onMouseLeave={() => setHoveredElement(null)}
+                      onClick={() => {
+                        setSupplyStates((prev) => ({
+                          ...prev,
+                          [elem.symbol]: !isAvailable,
+                        }));
+                      }}
+                      className={`relative flex flex-col justify-between p-1.5 rounded-xl border text-left cursor-pointer transition-all duration-200 select-none ${catColor} ${activeBorder}`}
+                    >
+                      {/* Top Corner Details */}
+                      <div className="flex justify-between items-center w-full leading-none">
+                        <span className="text-[7.5px] font-black opacity-45">{elem.num}</span>
+                        {/* Dot Indicator */}
+                        {elem.symbol === "Wf" && !isAvailable ? (
+                          <span className="text-[6.5px] font-black tracking-tighter text-rose-500 uppercase px-0.5 rounded bg-rose-500/10 scale-95 origin-right">
+                            NO WF
+                          </span>
+                        ) : elem.symbol === "Lz" && !isAvailable ? (
+                          <span className="text-[6.5px] font-black tracking-tighter text-rose-500 uppercase px-0.5 rounded bg-rose-500/10 scale-95 origin-right">
+                            NO LUZ
+                          </span>
+                        ) : (
+                          <span className={`w-1.5 h-1.5 rounded-full ${isAvailable ? "bg-emerald-500" : "bg-rose-500"}`}></span>
+                        )}
+                      </div>
+
+                      {/* Main Symbol & Emoji */}
+                      <div className="flex flex-col items-center justify-center py-0.5 leading-none">
+                        <span className="text-sm select-none">{elem.emoji}</span>
+                        <span className="text-xs font-black tracking-wide select-none">{elem.symbol}</span>
+                      </div>
+
+                      {/* Name Bottom */}
+                      <div className="text-center w-full leading-none overflow-hidden text-ellipsis whitespace-nowrap">
+                        <span className="text-[7px] font-bold tracking-tight uppercase select-none opacity-85">{elem.name}</span>
+                      </div>
+                    </button>
+                  );
+                })}
+              </div>
+            </div>
+
+            {/* Bottom Element Detailed Panel (big periodic element display) */}
+            <div className="bg-slate-950/60 border border-slate-850/80 rounded-2xl p-3 min-h-[56px] flex items-center justify-between gap-4">
+              {hoveredElement ? (
+                <>
+                  <div className="flex items-center gap-3">
+                    <div className="w-10 h-10 rounded-lg bg-slate-900 border border-slate-800 flex flex-col items-center justify-center leading-none">
+                      <span className="text-base">{hoveredElement.emoji}</span>
+                      <span className="text-[9px] font-black text-slate-400">{hoveredElement.symbol}</span>
+                    </div>
+                    <div className="flex flex-col leading-tight">
+                      <div className="flex items-center gap-2">
+                        <span className="text-[11px] font-black text-white">{hoveredElement.name}</span>
+                        <span className={`text-[7.5px] font-extrabold uppercase px-1.5 py-0.5 rounded-full ${
+                          hoveredElement.category === "alimentos" ? "bg-amber-500/10 text-amber-400 border border-amber-500/20" :
+                          hoveredElement.category === "servicios" ? "bg-sky-500/10 text-sky-400 border border-sky-500/20" :
+                          hoveredElement.category === "ropa" ? "bg-purple-500/10 text-purple-400 border border-purple-500/20" :
+                          hoveredElement.category === "higiene" ? "bg-teal-500/10 text-teal-400 border border-teal-500/20" :
+                          "bg-rose-500/10 text-rose-400 border border-rose-500/20"
+                        }`}>
+                          {hoveredElement.category}
+                        </span>
+                      </div>
+                      <span className="text-[9px] text-slate-400 leading-normal font-medium">{hoveredElement.description}</span>
+                    </div>
+                  </div>
+                  <div className="text-right">
+                    <span className={`text-[10px] font-black uppercase tracking-wider ${supplyStates[hoveredElement.symbol] !== false ? "text-emerald-400" : "text-rose-500"}`}>
+                      {supplyStates[hoveredElement.symbol] !== false ? "🟢 Disponible" : hoveredElement.symbol === "Wf" ? "🔴 Sin WiFi" : hoveredElement.symbol === "Lz" ? "🔴 Sin Luz" : "🔴 Agotado"}
+                    </span>
+                  </div>
+                </>
+              ) : (
+                <div className="flex items-center justify-center w-full py-1 text-center">
+                  <p className="text-[9.5px] text-slate-500 font-semibold leading-relaxed">
+                    💡 <em>Coloque el cursor o mantenga presionado un elemento para ver su descripción. Toque para alternar estado.</em>
+                  </p>
+                </div>
+              )}
+            </div>
+
+            {/* Action buttons */}
+            <div className="flex gap-3 border-t border-slate-800/80 pt-3">
+              <button
+                type="button"
+                onClick={() => {
+                  setIsSuppliesOpen(false);
+                  setActiveSuppliesPunto(null);
+                }}
+                className="flex-1 py-2.5 border border-slate-800 text-slate-400 hover:text-white rounded-xl text-xs font-black transition cursor-pointer"
+              >
+                Cerrar sin guardar
+              </button>
+              <button
+                type="button"
+                onClick={handleSaveSupplies}
+                className="flex-1 py-2.5 bg-gradient-to-r from-orange-600 to-amber-500 hover:from-orange-500 hover:to-amber-400 text-white rounded-xl text-xs font-black transition shadow-lg cursor-pointer"
+              >
+                Guardar Inventario
+              </button>
+            </div>
+
+          </div>
         </div>
       )}
 

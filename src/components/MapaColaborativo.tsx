@@ -25,6 +25,7 @@ interface MapaColaborativoProps {
   onApprove?: (id: string) => void;
   onDelete?: (id: string) => void;
   onMarkerMove?: (id: string, lat: number, lng: number, prevLat: number, prevLng: number) => void;
+  onViewSupplies?: (punto: PuntoReportado) => void;
 }
 
 const CATEGORY_EMOJIS: Record<string, string> = {
@@ -121,6 +122,7 @@ export default function MapaColaborativo({
   onApprove,
   onDelete,
   onMarkerMove,
+  onViewSupplies,
 }: MapaColaborativoProps) {
   const defaultCenter: [number, number] = userLocation || [10.4806, -66.9036];
   const [isMounted, setIsMounted] = useState(false);
@@ -282,6 +284,15 @@ export default function MapaColaborativo({
                   </button>
                 )}
 
+                {(punto.categoria === "suministros" || punto.categoria === "salud") && onViewSupplies && (
+                  <button
+                    onClick={() => onViewSupplies(punto)}
+                    className="w-full flex items-center justify-center gap-1.5 py-2.5 bg-gradient-to-r from-orange-600 to-amber-500 hover:from-orange-500 hover:to-amber-400 text-white rounded-xl text-[10px] font-black uppercase tracking-wider transition shadow-lg shadow-orange-500/20 cursor-pointer mt-1"
+                  >
+                    📋 Ver Suministros Exactos
+                  </button>
+                )}
+
                 {(isAdmin || isOwner || isCreator(punto)) && (
                   <div className="w-full flex gap-2 mt-1.5">
                     {isAdmin && punto.aprobado === false && onApprove && (
@@ -373,6 +384,14 @@ export default function MapaColaborativo({
                     className="flex-1 flex items-center justify-center gap-1 py-1.5 bg-orange-600 hover:bg-orange-500 text-white rounded-lg text-[10px] font-bold transition shadow-lg cursor-pointer"
                   >
                     ✏️ Editar
+                  </button>
+                )}
+                {(punto.categoria === "suministros" || punto.categoria === "salud") && onViewSupplies && (
+                  <button
+                    onClick={() => onViewSupplies(punto)}
+                    className="w-full flex items-center justify-center gap-1 py-1.5 bg-gradient-to-r from-orange-600 to-amber-500 hover:from-orange-500 hover:to-amber-400 text-white rounded-lg text-[10px] font-extrabold uppercase tracking-wider transition shadow-lg cursor-pointer mt-1.5"
+                  >
+                    📋 Ver Suministros
                   </button>
                 )}
                 {(isAdmin || isOwner || isCreator(punto)) && (

@@ -115,3 +115,6 @@ VALUES (
 -- 6. Habilitar la replicación en tiempo real (Supabase Realtime) para la tabla reports
 -- Nota: Si ya está agregada, arrojará un aviso de que ya es miembro, lo cual es correcto y seguro.
 alter publication supabase_realtime add table reports;
+
+-- 7. Agregar columna supply_details para el inventario periódico interactivo
+ALTER TABLE reports ADD COLUMN IF NOT EXISTS supply_details JSONB;

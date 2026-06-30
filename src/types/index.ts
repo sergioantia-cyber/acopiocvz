@@ -21,6 +21,9 @@ export interface PuntoReportado {
   // Moderation fields
   aprobado?: boolean;
   creadorAnonimo?: boolean;
+
+  // Supply periodic table details
+  supply_details?: Record<string, boolean>;
 }
 
 export interface Psychologist {
