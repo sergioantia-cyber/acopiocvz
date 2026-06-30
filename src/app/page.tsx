@@ -2675,8 +2675,8 @@ export default function HomePage() {
               </div>
 
               {/* Periodic Table Grid wrapper */}
-              <div className="flex-1 py-1.5 flex justify-center items-center overflow-visible">
-                <div className="grid grid-cols-12 gap-0.5 sm:gap-1 w-full max-w-[500px] aspect-[12/4] mx-auto">
+              <div className="flex-1 py-1.5 flex justify-start sm:justify-center items-center overflow-x-auto scrollbar-none select-none w-full">
+                <div className="grid grid-cols-12 gap-1.5 min-w-[620px] sm:min-w-0 w-full sm:max-w-[620px] aspect-[12/4] mx-auto">
                   {PERIODIC_SUPPLIES.map((elem) => {
                     const isAvailable = supplyStates[elem.symbol] !== false;
                     
@@ -2736,25 +2736,25 @@ export default function HomePage() {
                             }));
                           }
                         }}
-                        className={`relative flex flex-col justify-between p-0.5 sm:p-1 rounded border text-left cursor-pointer transition-all duration-200 select-none aspect-square ${catColor} ${activeBorder} ${
+                        className={`relative flex flex-col justify-between p-1 sm:p-1.5 rounded-xl border text-left cursor-pointer transition-all duration-200 select-none aspect-square ${catColor} ${activeBorder} ${
                           isDimmed ? "opacity-15 scale-95 saturate-50 pointer-events-none" : ""
                         }`}
                       >
                         {/* Top Corner Details */}
                         <div className="flex justify-between items-center w-full leading-none">
-                          <span className="text-[5px] sm:text-[6px] font-bold opacity-45">{elem.num}</span>
-                          <span className={`w-0.5 h-0.5 sm:w-1 sm:h-1 rounded-full ${isAvailable ? "bg-emerald-500" : "bg-rose-500"}`}></span>
+                          <span className="text-[7px] sm:text-[8px] font-bold opacity-45">{elem.num}</span>
+                          <span className={`w-1 h-1 sm:w-1.5 sm:h-1.5 rounded-full ${isAvailable ? "bg-emerald-500" : "bg-rose-500"}`}></span>
                         </div>
 
                         {/* Main Symbol & Emoji */}
                         <div className="flex flex-col items-center justify-center py-0.5 leading-none">
-                          <span className="text-[8px] sm:text-xs select-none">{elem.emoji}</span>
-                          <span className="text-[7px] sm:text-[9px] font-black tracking-wider select-none">{elem.symbol}</span>
+                          <span className="text-xs sm:text-base select-none">{elem.emoji}</span>
+                          <span className="text-[10px] sm:text-xs font-black tracking-wider select-none">{elem.symbol}</span>
                         </div>
 
                         {/* Name Bottom */}
                         <div className="text-center w-full leading-none overflow-hidden text-ellipsis whitespace-nowrap mt-0.5">
-                          <span className="text-[5px] sm:text-[6px] font-bold tracking-tight uppercase select-none opacity-80">{elem.name}</span>
+                          <span className="text-[6px] sm:text-[7px] font-bold tracking-tight uppercase select-none opacity-80">{elem.name}</span>
                         </div>
                       </button>
                     );
