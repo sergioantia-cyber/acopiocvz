@@ -156,3 +156,9 @@ body {
 .seismic-pulse-fast {
   animation: seismicPulse 2s infinite ease-in-out;
 }
+
+/* Fix Leaflet DivIcon clipping / background on iOS/Safari */
+.leaflet-div-icon {
+  background: transparent !important;
+  border: none !important;
+}

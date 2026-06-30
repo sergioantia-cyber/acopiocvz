@@ -22,8 +22,8 @@ export interface PuntoReportado {
   aprobado?: boolean;
   creadorAnonimo?: boolean;
 
-  // Supply periodic table details
   supply_details?: Record<string, boolean>;
+  image_url?: string;
 }
 
 export interface Psychologist {

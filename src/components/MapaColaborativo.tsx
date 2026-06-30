@@ -75,7 +75,7 @@ const createCustomIcon = (punto: PuntoReportado) => {
         ${isExt ? `<span class="absolute -top-1.5 -right-1.5 flex h-3.5 w-3.5 items-center justify-center rounded-full bg-slate-900 border border-slate-700 text-[8px] font-bold text-slate-300">ext</span>` : ""}
       </div>
     `,
-    className: "custom-div-icon",
+    className: "custom-div-icon bg-transparent border-none",
     iconSize: [36, 36],
     iconAnchor: [18, 36],
     popupAnchor: [0, -36],

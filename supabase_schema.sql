@@ -118,3 +118,7 @@ alter publication supabase_realtime add table reports;
 
 -- 7. Agregar columna supply_details para el inventario periódico interactivo
 ALTER TABLE reports ADD COLUMN IF NOT EXISTS supply_details JSONB;
+
+-- 8. Agregar columna image_url para fotos en las noticias
+ALTER TABLE reports ADD COLUMN IF NOT EXISTS image_url TEXT;
+

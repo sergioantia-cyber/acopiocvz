@@ -4143,6 +4143,19 @@ export default function HomePage() {
                           {noticia.descripcion}
                         </p>
 
+                        {noticia.image_url && (
+                          <div className="mt-2 relative rounded-2xl overflow-hidden max-h-[220px] border border-slate-900 shadow-md">
+                            <img
+                              src={noticia.image_url}
+                              alt={noticia.nombre}
+                              className="w-full h-full object-cover max-h-[220px]"
+                              onError={(e) => {
+                                (e.target as HTMLElement).style.display = 'none';
+                              }}
+                            />
+                          </div>
+                        )}
+
                         {noticia.fuente && (
                           <div className="mt-2 pt-2 border-t border-slate-900/60 flex items-center gap-1.5 text-[10px] text-slate-400">
                             <span className="font-bold text-slate-500">Fuente:</span>
@@ -4222,6 +4235,7 @@ export default function HomePage() {
                 const titulo = (e.target as any).titulo.value.trim();
                 const contenido = (e.target as any).contenido.value.trim();
                 const fuente = (e.target as any).fuente.value.trim();
+                const imagenUrl = (e.target as any).imagenUrl.value.trim();
 
                 if (!titulo || !contenido) return;
 
@@ -4232,6 +4246,7 @@ export default function HomePage() {
                     nombre: titulo,
                     descripcion: contenido,
                     fuente: fuente || undefined,
+                    image_url: imagenUrl || undefined,
                   };
 
                   const updated = puntos.map((p) => p.id === editingNews.id ? updatedNoticia : p);
@@ -4245,6 +4260,7 @@ export default function HomePage() {
                         nombre: titulo,
                         descripcion: contenido,
                         fuente: fuente || null,
+                        image_url: imagenUrl || null,
                       })
                       .eq("id", editingNews.id);
                     if (error) {
@@ -4268,6 +4284,7 @@ export default function HomePage() {
                     nombre: titulo,
                     descripcion: contenido,
                     fuente: fuente || undefined,
+                    image_url: imagenUrl || undefined,
                     lat: 0,
                     lng: 0,
                     confirmations: 0,
@@ -4320,6 +4337,20 @@ export default function HomePage() {
                   defaultValue={editingNews ? editingNews.descripcion : ""}
                   placeholder="Detalles sobre el anuncio o acontecimiento..."
                   className="w-full px-3 py-2 bg-slate-950 border border-slate-800 rounded-lg text-slate-300 text-xs focus:outline-none focus:border-sky-500/50 transition h-28 resize-none"
+                />
+              </div>
+
+              <div>
+                <label className="text-[9px] font-bold text-slate-400 uppercase tracking-wider block mb-1">
+                  URL de la Foto / Imagen (Opcional)
+                </label>
+                <input
+                  name="imagenUrl"
+                  type="text"
+                  key={editingNews ? `edit-img-${editingNews.id}` : 'new-img'}
+                  defaultValue={editingNews ? editingNews.image_url : ""}
+                  placeholder="Ej. https://images.unsplash.com/photo-... o enlace directo"
+                  className="w-full px-3 py-2 bg-slate-950 border border-slate-800 rounded-lg text-slate-300 text-xs focus:outline-none focus:border-sky-500/50 transition"
                 />
               </div>
 
